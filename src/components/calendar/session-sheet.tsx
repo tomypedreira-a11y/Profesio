@@ -72,7 +72,7 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
 
               {/* Cobro: solo en sesiones realizadas (ya empezaron y no se cancelaron) */}
               {session.status === "scheduled" && new Date(session.starts_at) <= new Date() && (
-                <SessionPayment key={session.id} sessionId={session.id} timeZone={timeZone} />
+                <SessionPayment key={`payment-${session.id}`} sessionId={session.id} timeZone={timeZone} />
               )}
 
               <SessionActions session={session} timeZone={timeZone} onChanged={onChanged} />
@@ -84,8 +84,9 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
 
               <Separator />
 
-              {/* key: al abrir otra sesión, el editor arranca de cero */}
-              <NoteEditor key={session.id} sessionId={session.id} timeZone={timeZone} />
+              {/* key: al abrir otra sesión, el editor arranca de cero.
+                  Con prefijo para no chocar con la key del cobro, que es hermano en este mismo contenedor. */}
+              <NoteEditor key={`note-${session.id}`} sessionId={session.id} timeZone={timeZone} />
             </div>
           </>
         )}
