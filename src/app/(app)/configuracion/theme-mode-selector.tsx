@@ -4,7 +4,8 @@
 import { useSyncExternalStore, useTransition } from "react";
 import { useTheme } from "next-themes";
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
-import { updateTheme } from "@/app/(app)/actions";
+import { toast } from "sonner";
+import { updateTheme } from "./actions";
 import { THEMES, type Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,11 @@ export function ThemeModeSelector({ value }: { value: string }) {
 
   function choose(mode: Theme) {
     setTheme(mode); // cambia al instante
-    startTransition(() => updateTheme(mode)); // y lo guarda en el perfil
+    // y lo guarda en el perfil
+    startTransition(async () => {
+      const result = await updateTheme(mode);
+      if (result.error) toast.error(result.error);
+    });
   }
 
   return (

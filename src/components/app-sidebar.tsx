@@ -19,6 +19,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -40,6 +41,10 @@ const NAV_ITEMS = [
   { href: "/pacientes", label: "Pacientes", icon: UsersIcon },
   { href: "/sesiones", label: "Sesiones", icon: CalendarClockIcon },
   { href: "/ingresos", label: "Ingresos", icon: WalletIcon },
+];
+
+// Lo de la cuenta no va en la lista: se abre desde el usuario, abajo del panel.
+const ACCOUNT_ITEMS = [
   { href: "/perfil", label: "Mi perfil", icon: UserRoundIcon },
   { href: "/configuracion", label: "Configuración", icon: SettingsIcon },
 ];
@@ -58,6 +63,8 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const initials =
     `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() ||
     user.email.charAt(0).toUpperCase();
+  // Resalta el usuario cuando se está en una pantalla de la cuenta.
+  const inAccount = ACCOUNT_ITEMS.some((item) => pathname.startsWith(item.href));
 
   return (
     <Sidebar collapsible="icon">
@@ -106,7 +113,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
-              <DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
+              <DropdownMenuTrigger render={<SidebarMenuButton size="lg" isActive={inAccount} />}>
                 <Avatar className="size-8 rounded-md">
                   <AvatarFallback className="rounded-md">{initials}</AvatarFallback>
                 </Avatar>
@@ -117,15 +124,19 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 <ChevronsUpDownIcon className="ml-auto size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="min-w-56">
-                <DropdownMenuItem
-                  onClick={() => {
-                    setOpenMobile(false);
-                    router.push("/perfil");
-                  }}
-                >
-                  <UserRoundIcon />
-                  Mi perfil
-                </DropdownMenuItem>
+                {ACCOUNT_ITEMS.map((item) => (
+                  <DropdownMenuItem
+                    key={item.href}
+                    onClick={() => {
+                      setOpenMobile(false);
+                      router.push(item.href);
+                    }}
+                  >
+                    <item.icon />
+                    {item.label}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => startTransition(() => logout())}>
                   <LogOutIcon />
                   Cerrar sesión
