@@ -12,8 +12,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { AddSessionDialog } from "./add-session-dialog";
+import { NextSessionPanel } from "./next-session-panel";
 import { SessionSheet } from "./session-sheet";
 import { UnscheduledPanel } from "./unscheduled-panel";
+import type { CalendarViewPreference } from "@/lib/calendar-views";
 import type { CalendarSession, PatientOption, UnscheduledPatient } from "./types";
 import "./calendar.css";
 
@@ -26,30 +28,38 @@ const DEFAULT_MAX_HOUR = 22;
 
 type ViewKey = "timeGridDay" | "timeGridThreeDay" | "timeGridWeek" | "dayGridMonth";
 
-export function CalendarView({ timeZone, patients }: { timeZone: string; patients: PatientOption[] }) {
+type CalendarViewProps = {
+  timeZone: string;
+  patients: PatientOption[];
+  initialView: CalendarViewPreference; // vista elegida en el perfil
+};
+
+export function CalendarView({ timeZone, patients, initialView }: CalendarViewProps) {
   const supabase = useRef(createClient()).current;
   const calendarRef = useRef<FullCalendar>(null);
   const isMobile = useIsMobile();
 
   const [title, setTitle] = useState("");
-  const [view, setView] = useState<ViewKey>("timeGridWeek");
+  const [view, setView] = useState<ViewKey>(initialView);
   const [hours, setHours] = useState({ min: DEFAULT_MIN_HOUR, max: DEFAULT_MAX_HOUR });
   const [selected, setSelected] = useState<{ session: CalendarSession; isNext: boolean } | null>(null);
   const [week, setWeek] = useState<Date | null>(null);
   const [unscheduled, setUnscheduled] = useState<UnscheduledPatient[]>([]);
+  // Próxima sesión de todas (undefined mientras carga), para destacarla y mostrarla en el panel.
+  const [nextSession, setNextSession] = useState<CalendarSession | null | undefined>(undefined);
   // Panel "Agregar sesión" abierto (con el paciente y la fecha sugeridos, si vienen de "No agendados").
   const [adding, setAdding] = useState<{ patientId?: string; date?: Date } | null>(null);
 
   const api = () => calendarRef.current?.getApi();
 
-  // En el celular, la vista inicial muestra 3 días en lugar de la semana completa.
+  // En el celular, si la vista inicial es la semana, se muestran 3 días (la semana entera no entra).
   const adjustedForMobile = useRef(false);
   useEffect(() => {
     if (isMobile && !adjustedForMobile.current) {
       adjustedForMobile.current = true;
-      api()?.changeView("timeGridThreeDay");
+      if (initialView === "timeGridWeek") api()?.changeView("timeGridThreeDay");
     }
-  }, [isMobile]);
+  }, [isMobile, initialView]);
 
   // Carga las sesiones del rango visible. FullCalendar la llama al cambiar de fecha o vista.
   const fetchEvents = useCallback(
@@ -61,10 +71,10 @@ export function CalendarView({ timeZone, patients }: { timeZone: string; patient
           .select(SESSION_COLUMNS)
           .gte("starts_at", info.start.toISOString())
           .lt("starts_at", info.end.toISOString()),
-        // La próxima sesión (no cancelada) de todas, para destacarla.
+        // La próxima sesión (no cancelada) de todas, para destacarla y mostrarla en el panel.
         supabase
-          .from("sessions")
-          .select("id")
+          .from("calendar_sessions")
+          .select(SESSION_COLUMNS)
           .eq("status", "scheduled")
           .gt("starts_at", now)
           .order("starts_at", { ascending: true })
@@ -73,6 +83,7 @@ export function CalendarView({ timeZone, patients }: { timeZone: string; patient
       ]);
 
       const list = (sessions ?? []) as CalendarSession[];
+      setNextSession((next as CalendarSession | null) ?? null);
 
       // Ampliar el horario visible si alguna sesión cae fuera de 8 a 22.
       let min = DEFAULT_MIN_HOUR;
@@ -153,8 +164,11 @@ export function CalendarView({ timeZone, patients }: { timeZone: string; patient
     setSelected({ session, isNext });
   }
 
+  // Estable (sin dependencias) porque el panel de próxima sesión la usa en un efecto.
+  const refetchEvents = useCallback(() => calendarRef.current?.getApi().refetchEvents(), []);
+
   function refresh() {
-    api()?.refetchEvents();
+    refetchEvents();
     if (week) void loadUnscheduled(week);
   }
 
@@ -184,12 +198,12 @@ export function CalendarView({ timeZone, patients }: { timeZone: string; patient
             </Button>
           </div>
           <h2 className="order-first w-full text-lg font-semibold first-letter:uppercase sm:order-none sm:w-auto sm:flex-1">{title}</h2>
-          <div className="ml-auto flex rounded-lg border p-0.5 sm:ml-0">
+          <div className="ml-auto flex rounded-full border p-0.5 sm:ml-0">
             {viewOptions.map((o) => (
               <Button
                 key={o.key}
                 size="sm"
-                variant={view === o.key ? "secondary" : "ghost"}
+                variant={view === o.key ? "default" : "ghost"}
                 onClick={() => api()?.changeView(o.key)}
               >
                 {o.label}
@@ -206,7 +220,7 @@ export function CalendarView({ timeZone, patients }: { timeZone: string; patient
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin]}
           locale={esLocale}
-          initialView="timeGridWeek"
+          initialView={initialView}
           views={{ timeGridThreeDay: { type: "timeGrid", duration: { days: 3 } } }}
           headerToolbar={false}
           height="auto"
@@ -228,13 +242,19 @@ export function CalendarView({ timeZone, patients }: { timeZone: string; patient
 
         {/* Referencia de colores */}
         <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-primary" /> Sesión</span>
-          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-(--session-next)" /> Próxima sesión</span>
+          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border-[1.5px] border-primary-border bg-primary" /> Sesión</span>
+          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-(--session-next-border) bg-(--session-next)" /> Próxima sesión</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border bg-muted" /> Cancelada</span>
         </div>
       </div>
 
-      <div className="max-lg:order-first">
+      <div className="flex min-w-0 flex-col gap-4 max-lg:order-first lg:sticky lg:top-4 lg:self-start">
+        <NextSessionPanel
+          session={nextSession}
+          timeZone={timeZone}
+          onSelect={(session) => setSelected({ session, isNext: true })}
+          onStarted={refetchEvents}
+        />
         <UnscheduledPanel
           patients={unscheduled}
           weekLabel={week ? `${format(week, "dd/MM")} al ${format(addDays(week, 6), "dd/MM")}` : ""}

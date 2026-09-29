@@ -130,7 +130,10 @@ export type Database = {
       }
       profiles: {
         Row: {
+          calendar_view: string
           created_at: string
+          default_session_fee: number | null
+          default_session_minutes: number
           first_name: string
           id: string
           last_name: string
@@ -140,7 +143,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          calendar_view?: string
           created_at?: string
+          default_session_fee?: number | null
+          default_session_minutes?: number
           first_name?: string
           id: string
           last_name?: string
@@ -150,7 +156,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          calendar_view?: string
           created_at?: string
+          default_session_fee?: number | null
+          default_session_minutes?: number
           first_name?: string
           id?: string
           last_name?: string
@@ -295,8 +304,11 @@ export type Database = {
           created_at: string
           duration_minutes: number
           ends_at: string
+          fee: number | null
           id: string
+          paid_at: string | null
           patient_id: string
+          payment_method: string | null
           psychologist_id: string
           rescheduled_from: string | null
           series_id: string | null
@@ -310,8 +322,11 @@ export type Database = {
           created_at?: string
           duration_minutes?: number
           ends_at: string
+          fee?: number | null
           id?: string
+          paid_at?: string | null
           patient_id: string
+          payment_method?: string | null
           psychologist_id?: string
           rescheduled_from?: string | null
           series_id?: string | null
@@ -325,8 +340,11 @@ export type Database = {
           created_at?: string
           duration_minutes?: number
           ends_at?: string
+          fee?: number | null
           id?: string
+          paid_at?: string | null
           patient_id?: string
+          payment_method?: string | null
           psychologist_id?: string
           rescheduled_from?: string | null
           series_id?: string | null
@@ -429,6 +447,19 @@ export type Database = {
           },
         ]
       }
+      session_payments: {
+        Row: {
+          fee: number | null
+          first_name: string | null
+          id: string | null
+          last_name: string | null
+          paid_at: string | null
+          patient_id: string | null
+          payment_method: string | null
+          starts_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_patient_schedules: {
@@ -470,6 +501,7 @@ export type Database = {
         Args: { p_from: string; p_series_id: string }
         Returns: undefined
       }
+      default_session_minutes: { Args: never; Returns: number }
       extend_series: { Args: never; Returns: number }
       generate_series_sessions: {
         Args: {
@@ -477,6 +509,14 @@ export type Database = {
           p_skip_conflicts?: boolean
           p_until: string
         }
+        Returns: number
+      }
+      mark_session_unpaid: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
+      mark_sessions_paid: {
+        Args: { p_method: string; p_session_ids: string[] }
         Returns: number
       }
       replace_patient_schedules: {

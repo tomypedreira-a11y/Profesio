@@ -8,7 +8,7 @@ import { formatSchedules, formatSessionShort } from "@/lib/format";
 import type { ScheduleSlot } from "@/lib/schedule";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export type PatientListItem = {
   id: string;
@@ -101,13 +101,18 @@ export function PatientList({
           />
         </div>
         {showSort && (
-          <NativeSelect value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Ordenar" className="sm:w-56">
-            {SORT_OPTIONS.map((o) => (
-              <NativeSelectOption key={o.value} value={o.value}>
-                {o.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <Select value={sort} onValueChange={(value) => value && setSort(value)} items={SORT_OPTIONS}>
+            <SelectTrigger aria-label="Ordenar" className="w-full sm:w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
       </div>
 

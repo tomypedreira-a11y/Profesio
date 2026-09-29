@@ -1,5 +1,6 @@
 // Validación del formulario de paciente. Se usa en el servidor (acciones).
 import { z } from "zod";
+import { parseFee } from "@/lib/format";
 import { isCountryCode, normalizePhone } from "@/lib/phone";
 import { isValidRange, scheduleSlotsSchema, type ScheduleSlot } from "@/lib/schedule";
 
@@ -26,16 +27,6 @@ function parseBirthDate(raw: string): string | null {
   const exists = date.getFullYear() === Number(yyyy) && date.getMonth() === Number(mm) - 1 && date.getDate() === Number(dd);
   if (!exists || Number(yyyy) < 1900 || date > new Date()) return null;
   return `${yyyy}-${mm}-${dd}`;
-}
-
-// Acepta "25000", "25.000", "25.000,50", "$ 25000".
-function parseFee(raw: string): number | null | "invalid" {
-  let v = raw.replace(/[$\s]/g, "");
-  if (v === "") return null;
-  if (v.includes(",")) v = v.replace(/\./g, "").replace(",", ".");
-  else if (/^\d{1,3}(\.\d{3})+$/.test(v)) v = v.replace(/\./g, "");
-  const n = Number(v);
-  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : "invalid";
 }
 
 export const patientSchema = z
@@ -67,7 +58,7 @@ export const patientSchema = z
         ctx.addIssue({
           code: "custom",
           path: ["schedule"],
-          message: "Completá el día, el inicio y el fin de cada sesión (el fin tiene que ser después del inicio).",
+          message: "Completá el día y el inicio de cada sesión. El fin tiene que ser después del inicio, sin pasar la medianoche.",
         });
       } else schedules = parsed.data;
     } else if (data.session_date !== "" || data.session_start !== "" || data.session_end !== "") {
@@ -75,7 +66,7 @@ export const patientSchema = z
         ctx.addIssue({
           code: "custom",
           path: ["schedule"],
-          message: "Completá la fecha, el inicio y el fin de la sesión (el fin después del inicio), o dejalos vacíos.",
+          message: "Completá la fecha y el inicio de la sesión (el fin, si lo ponés, después del inicio y sin pasar la medianoche), o dejalos vacíos.",
         });
       } else session = { date: data.session_date, start: data.session_start, end: data.session_end };
     }

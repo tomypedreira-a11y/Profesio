@@ -22,6 +22,25 @@ export function formatSessionLong(iso: string, timeZone: string): string {
   return formatInTimeZone(iso, timeZone, "EEEE d 'de' MMMM 'de' yyyy · HH:mm", { locale: es });
 }
 
+// Tiempo que falta para una sesión: "Faltan 25 min", "Falta 1 h 20 min", "Faltan 2 días y 3 h".
+export function formatTimeUntil(ms: number): string {
+  const totalMinutes = Math.ceil(ms / 60_000);
+  if (totalMinutes <= 0) return "Empieza ahora";
+
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  // Con días no se muestran los minutos: a esa distancia no aportan.
+  const [first, text] =
+    days > 0
+      ? [days, `${days} ${days === 1 ? "día" : "días"}${hours > 0 ? ` y ${hours} h` : ""}`]
+      : hours > 0
+        ? [hours, `${hours} h${minutes > 0 ? ` ${minutes} min` : ""}`]
+        : [minutes, `${minutes} min`];
+  return `${first === 1 ? "Falta" : "Faltan"} ${text}`;
+}
+
 // "01/05/1990 (36 años)"
 export function formatBirthDate(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
@@ -33,4 +52,14 @@ const currency = new Intl.NumberFormat("es-AR", { style: "currency", currency: "
 
 export function formatFee(value: number | null): string {
   return value === null ? "" : currency.format(value);
+}
+
+// Monto escrito por el usuario. Acepta "25000", "25.000", "25.000,50", "$ 25000".
+export function parseFee(raw: string): number | null | "invalid" {
+  let v = raw.replace(/[$\s]/g, "");
+  if (v === "") return null;
+  if (v.includes(",")) v = v.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(v)) v = v.replace(/\./g, "");
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : "invalid";
 }
