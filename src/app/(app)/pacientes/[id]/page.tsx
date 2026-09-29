@@ -9,9 +9,10 @@ import { formatBirthDate, formatFee, formatSchedule, formatSessionLong } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getTimeZone } from "../queries";
 import { ArchiveButton } from "./archive-button";
+import { ScheduleButton } from "./schedule-button";
 
 export const metadata: Metadata = { title: "Paciente" };
 
@@ -29,7 +30,7 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
 
   const supabase = await createClient();
   const now = new Date().toISOString();
-  const [{ data: upcoming }, { data: past }] = await Promise.all([
+  const [{ data: upcoming }, { data: past }, { data: notes, count: notesCount }] = await Promise.all([
     supabase
       .from("sessions")
       .select("id, starts_at, status")
@@ -44,6 +45,12 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
       .lte("starts_at", now)
       .order("starts_at", { ascending: false })
       .limit(10),
+    supabase
+      .from("session_book")
+      .select("note_id, starts_at, content, note_status", { count: "exact" })
+      .eq("patient_id", id)
+      .order("starts_at", { ascending: false })
+      .limit(3),
   ]);
 
   const fullName = `${patient.first_name} ${patient.last_name}`;
@@ -91,7 +98,8 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {patient.active && <ScheduleButton patient={{ id, name: fullName }} />}
           <Button variant="outline" render={<Link href={`/pacientes/${id}/editar`} />} nativeButton={false}>
             <PencilIcon />
             Editar
@@ -126,6 +134,7 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
         </Card>
 
         <div className="flex flex-col gap-4">
+          <NotesCard patientId={id} notes={notes ?? []} total={notesCount ?? 0} timeZone={timeZone} />
           <SessionsCard title="Próximas sesiones" sessions={upcoming ?? []} timeZone={timeZone} empty="No tiene sesiones agendadas." />
           <SessionsCard title="Últimas sesiones" sessions={past ?? []} timeZone={timeZone} empty="Todavía no tuvo sesiones." />
         </div>
@@ -161,6 +170,55 @@ function SessionsCard({
                   {formatSessionLong(s.starts_at, timeZone)}
                 </span>
                 {s.status === "cancelled" && <Badge variant="outline">Cancelada</Badge>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Últimos informes del paciente, con acceso a la lista completa.
+function NotesCard({
+  patientId,
+  notes,
+  total,
+  timeZone,
+}: {
+  patientId: string;
+  notes: { note_id: string | null; starts_at: string | null; content: string | null; note_status: string | null }[];
+  total: number;
+  timeZone: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Informes</CardTitle>
+        {total > 0 && (
+          <CardAction>
+            <Button variant="link" size="sm" render={<Link href={`/pacientes/${patientId}/informes`} />} nativeButton={false}>
+              Ver todos ({total})
+            </Button>
+          </CardAction>
+        )}
+      </CardHeader>
+      <CardContent>
+        {notes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Todavía no hay informes. Se cargan desde cada sesión en el calendario.</p>
+        ) : (
+          <ul className="divide-y">
+            {notes.map((n) => (
+              <li key={n.note_id} className="py-2 first:pt-0 last:pb-0">
+                <Link href={`/pacientes/${patientId}/informes#${n.note_id}`} className="group block">
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="font-medium first-letter:uppercase group-hover:underline">
+                      {formatSessionLong(n.starts_at!, timeZone)}
+                    </span>
+                    {n.note_status === "draft" && <Badge variant="secondary">Borrador</Badge>}
+                  </div>
+                  <p className="line-clamp-2 text-sm text-muted-foreground">{n.content}</p>
+                </Link>
               </li>
             ))}
           </ul>
