@@ -119,7 +119,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{fullName}</span>
-                  <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+                  {/* Con la cuenta activa (fondo verde) el gris no se leía: el email toma el mismo color que el nombre. */}
+                  <span className="truncate text-xs text-muted-foreground group-data-active/menu-button:text-inherit">
+                    {user.email}
+                  </span>
                 </div>
                 <ChevronsUpDownIcon className="ml-auto size-4" />
               </DropdownMenuTrigger>

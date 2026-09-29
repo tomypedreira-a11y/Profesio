@@ -57,15 +57,10 @@
   opacity: 0.75;
 }
 
-/* Color de la próxima sesión: amarillo pastel en claro (resalta sin impactar), ámbar en oscuro.
+/* Color de la próxima sesión: amarillo pastel (resalta sin impactar), el mismo en los dos temas.
    El borde es un tono más intenso para que el pastel no se pierda sobre el beige. */
 :root {
   --session-next: oklch(0.94 0.07 98);
   --session-next-border: oklch(0.86 0.11 95);
   --session-next-foreground: oklch(0.35 0.05 75);
-}
-.dark {
-  --session-next: oklch(0.75 0.15 70);
-  --session-next-border: oklch(0.75 0.15 70);
-  --session-next-foreground: oklch(0.2 0.04 60);
 }
