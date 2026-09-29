@@ -90,39 +90,46 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --primary-border: oklch(1 0 0 / 20%);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  /* Tema oscuro con la misma paleta que el claro (verde salvia y el beige como texto),
+     sobre superficies gris casi negro. */
+  --background: oklch(0.18 0 0);
+  --foreground: oklch(0.93 0.02 85);
+  /* Tarjetas un escalón más claras que el fondo; el panel lateral, uno más oscuro (como en el claro). */
+  --card: oklch(0.215 0 0);
+  --card-foreground: oklch(0.93 0.02 85);
+  --popover: oklch(0.215 0 0);
+  --popover-foreground: oklch(0.93 0.02 85);
+  /* Mismo verde que el tema claro. */
+  --primary: oklch(0.8 0.085 145);
+  --primary-foreground: oklch(0.27 0.05 150);
+  /* Borde en verde (no oliva como en el claro): sobre el negro, el oliva se veía amarillento. */
+  --primary-border: oklch(0.6 0.1 150);
+  --secondary: oklch(0.26 0.005 85);
+  --secondary-foreground: oklch(0.93 0.02 85);
+  --muted: oklch(0.25 0.004 85);
+  --muted-foreground: oklch(0.72 0.02 80);
+  /* El hover es un verde oscuro: el verde pálido del claro encandila sobre el negro. */
+  --accent: oklch(0.28 0.03 145);
+  --accent-foreground: oklch(0.925 0.045 140);
+  /* El rojo del claro, un poco más luminoso para leerse sobre el fondo oscuro. */
+  --destructive: oklch(0.68 0.16 32);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  /* El ítem activo del panel usa sidebar-primary: en oscuro se deja como estaba (gris). */
-  --sidebar-primary: oklch(0.269 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.68 0.1 145);
+  --chart-1: oklch(0.8 0.085 145);
+  --chart-2: oklch(0.62 0.09 150);
+  --chart-3: oklch(0.82 0.12 85);
+  --chart-4: oklch(0.6 0.07 60);
+  --chart-5: oklch(0.45 0.05 150);
+  --sidebar: oklch(0.16 0 0);
+  --sidebar-foreground: oklch(0.93 0.02 85);
+  /* Ítem activo del panel en verde, como en el claro; el hover, en verde oscuro. */
+  --sidebar-primary: oklch(0.8 0.085 145);
+  --sidebar-primary-foreground: oklch(0.27 0.05 150);
+  --sidebar-accent: oklch(0.28 0.03 145);
+  --sidebar-accent-foreground: oklch(0.925 0.045 140);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.68 0.1 145);
 }
 
 @layer base {
