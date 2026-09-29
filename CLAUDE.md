@@ -129,6 +129,10 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 - **Informes (historia clínica, Ley 26.529):** un borrador (`draft`) se edita; uno finalizado (`final`)
   **no se modifica ni se borra** (lo impide un trigger). Para corregir, se inserta una fila nueva con
   `supersedes_id`. Las sesiones con informe nunca se borran.
+  El borrador se guarda solo (`note-editor.tsx`): 3 s después de dejar de escribir, al ocultar la app y al cerrar
+  el editor, de a uno por vez (cola), así una corrección crea una sola versión nueva y después la actualiza.
+  Cada guardado queda en `audit_log`: no guardar por tecla. Una corrección en borrador se puede descartar
+  (`discardCorrection`); solo se revalidan las pantallas al finalizar o descartar.
 - **Pacientes:** se archivan, no se borran. Archivar quita las sesiones futuras de su horario fijo.
 - **Teléfonos:** se guardan en E.164 (`+5491123456789`) usando `normalizePhone` de `lib/phone.ts`.
   Argentina por defecto; a los números argentinos sin 9 se les agrega (se asumen celulares, para WhatsApp).
@@ -168,6 +172,5 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 
 - Etapa 7: PWA (manifest e íconos), separar `profesio-prod`, SMTP propio (mails en castellano),
   prueba con un psicólogo real.
-- Guardado automático del borrador del informe.
 - Auditoría de lecturas (hoy solo se registran modificaciones).
 - El calendario usa la zona horaria del dispositivo (no la del perfil).
