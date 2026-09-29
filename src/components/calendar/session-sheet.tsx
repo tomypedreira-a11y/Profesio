@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { NoteEditor } from "@/components/notes/note-editor";
+import { SessionPayment } from "@/components/payments/session-payment";
 import { SessionActions } from "./session-actions";
 import type { CalendarSession } from "./types";
 
@@ -67,6 +68,11 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
                   <MessageCircleIcon className="size-4" />
                   {formatPhone(session.phone)}
                 </a>
+              )}
+
+              {/* Cobro: solo en sesiones realizadas (ya empezaron y no se cancelaron) */}
+              {session.status === "scheduled" && new Date(session.starts_at) <= new Date() && (
+                <SessionPayment key={session.id} sessionId={session.id} timeZone={timeZone} />
               )}
 
               <SessionActions session={session} timeZone={timeZone} onChanged={onChanged} />

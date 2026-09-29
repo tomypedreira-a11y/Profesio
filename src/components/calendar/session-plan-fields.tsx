@@ -5,16 +5,20 @@
 import type { ReactNode } from "react";
 import { format } from "date-fns";
 import { PlusIcon, XIcon } from "lucide-react";
-import { isValidRange, type ScheduleSlot } from "@/lib/schedule";
+import { endFromDuration, isValidRange, resolveEnd, SESSION_LENGTHS, type ScheduleSlot } from "@/lib/schedule";
 import { WEEKDAYS } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel, FieldTitle } from "@/components/ui/field";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useSessionLength } from "@/components/profile-defaults-provider";
 import { DateTimePicker } from "./date-time-picker";
 import { TimeInput } from "./time-range-fields";
 
 type PlanSlot = { weekday: string; start: string; end: string }; // "" = sin completar
+
+// Lunes primero, domingo al final.
+const WEEKDAY_ITEMS = [1, 2, 3, 4, 5, 6, 0].map((d) => ({ value: String(d), label: WEEKDAYS[d] }));
 
 export type SessionPlan = {
   type: "fixed" | "irregular";
@@ -37,10 +41,12 @@ export function initialPlan(slots: ScheduleSlot[] = [], date?: Date): SessionPla
   };
 }
 
-// Horarios del plan en el formato de la base. null si falta algún dato o un fin no es posterior a su inicio.
-export function planSlots(plan: SessionPlan): ScheduleSlot[] | null {
-  if (plan.slots.some((s) => s.weekday === "" || !isValidRange(s.start, s.end))) return null;
-  return plan.slots.map((s) => ({ weekday: Number(s.weekday), start_time: s.start, end_time: s.end }));
+// Horarios del plan en el formato de la base, con el fin vacío completado con la duración habitual.
+// null si falta algún dato o un fin no es posterior a su inicio.
+export function planSlots(plan: SessionPlan, minutes: number): ScheduleSlot[] | null {
+  const slots = plan.slots.map((s) => ({ weekday: s.weekday, start_time: s.start, end_time: resolveEnd(s.start, s.end, minutes) }));
+  if (slots.some((s) => s.weekday === "" || !isValidRange(s.start_time, s.end_time))) return null;
+  return slots.map((s) => ({ ...s, weekday: Number(s.weekday) }));
 }
 
 export function planDate(plan: SessionPlan): string {
@@ -59,6 +65,10 @@ export function SessionPlanFields({ value, onChange, error, fixedHint, irregular
   const set = (changes: Partial<SessionPlan>) => onChange({ ...value, ...changes });
   const setSlot = (index: number, changes: Partial<PlanSlot>) =>
     set({ slots: value.slots.map((s, i) => (i === index ? { ...s, ...changes } : s)) });
+
+  const minutes = useSessionLength();
+  const lengthLabel = SESSION_LENGTHS.find((l) => l.minutes === minutes)?.label ?? `${minutes} minutos`;
+  const endHint = `Si dejás el fin vacío, la sesión dura ${lengthLabel} (se cambia en Mi perfil).`;
 
   return (
     <>
@@ -96,28 +106,29 @@ export function SessionPlanFields({ value, onChange, error, fixedHint, irregular
           </div>
           {value.slots.map((slot, i) => (
             <div key={i} className="grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_2rem] items-center gap-2">
-              <NativeSelect
-                value={slot.weekday}
-                onChange={(e) => setSlot(i, { weekday: e.target.value })}
-                aria-label="Día"
-                className="w-full"
+              <Select
+                value={slot.weekday || null}
+                onValueChange={(weekday) => setSlot(i, { weekday: weekday ?? "" })}
+                items={WEEKDAY_ITEMS}
               >
-                <NativeSelectOption value="" disabled>
-                  Elegí un día
-                </NativeSelectOption>
-                {/* Lunes primero, domingo al final */}
-                {[1, 2, 3, 4, 5, 6, 0].map((d) => (
-                  <NativeSelectOption key={d} value={String(d)}>
-                    {WEEKDAYS[d]}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                <SelectTrigger aria-label="Día" className="w-full">
+                  <SelectValue placeholder="Elegí un día" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WEEKDAY_ITEMS.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>
+                      {d.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <TimeInput value={slot.start} onChange={(start) => setSlot(i, { start })} aria-label="Inicio" />
               <TimeInput
                 value={slot.end}
                 onChange={(end) => setSlot(i, { end })}
                 invalid={slot.start.length === 5 && slot.end.length === 5 && slot.end <= slot.start}
-                aria-label="Fin"
+                placeholder={endFromDuration(slot.start, minutes) || "HH:MM"}
+                aria-label="Fin (opcional)"
               />
               <Button
                 type="button"
@@ -131,6 +142,10 @@ export function SessionPlanFields({ value, onChange, error, fixedHint, irregular
               </Button>
             </div>
           ))}
+          {/* "(opcional)" debajo de la columna del fin */}
+          <div className="-mt-1 grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_2rem] gap-2 text-xs text-muted-foreground">
+            <span className="col-start-3">(opcional)</span>
+          </div>
           <Button
             type="button"
             variant="outline"
@@ -146,6 +161,7 @@ export function SessionPlanFields({ value, onChange, error, fixedHint, irregular
             Agregar otro día
           </Button>
           {fixedHint && <FieldDescription>{fixedHint}</FieldDescription>}
+          <FieldDescription>{endHint}</FieldDescription>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -158,6 +174,7 @@ export function SessionPlanFields({ value, onChange, error, fixedHint, irregular
             onEndChange={(end) => set({ end })}
           />
           {irregularHint && <FieldDescription>{irregularHint}</FieldDescription>}
+          <FieldDescription>{endHint}</FieldDescription>
         </div>
       )}
 

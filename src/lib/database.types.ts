@@ -131,6 +131,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          default_session_minutes: number
           first_name: string
           id: string
           last_name: string
@@ -141,6 +142,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_session_minutes?: number
           first_name?: string
           id: string
           last_name?: string
@@ -151,6 +153,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_session_minutes?: number
           first_name?: string
           id?: string
           last_name?: string
@@ -470,6 +473,7 @@ export type Database = {
         Args: { p_from: string; p_series_id: string }
         Returns: undefined
       }
+      default_session_minutes: { Args: never; Returns: number }
       extend_series: { Args: never; Returns: number }
       generate_series_sessions: {
         Args: {

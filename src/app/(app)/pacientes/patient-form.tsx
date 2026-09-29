@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import type { FormState } from "@/lib/form-state";
-import type { ScheduleSlot } from "@/lib/schedule";
+import { formatFee } from "@/lib/format";
+import { resolveEnd, type ScheduleSlot } from "@/lib/schedule";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormMessage } from "@/components/form-message";
+import { useDefaultFee, useSessionLength } from "@/components/profile-defaults-provider";
 import { initialPlan, planDate, SessionPlanFields, type SessionPlan } from "@/components/calendar/session-plan-fields";
 import { BirthDateInput } from "./birth-date-input";
 
@@ -56,6 +58,10 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
   // Las sesiones son estado del componente (no inputs sueltos), así que no se pierden si hay error.
   const [plan, setPlan] = useState<SessionPlan>(() => initialPlan(defaults.schedules));
   const hadFixedSchedule = isEdit && defaults.schedules.length > 0;
+  // El fin vacío se completa con la duración habitual del perfil antes de enviar.
+  const minutes = useSessionLength();
+  // Sin valor propio, el paciente usa el valor por sesión del perfil (no se copia).
+  const defaultFee = useDefaultFee();
 
   return (
     <form action={formAction} className="flex max-w-2xl flex-col gap-4">
@@ -89,11 +95,11 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
       <input
         type="hidden"
         name="schedules"
-        value={JSON.stringify(plan.slots.map((s) => ({ weekday: s.weekday === "" ? null : Number(s.weekday), start_time: s.start, end_time: s.end })))}
+        value={JSON.stringify(plan.slots.map((s) => ({ weekday: s.weekday === "" ? null : Number(s.weekday), start_time: s.start, end_time: resolveEnd(s.start, s.end, minutes) })))}
       />
       <input type="hidden" name="session_date" value={plan.type === "irregular" ? planDate(plan) : ""} />
       <input type="hidden" name="session_start" value={plan.type === "irregular" ? plan.start : ""} />
-      <input type="hidden" name="session_end" value={plan.type === "irregular" ? plan.end : ""} />
+      <input type="hidden" name="session_end" value={plan.type === "irregular" ? resolveEnd(plan.start, plan.end, minutes) : ""} />
       {!archived && (
         <Card>
           <CardHeader>
@@ -134,13 +140,18 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
             <Field data-invalid={!!errors.phone}>
               <FieldLabel htmlFor="phone">Teléfono</FieldLabel>
               <div className="flex gap-2">
-                <NativeSelect name="phone_country" defaultValue={v("phone_country")} aria-label="País del teléfono" className="w-32 shrink-0 sm:w-44">
-                  {countries.map((c) => (
-                    <NativeSelectOption key={c.code} value={c.code}>
-                      {c.label}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                <Select name="phone_country" defaultValue={v("phone_country")} items={countries.map((c) => ({ value: c.code, label: c.label }))}>
+                  <SelectTrigger aria-label="País del teléfono" className="h-8 w-32 shrink-0 sm:w-44">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="min-w-56">
+                    {countries.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input id="phone" name="phone" type="tel" inputMode="tel" placeholder="11 2345-6789" defaultValue={v("phone")} aria-invalid={!!errors.phone} className="flex-1" />
               </div>
               <FieldDescription>Escribilo como quieras: con o sin 0, 15 o guiones.</FieldDescription>
@@ -166,7 +177,19 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
               </Field>
               <Field data-invalid={!!errors.session_fee}>
                 <FieldLabel htmlFor="session_fee">Valor por sesión ($)</FieldLabel>
-                <Input id="session_fee" name="session_fee" inputMode="decimal" placeholder="25.000" defaultValue={v("session_fee")} aria-invalid={!!errors.session_fee} />
+                <Input
+                  id="session_fee"
+                  name="session_fee"
+                  inputMode="decimal"
+                  placeholder={defaultFee !== null ? formatFee(defaultFee) : "25.000"}
+                  defaultValue={v("session_fee")}
+                  aria-invalid={!!errors.session_fee}
+                />
+                <FieldDescription>
+                  {defaultFee !== null
+                    ? `Si lo dejás vacío, usa el valor de tu perfil (${formatFee(defaultFee)}).`
+                    : "Podés definir un valor por defecto en Mi perfil."}
+                </FieldDescription>
                 <FieldError>{errors.session_fee?.[0]}</FieldError>
               </Field>
             </div>

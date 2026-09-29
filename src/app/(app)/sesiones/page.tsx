@@ -67,7 +67,7 @@ export default async function SessionsPage() {
                         href={`/pacientes/${s.patient_id}`}
                         className={cn(
                           "flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50",
-                          s.id === nextId && "border-l-4 border-l-(--session-next)",
+                          s.id === nextId && "border-l-4 border-l-(--session-next-border)",
                         )}
                       >
                         <span className={cn("w-24 shrink-0 text-sm tabular-nums text-muted-foreground", cancelled && "line-through")}>

@@ -7,7 +7,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { CalendarClockIcon, CalendarXIcon, UndoIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cancelSession, rescheduleSession, restoreSession } from "@/app/(app)/sesiones/actions";
-import { isValidRange } from "@/lib/schedule";
+import { isValidRange, resolveEnd } from "@/lib/schedule";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,6 +20,7 @@ import {
 import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@/components/ui/field";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FormMessage } from "@/components/form-message";
+import { useSessionLength } from "@/components/profile-defaults-provider";
 import { DateTimePicker } from "./date-time-picker";
 import type { CalendarSession } from "./types";
 
@@ -153,19 +154,21 @@ function RescheduleForm({
   const [scope, setScope] = useState<Scope>("one");
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
+  const minutes = useSessionLength();
 
   function submit() {
     if (!date) {
       setError("Elegí la fecha.");
       return;
     }
-    if (!isValidRange(start, end)) {
-      setError("Completá el inicio y el fin (el fin tiene que ser después del inicio).");
+    const resolvedEnd = resolveEnd(start, end, minutes);
+    if (!isValidRange(start, resolvedEnd)) {
+      setError("Completá el inicio. El fin tiene que ser después del inicio, sin pasar la medianoche.");
       return;
     }
     setError(undefined);
     startTransition(async () => {
-      const result = await rescheduleSession({ sessionId: session.id, date: format(date, "yyyy-MM-dd"), start, end, scope });
+      const result = await rescheduleSession({ sessionId: session.id, date: format(date, "yyyy-MM-dd"), start, end: resolvedEnd, scope });
       if (result.error) setError(result.error);
       else {
         toast.success(scope === "one" ? "Sesión reprogramada." : "Horario fijo actualizado.");

@@ -3,9 +3,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/app-sidebar";
+import { ProfileDefaultsProvider } from "@/components/profile-defaults-provider";
 import { ThemeSync } from "@/components/theme-provider";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { DEFAULT_SESSION_MINUTES } from "@/lib/schedule";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -15,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("first_name, last_name, theme")
+    .select("first_name, last_name, theme, default_session_minutes, default_session_fee")
     .eq("id", claims.sub)
     .single();
 
@@ -38,7 +40,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Separator orientation="vertical" className="mr-2 h-4" />
           <span className="text-sm font-medium text-muted-foreground">Profesio</span>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">{children}</div>
+        <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+          <ProfileDefaultsProvider
+            value={{
+              sessionMinutes: profile?.default_session_minutes ?? DEFAULT_SESSION_MINUTES,
+              sessionFee: profile?.default_session_fee ?? null,
+            }}
+          >
+            {children}
+          </ProfileDefaultsProvider>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
