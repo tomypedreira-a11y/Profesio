@@ -3,11 +3,9 @@
 // Panel para agendar una sesión suelta: fecha (calendario) + horario.
 import { useState, useTransition } from "react";
 import { format, startOfDay } from "date-fns";
-import { es } from "react-day-picker/locale";
 import { toast } from "sonner";
 import { scheduleSession } from "@/app/(app)/sesiones/actions";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -16,15 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { FormMessage } from "@/components/form-message";
-
-// Horarios cada 15 minutos, de 7:00 a 22:00.
-const TIMES = Array.from({ length: (22 - 7) * 4 + 1 }, (_, i) => {
-  const minutes = 7 * 60 + i * 15;
-  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
-});
+import { DateTimePicker } from "./date-time-picker";
 
 type ScheduleSessionDialogProps = {
   patient: { id: string; name: string } | null; // null = cerrado
@@ -96,29 +87,7 @@ function ScheduleForm({
 
       <FormMessage error={error} />
 
-      <Calendar
-        mode="single"
-        locale={es}
-        selected={date}
-        onSelect={setDate}
-        defaultMonth={initial}
-        disabled={{ before: today }}
-        className="mx-auto rounded-lg border"
-      />
-
-      <Field>
-        <FieldLabel htmlFor="session-time">Horario</FieldLabel>
-        <NativeSelect id="session-time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full">
-          <NativeSelectOption value="" disabled>
-            Elegí un horario
-          </NativeSelectOption>
-          {TIMES.map((t) => (
-            <NativeSelectOption key={t} value={t}>
-              {t}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </Field>
+      <DateTimePicker date={date} onDateChange={setDate} time={time} onTimeChange={setTime} />
 
       <DialogFooter>
         <Button onClick={submit} disabled={pending}>

@@ -17,7 +17,8 @@ import { UnscheduledPanel } from "./unscheduled-panel";
 import type { CalendarSession, UnscheduledPatient } from "./types";
 import "./calendar.css";
 
-const SESSION_COLUMNS = "id, patient_id, series_id, starts_at, ends_at, status, rescheduled_from, first_name, last_name, phone";
+const SESSION_COLUMNS =
+  "id, patient_id, series_id, starts_at, ends_at, status, rescheduled_from, first_name, last_name, phone, series_active";
 
 // Horario visible por defecto; se amplía si hay sesiones fuera de este rango.
 const DEFAULT_MIN_HOUR = 8;
@@ -241,6 +242,10 @@ export function CalendarView({ timeZone }: { timeZone: string }) {
         isNext={selected?.isNext ?? false}
         timeZone={timeZone}
         onOpenChange={(open) => !open && setSelected(null)}
+        onChanged={() => {
+          setSelected(null);
+          refresh();
+        }}
       />
 
       <ScheduleSessionDialog
