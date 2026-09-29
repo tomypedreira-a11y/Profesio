@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { useTheme } from "next-themes";
 import {
   CalendarClockIcon,
   CalendarDaysIcon,
@@ -14,18 +13,11 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { logout } from "@/app/(auth)/actions";
-import { updateTheme } from "@/app/(app)/actions";
-import { THEMES } from "@/lib/theme";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -58,18 +50,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
-  const { theme, setTheme } = useTheme();
   const [, startTransition] = useTransition();
 
   const fullName = `${user.firstName} ${user.lastName}`.trim() || user.email;
   const initials =
     `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() ||
     user.email.charAt(0).toUpperCase();
-
-  function changeTheme(value: string) {
-    setTheme(value); // cambia al instante
-    startTransition(() => updateTheme(value)); // y lo guarda en el perfil
-  }
 
   return (
     <Sidebar collapsible="icon">
@@ -126,17 +112,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 <ChevronsUpDownIcon className="ml-auto size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="min-w-56">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>Tema</DropdownMenuLabel>
-                  <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={changeTheme}>
-                    {THEMES.map((t) => (
-                      <DropdownMenuRadioItem key={t.value} value={t.value}>
-                        {t.label}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => {
                     setOpenMobile(false);
