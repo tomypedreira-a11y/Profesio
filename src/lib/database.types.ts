@@ -135,6 +135,7 @@ export type Database = {
           id: string
           last_name: string
           license_number: string | null
+          palette: string
           theme: string
           timezone: string
           updated_at: string
@@ -145,6 +146,7 @@ export type Database = {
           id: string
           last_name?: string
           license_number?: string | null
+          palette?: string
           theme?: string
           timezone?: string
           updated_at?: string
@@ -155,6 +157,7 @@ export type Database = {
           id?: string
           last_name?: string
           license_number?: string | null
+          palette?: string
           theme?: string
           timezone?: string
           updated_at?: string

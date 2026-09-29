@@ -56,7 +56,7 @@ src/
   lib/
     supabase/{client,server,proxy}.ts
     database.types.ts            Generado por Supabase: NO editar a mano
-    phone.ts  format.ts  form-state.ts  theme.ts
+    phone.ts  format.ts  form-state.ts  theme.ts  palettes.ts  schedule.ts
 supabase/migrations/             Toda la estructura de la base, en orden
 ```
 
@@ -137,6 +137,12 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 - Tema claro/oscuro con `next-themes`; la preferencia se guarda en `profiles.theme`.
 - **Configuración** (`/configuracion`): cada sección es un `<SettingsSection>` y cada opción un `<Field>` adentro.
   Las opciones se aplican al instante y se guardan en `profiles` con una Server Action.
+- **Paletas de color** (independientes del modo claro/oscuro): `<html data-palette="…">`, aplicado desde el servidor
+  con la cookie `palette` (sin parpadeo) y sincronizado con `profiles.palette`. Para agregar una: sus colores
+  en `src/app/palettes.css` (plantilla adentro, claro y oscuro) y su entrada en `PALETTES` (`lib/palettes.ts`);
+  no hace falta migración. El selector listo para usar es `components/palette-selector.tsx`.
+- **Colores: siempre con las variables del tema** (`bg-primary`, `text-muted-foreground`, `var(--border)`…),
+  nunca fijos (`bg-blue-500`, `#fff`), para que respeten el modo y la paleta.
 - Comentarios breves en castellano explicando el *porqué*.
 
 ## Flujo de trabajo (Git)

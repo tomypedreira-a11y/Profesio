@@ -1,0 +1,59 @@
+/* =============================================================================
+   Paletas de color.
+   Cada paleta redefine los colores de globals.css para el modo claro y para el
+   oscuro. Se activa con <html data-palette="nombre"> (lo pone el layout raíz).
+
+   "neutral" es la base de globals.css: no lleva reglas acá.
+
+   Para agregar una paleta:
+   1. Copiar la plantilla de abajo y reemplazar "nombre" (minúsculas, sin espacios).
+   2. Completar los valores en oklch, para claro y para oscuro.
+   3. Sumarla a PALETTES en src/lib/palettes.ts, con su nombre visible y color de muestra.
+
+   Qué redefinir (lo mínimo es el bloque "Marca"):
+   - Marca: botones principales, sesiones del calendario, selección y foco.
+   - Fondos (opcional): un tinte leve del color en fondo, tarjetas y bordes
+     le da más identidad al tema. Mantenerlo muy suave para no cansar la vista.
+   - Gráficos (opcional): --chart-1 … --chart-5.
+   - Próxima sesión (opcional): --session-next / --session-next-foreground
+     (ámbar por defecto, en calendar.css). Redefinir si la paleta es cálida y se confunde.
+
+   Contraste: el texto sobre --primary (--primary-foreground) tiene que ser legible
+   en los dos modos (WCAG AA: 4.5:1 como mínimo).
+
+   Los selectores usan html[...] para ganarle en especificidad a :root y .dark,
+   así el orden de los archivos no importa.
+   ============================================================================= */
+
+/* Plantilla:
+
+html[data-palette="nombre"]:not(.dark) {
+  (marca)
+  --primary: oklch(L C H);
+  --primary-foreground: oklch(L C H);
+  --ring: oklch(L C H);
+  --sidebar-primary: oklch(L C H);
+  --sidebar-primary-foreground: oklch(L C H);
+  --sidebar-ring: oklch(L C H);
+
+  (fondos, opcional)
+  --background: oklch(L C H);
+  --card: oklch(L C H);
+  --popover: oklch(L C H);
+  --secondary: oklch(L C H);
+  --muted: oklch(L C H);
+  --accent: oklch(L C H);
+  --accent-foreground: oklch(L C H);
+  --border: oklch(L C H);
+  --input: oklch(L C H);
+  --sidebar: oklch(L C H);
+  --sidebar-accent: oklch(L C H);
+  --sidebar-accent-foreground: oklch(L C H);
+  --sidebar-border: oklch(L C H);
+}
+
+html.dark[data-palette="nombre"] {
+  (las mismas variables, con los valores para modo oscuro)
+}
+
+*/

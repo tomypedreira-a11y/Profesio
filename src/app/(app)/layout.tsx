@@ -2,8 +2,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_PALETTE } from "@/lib/palettes";
 import { AppSidebar } from "@/components/app-sidebar";
-import { ThemeSync } from "@/components/theme-provider";
+import { PaletteSync, ThemeSync } from "@/components/theme-provider";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -15,7 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("first_name, last_name, theme")
+    .select("first_name, last_name, theme, palette")
     .eq("id", claims.sub)
     .single();
 
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <SidebarProvider defaultOpen={sidebarOpen}>
       <ThemeSync theme={profile?.theme ?? "system"} />
+      <PaletteSync palette={profile?.palette ?? DEFAULT_PALETTE} />
       <AppSidebar
         user={{
           firstName: profile?.first_name ?? "",

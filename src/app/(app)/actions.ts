@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { formValues, type FormState } from "@/lib/form-state";
 import { isTheme } from "@/lib/theme";
+import { isPalette } from "@/lib/palettes";
 
 const profileSchema = z.object({
   first_name: z.string().trim().min(1, "Ingresá tu nombre."),
@@ -48,4 +49,11 @@ export async function updateTheme(theme: string) {
   const { supabase, userId } = await currentUserId();
   if (!userId) return;
   await supabase.from("profiles").update({ theme }).eq("id", userId);
+}
+
+export async function updatePalette(palette: string) {
+  if (!isPalette(palette)) return;
+  const { supabase, userId } = await currentUserId();
+  if (!userId) return;
+  await supabase.from("profiles").update({ palette }).eq("id", userId);
 }
