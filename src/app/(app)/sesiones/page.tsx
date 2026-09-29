@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
-import { getTimeZone } from "../pacientes/queries";
+import { AddSessionButton } from "@/components/calendar/add-session-button";
+import { getPatientOptions, getTimeZone } from "../pacientes/queries";
 import "@/components/calendar/calendar.css"; // colores de las sesiones
 
 export const metadata: Metadata = { title: "Sesiones" };
@@ -16,7 +17,7 @@ const DAYS_AHEAD = 14;
 // Lista de próximas sesiones, agrupadas por día.
 export default async function SessionsPage() {
   const supabase = await createClient();
-  const timeZone = await getTimeZone();
+  const [timeZone, patients] = await Promise.all([getTimeZone(), getPatientOptions()]);
   const now = new Date();
   const until = new Date(now.getTime() + DAYS_AHEAD * 24 * 60 * 60 * 1000);
 
@@ -40,7 +41,10 @@ export default async function SessionsPage() {
 
   return (
     <>
-      <PageHeader title="Sesiones" description={`Próximos ${DAYS_AHEAD} días`} />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeader title="Sesiones" description={`Próximos ${DAYS_AHEAD} días`} />
+        <AddSessionButton patients={patients} />
+      </div>
 
       {sessions.length === 0 ? (
         <p className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">

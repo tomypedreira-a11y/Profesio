@@ -3,31 +3,38 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { scheduleSlotsSchema, timeSchema } from "@/lib/schedule";
 
-const scheduleSchema = z.object({
-  patientId: z.uuid(),
-  date: z.iso.date(),
-  time: z.string().regex(/^\d{2}:\d{2}$/),
-});
+// Fecha + inicio y fin; el fin después del inicio.
+const whenSchema = z
+  .object({ date: z.iso.date(), start: timeSchema, end: timeSchema })
+  .refine((w) => w.end > w.start);
 
-// Agenda una sesión suelta. Devuelve { error } si no se pudo.
-export async function scheduleSession(input: { patientId: string; date: string; time: string }) {
-  const parsed = scheduleSchema.safeParse(input);
-  if (!parsed.success) return { error: "Elegí una fecha y un horario." };
+const addSessionsSchema = z.discriminatedUnion("type", [
+  // Irregular: una sesión suelta.
+  whenSchema.safeExtend({ type: z.literal("irregular"), patientId: z.uuid() }),
+  // Regular: se suman horarios fijos a los que ya tenga el paciente.
+  z.object({ type: z.literal("fixed"), patientId: z.uuid(), slots: scheduleSlotsSchema.min(1) }),
+]);
+
+// Agrega sesiones a un paciente. Devuelve { error } si no se pudo.
+export async function addSessions(input: z.input<typeof addSessionsSchema>) {
+  const parsed = addSessionsSchema.safeParse(input);
+  if (!parsed.success) return { error: "Revisá el paciente, el día, el inicio y el fin." };
+  const data = parsed.data;
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("schedule_session", {
-    p_patient_id: parsed.data.patientId,
-    p_date: parsed.data.date,
-    p_time: parsed.data.time,
-  });
+  const { error } =
+    data.type === "irregular"
+      ? await supabase.rpc("schedule_session", {
+          p_patient_id: data.patientId,
+          p_date: data.date,
+          p_time: data.start,
+          p_end_time: data.end,
+        })
+      : await supabase.rpc("add_patient_schedules", { p_patient_id: data.patientId, p_schedules: data.slots });
 
-  if (error) {
-    return {
-      error: error.hint === "schedule_conflict" ? error.message : "No se pudo agendar la sesión. Volvé a intentar.",
-    };
-  }
-
+  if (error) return { error: conflictMessage(error, "No se pudo agendar. Volvé a intentar.") };
   revalidatePath("/", "layout");
   return {};
 }
@@ -38,12 +45,7 @@ export async function scheduleSession(input: { patientId: string; date: string; 
 
 const scopeSchema = z.enum(["one", "following"]); // solo esta / esta y las siguientes
 
-const rescheduleSchema = z.object({
-  sessionId: z.uuid(),
-  date: z.iso.date(),
-  time: z.string().regex(/^\d{2}:\d{2}$/),
-  scope: scopeSchema,
-});
+const rescheduleSchema = whenSchema.safeExtend({ sessionId: z.uuid(), scope: scopeSchema });
 
 function conflictMessage(error: { code?: string; hint?: string; message: string }, fallback: string) {
   if (error.hint === "schedule_conflict") return error.message;
@@ -54,11 +56,11 @@ function conflictMessage(error: { code?: string; hint?: string; message: string 
 
 export async function rescheduleSession(input: z.input<typeof rescheduleSchema>) {
   const parsed = rescheduleSchema.safeParse(input);
-  if (!parsed.success) return { error: "Elegí una fecha y un horario." };
-  const { sessionId, date, time, scope } = parsed.data;
+  if (!parsed.success) return { error: "Revisá la fecha, el inicio y el fin." };
+  const { sessionId, date, start, end, scope } = parsed.data;
 
   const supabase = await createClient();
-  const args = { p_session_id: sessionId, p_date: date, p_time: time };
+  const args = { p_session_id: sessionId, p_date: date, p_time: start, p_end_time: end };
   const { error } =
     scope === "one"
       ? await supabase.rpc("reschedule_session", args)

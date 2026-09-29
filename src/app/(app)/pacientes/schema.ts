@@ -1,6 +1,15 @@
 // Validación del formulario de paciente. Se usa en el servidor (acciones).
 import { z } from "zod";
 import { isCountryCode, normalizePhone } from "@/lib/phone";
+import { isValidRange, scheduleSlotsSchema, type ScheduleSlot } from "@/lib/schedule";
+
+function parseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 
 // Texto opcional: "" → null.
 const optionalText = z
@@ -34,8 +43,10 @@ export const patientSchema = z
     first_name: z.string().trim().min(1, "Ingresá el nombre."),
     last_name: z.string().trim().min(1, "Ingresá el apellido."),
     schedule_type: z.enum(["fixed", "irregular"]),
-    weekday: z.string().optional(),
-    start_time: z.string().optional(),
+    schedules: z.string(), // JSON: [{ weekday, start_time, end_time }]
+    session_date: z.string(), // irregular: primera sesión (opcional), AAAA-MM-DD
+    session_start: z.string(),
+    session_end: z.string(),
     phone_country: z.string().refine(isCountryCode, "País inválido."),
     phone: z.string().trim(),
     dni: optionalText.pipe(
@@ -46,17 +57,27 @@ export const patientSchema = z
     session_fee: z.string(),
   })
   .transform((data, ctx) => {
-    // Horario fijo: día y hora obligatorios.
-    let weekday: number | null = null;
-    let startTime: string | null = null;
+    // Regular: uno o más días fijos, todos con día, inicio y fin.
+    // Irregular: sin horarios fijos; la primera sesión es opcional, pero con fecha, inicio y fin.
+    let schedules: ScheduleSlot[] = [];
+    let session: { date: string; start: string; end: string } | null = null;
     if (data.schedule_type === "fixed") {
-      const d = data.weekday ? Number(data.weekday) : NaN; // "" no es domingo (0)
-      if (!Number.isInteger(d) || d < 0 || d > 6) {
-        ctx.addIssue({ code: "custom", path: ["weekday"], message: "Elegí el día." });
-      } else weekday = d;
-      if (!data.start_time || !/^\d{2}:\d{2}$/.test(data.start_time)) {
-        ctx.addIssue({ code: "custom", path: ["start_time"], message: "Elegí el horario." });
-      } else startTime = data.start_time;
+      const parsed = scheduleSlotsSchema.min(1).safeParse(parseJson(data.schedules));
+      if (!parsed.success) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["schedule"],
+          message: "Completá el día, el inicio y el fin de cada sesión (el fin tiene que ser después del inicio).",
+        });
+      } else schedules = parsed.data;
+    } else if (data.session_date !== "" || data.session_start !== "" || data.session_end !== "") {
+      if (!z.iso.date().safeParse(data.session_date).success || !isValidRange(data.session_start, data.session_end)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["schedule"],
+          message: "Completá la fecha, el inicio y el fin de la sesión (el fin después del inicio), o dejalos vacíos.",
+        });
+      } else session = { date: data.session_date, start: data.session_start, end: data.session_end };
     }
 
     // Teléfono (opcional): se normaliza a formato internacional.
@@ -83,7 +104,7 @@ export const patientSchema = z
       ctx.addIssue({ code: "custom", path: ["session_fee"], message: "Ingresá un monto válido." });
     }
 
-    // Formato de los parámetros de create_patient / update_patient.
+    // Formato de los parámetros de create_patient_with_schedules / update_patient_with_schedules.
     // undefined = "sin dato" (la base lo guarda como null).
     return {
       p_first_name: data.first_name,
@@ -93,7 +114,9 @@ export const patientSchema = z
       p_email: data.email ?? undefined,
       p_birth_date: birthDate ?? undefined,
       p_session_fee: typeof fee === "number" ? fee : undefined,
-      p_weekday: weekday ?? undefined,
-      p_start_time: startTime ?? undefined,
+      p_schedules: schedules,
+      p_session_date: session?.date,
+      p_session_time: session?.start,
+      p_session_end_time: session?.end,
     };
   });

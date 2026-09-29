@@ -1,3 +1,5 @@
+import type { ScheduleSlot } from "@/lib/schedule";
+
 export type CalendarSession = {
   id: string;
   patient_id: string;
@@ -13,3 +15,6 @@ export type CalendarSession = {
 };
 
 export type UnscheduledPatient = { id: string; first_name: string; last_name: string };
+
+// Paciente activo, para elegirlo al agregar una sesión.
+export type PatientOption = { id: string; name: string; schedules: ScheduleSlot[] };

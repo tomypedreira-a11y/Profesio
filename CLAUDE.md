@@ -27,8 +27,10 @@ npm run lint
 
 npx supabase migration new nombre   # nueva migración (vacía)
 npx supabase db push                 # aplica migraciones al proyecto vinculado
-npx supabase gen types typescript --linked > src/lib/database.types.ts
+npx supabase gen types typescript --linked | Out-File -Encoding utf8 src/lib/database.types.ts
 ```
+
+En PowerShell 5.1, `>` guarda el archivo en UTF-16 y git lo trata como binario (diffs ilegibles): usar `Out-File -Encoding utf8`.
 
 Si Next no toma archivos nuevos (sobre todo `proxy.ts`), borrar la caché: `.next`.
 El equipo trabaja en **Windows / PowerShell**.
@@ -69,8 +71,8 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 |---|---|
 | `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema y zona horaria. |
 | `patients` | Pacientes. `active = false` = archivado. Teléfono en E.164. |
-| `session_series` | Horario fijo semanal de un paciente. `end_date is null` = vigente. |
-| `sessions` | Cada sesión concreta (suelta o generada por una serie). 45 min por defecto. |
+| `session_series` | Horario fijo semanal (día, hora y duración). Un paciente puede tener varios. `end_date is null` = vigente. |
+| `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). |
 | `session_notes` | Informes de sesión, con versiones. |
 | `audit_log` | Registro de modificaciones (lo escriben triggers). |
 
@@ -91,12 +93,21 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 
 ### Reglas del dominio
 
-- **Sesiones:** 45 minutos. La base impide sesiones superpuestas no canceladas (restricción de exclusión).
+- **Sesiones:** la duración la elige el usuario (inicio y fin, escritos como `HH:MM`); una sesión no cruza la medianoche.
+  Sin fin, `schedule_session` usa 45 minutos y reprogramar conserva la duración (compatibilidad).
+  La base impide sesiones superpuestas no canceladas (restricción de exclusión).
   Los choques devuelven errores con `hint = 'schedule_conflict'`; mostrarlos tal cual al usuario.
 - **Horarios fijos:** se generan filas reales en `sessions` (no recurrencias calculadas al vuelo).
   Se generan 12 meses; `extend_series()` (llamada al abrir el calendario) extiende cuando quedan menos de 3.
-  Usar las funciones existentes: `create_patient`, `update_patient`, `set_patient_schedule`,
-  `schedule_session`, `reschedule_session`, `reschedule_series_from`, `cancel_series_from`, `set_patient_archived`.
+  Un paciente puede tener varios horarios fijos (ej. martes y jueves 18:00); `patient_list.schedules` los trae todos
+  (`weekday`/`start_time` solo el más reciente, por compatibilidad). Formato: `[{ weekday, start_time, end_time }]` (`lib/schedule.ts`).
+  Usar las funciones existentes: `create_patient_with_schedules`, `update_patient_with_schedules` (deja exactamente
+  los horarios indicados), `add_patient_schedules` (suma horarios), `schedule_session`, `reschedule_session`,
+  `reschedule_series_from`, `cancel_series_from`, `set_patient_archived`.
+  `create_patient`, `update_patient` y `set_patient_schedule` quedan solo por compatibilidad: no usarlas.
+- **Agregar sesión:** el mismo panel (`components/calendar/add-session-dialog.tsx`) en Sesiones, Calendario y la ficha
+  del paciente; el formulario de paciente usa sus mismos campos (`session-plan-fields.tsx`).
+  Regular = suma días fijos; irregular = una sesión suelta.
 - **Estados de sesión:** solo `scheduled` y `cancelled`. Una sesión pasada no cancelada se considera realizada.
   La "próxima sesión" se calcula (primera futura con `scheduled`); no se guarda.
 - **Informes (historia clínica, Ley 26.529):** un borrador (`draft`) se edita; uno finalizado (`final`)
