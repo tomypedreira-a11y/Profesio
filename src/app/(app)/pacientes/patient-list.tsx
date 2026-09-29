@@ -1,0 +1,147 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { SearchIcon } from "lucide-react";
+import { formatPhone } from "@/lib/phone";
+import { formatSchedule, formatSessionShort } from "@/lib/format";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+
+export type PatientListItem = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  dni: string | null;
+  weekday: number | null;
+  start_time: string | null;
+  last_session_at: string | null;
+  next_session_at: string | null;
+};
+
+type SortKey = "alfabetico" | "recientes" | "proximas";
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "alfabetico", label: "Alfabético" },
+  { value: "recientes", label: "Sesiones más recientes" },
+  { value: "proximas", label: "Próximas sesiones" },
+];
+
+const collator = new Intl.Collator("es", { sensitivity: "base" });
+const byName = (a: PatientListItem, b: PatientListItem) =>
+  collator.compare(a.last_name, b.last_name) || collator.compare(a.first_name, b.first_name);
+
+// Compara fechas ISO dejando los pacientes sin fecha al final.
+function byDate(a: string | null, b: string | null, direction: 1 | -1) {
+  if (a === b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+  return a < b ? -direction : direction;
+}
+
+// Sin acentos y en minúsculas, para buscar "gomez" y encontrar "Gómez".
+const normalize = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+export function PatientList({
+  patients,
+  timeZone,
+  showSort = true,
+}: {
+  patients: PatientListItem[];
+  timeZone: string;
+  showSort?: boolean;
+}) {
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortKey>("alfabetico");
+
+  const visible = useMemo(() => {
+    const q = normalize(query.trim());
+    const digits = query.replace(/\D/g, "");
+    const filtered = q
+      ? patients.filter(
+          (p) =>
+            normalize(`${p.first_name} ${p.last_name}`).includes(q) ||
+            normalize(`${p.last_name} ${p.first_name}`).includes(q) ||
+            (digits.length >= 3 && ((p.phone ?? "").includes(digits) || (p.dni ?? "").replace(/\D/g, "").includes(digits))),
+        )
+      : patients;
+
+    const sorted = [...filtered];
+    if (sort === "alfabetico") sorted.sort(byName);
+    if (sort === "recientes") sorted.sort((a, b) => byDate(a.last_session_at, b.last_session_at, -1) || byName(a, b));
+    if (sort === "proximas") sorted.sort((a, b) => byDate(a.next_session_at, b.next_session_at, 1) || byName(a, b));
+    return sorted;
+  }, [patients, query, sort]);
+
+  // Qué dato mostrar a la derecha según el orden elegido.
+  function detail(p: PatientListItem) {
+    if (sort === "recientes") return p.last_session_at ? `Última: ${formatSessionShort(p.last_session_at, timeZone)}` : "Sin sesiones";
+    if (sort === "proximas") return p.next_session_at ? `Próxima: ${formatSessionShort(p.next_session_at, timeZone)}` : "Sin sesiones";
+    return formatSchedule(p.weekday, p.start_time);
+  }
+
+  if (patients.length === 0) return null;
+
+  let lastLetter = "";
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Buscar por nombre, teléfono o documento"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-8"
+            aria-label="Buscar pacientes"
+          />
+        </div>
+        {showSort && (
+          <NativeSelect value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Ordenar" className="sm:w-56">
+            {SORT_OPTIONS.map((o) => (
+              <NativeSelectOption key={o.value} value={o.value}>
+                {o.label}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        )}
+      </div>
+
+      {visible.length === 0 ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">No hay pacientes que coincidan con la búsqueda.</p>
+      ) : (
+        <ul className="divide-y rounded-lg border">
+          {visible.map((p) => {
+            // En orden alfabético, un separador por cada letra (como en los contactos).
+            const letter = normalize(p.last_name.charAt(0)).toUpperCase();
+            const showLetter = sort === "alfabetico" && !query && letter !== lastLetter;
+            lastLetter = letter;
+            return (
+              <li key={p.id}>
+                {showLetter && (
+                  <div className="bg-muted/50 px-4 py-1 text-xs font-semibold text-muted-foreground">{letter}</div>
+                )}
+                <Link href={`/pacientes/${p.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">
+                  <Avatar className="size-10">
+                    <AvatarFallback>{`${p.first_name.charAt(0)}${p.last_name.charAt(0)}`.toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">
+                      {p.last_name}, {p.first_name}
+                    </p>
+                    <p className="truncate text-sm text-muted-foreground">{p.phone ? formatPhone(p.phone) : "Sin teléfono"}</p>
+                  </div>
+                  <span className="shrink-0 text-right text-xs text-muted-foreground">{detail(p)}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
