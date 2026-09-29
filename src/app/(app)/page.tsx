@@ -1,13 +1,13 @@
-import { PageHeader } from "@/components/page-header";
+import { createClient } from "@/lib/supabase/server";
+import { CalendarView } from "@/components/calendar/calendar-view";
+import { getTimeZone } from "./pacientes/queries";
 
-// Vista principal. El calendario llega en la etapa 4.
-export default function CalendarPage() {
-  return (
-    <>
-      <PageHeader title="Calendario" description="Tus sesiones por día, semana y mes." />
-      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed p-10 text-sm text-muted-foreground">
-        Acá va a estar el calendario (etapa 4).
-      </div>
-    </>
-  );
+// Vista principal: el calendario.
+export default async function CalendarPage() {
+  const supabase = await createClient();
+  // Mantiene generados al menos 3 meses de sesiones de los horarios fijos.
+  await supabase.rpc("extend_series");
+  const timeZone = await getTimeZone();
+
+  return <CalendarView timeZone={timeZone} />;
 }
