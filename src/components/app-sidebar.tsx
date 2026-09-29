@@ -9,6 +9,7 @@ import {
   CalendarDaysIcon,
   ChevronsUpDownIcon,
   LogOutIcon,
+  SettingsIcon,
   UserRoundIcon,
   UsersIcon,
 } from "lucide-react";
@@ -46,6 +47,7 @@ const NAV_ITEMS = [
   { href: "/pacientes", label: "Pacientes", icon: UsersIcon },
   { href: "/sesiones", label: "Sesiones", icon: CalendarClockIcon },
   { href: "/perfil", label: "Mi perfil", icon: UserRoundIcon },
+  { href: "/configuracion", label: "Configuración", icon: SettingsIcon },
 ];
 
 type AppSidebarProps = {

@@ -48,6 +48,7 @@ src/
       pacientes/                 Listado, alta, ficha, edición, archivados, informes
       sesiones/                  Lista de próximas sesiones + acciones de sesiones
       perfil/                    Perfil del psicólogo
+      configuracion/             Preferencias, en secciones (hoy: Personalización)
   components/
     ui/                          Componentes de shadcn (generados por la CLI)
     calendar/                    Calendario, panel de sesión, agendar, reprogramar/cancelar
@@ -134,6 +135,8 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   - Un ítem de menú que navega: `onClick={() => router.push(...)}`, no un `<Link>` adentro.
   - Agregar componentes con `npx shadcn@latest add <nombre>`; no copiarlos a mano.
 - Tema claro/oscuro con `next-themes`; la preferencia se guarda en `profiles.theme`.
+- **Configuración** (`/configuracion`): cada sección es un `<SettingsSection>` y cada opción un `<Field>` adentro.
+  Las opciones se aplican al instante y se guardan en `profiles` con una Server Action.
 - Comentarios breves en castellano explicando el *porqué*.
 
 ## Flujo de trabajo (Git)
