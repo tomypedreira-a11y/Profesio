@@ -48,7 +48,7 @@ src/
       pacientes/                 Listado, alta, ficha, edición, archivados, informes
       sesiones/                  Lista de próximas sesiones + acciones de sesiones
       perfil/                    Perfil del psicólogo
-      configuracion/             Preferencias, en secciones (hoy: Personalización)
+      configuracion/             Preferencias, en secciones (hoy: Personalización: modo y paleta)
   components/
     ui/                          Componentes de shadcn (generados por la CLI)
     calendar/                    Calendario, panel de sesión, agendar, reprogramar/cancelar
@@ -140,7 +140,7 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 - **Paletas de color** (independientes del modo claro/oscuro): `<html data-palette="…">`, aplicado desde el servidor
   con la cookie `palette` (sin parpadeo) y sincronizado con `profiles.palette`. Para agregar una: sus colores
   en `src/app/palettes.css` (plantilla adentro, claro y oscuro) y su entrada en `PALETTES` (`lib/palettes.ts`);
-  no hace falta migración. El selector listo para usar es `components/palette-selector.tsx`.
+  no hace falta migración. Se elige en Configuración → Personalización (`components/palette-selector.tsx`).
 - **Colores: siempre con las variables del tema** (`bg-primary`, `text-muted-foreground`, `var(--border)`…),
   nunca fijos (`bg-blue-500`, `#fff`), para que respeten el modo y la paleta.
 - Comentarios breves en castellano explicando el *porqué*.

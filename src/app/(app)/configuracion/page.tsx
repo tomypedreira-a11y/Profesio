@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { DEFAULT_PALETTE } from "@/lib/palettes";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { PaletteSelector } from "@/components/palette-selector";
 import { PageHeader } from "@/components/page-header";
 import { SettingsSection } from "./settings-section";
 import { ThemeModeSelector } from "./theme-mode-selector";
@@ -16,7 +18,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("theme")
+    .select("theme, palette")
     .eq("id", data.claims.sub)
     .single();
 
@@ -29,6 +31,11 @@ export default async function SettingsPage() {
           <Field>
             <FieldLabel>Modo</FieldLabel>
             <ThemeModeSelector value={profile?.theme ?? "system"} />
+          </Field>
+          <Field>
+            <FieldLabel>Paleta de colores</FieldLabel>
+            <FieldDescription>Se combina con el modo claro u oscuro.</FieldDescription>
+            <PaletteSelector value={profile?.palette ?? DEFAULT_PALETTE} />
           </Field>
         </SettingsSection>
       </div>

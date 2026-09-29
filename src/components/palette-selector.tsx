@@ -1,6 +1,6 @@
 "use client";
 
-// Selector de paleta de colores, para la sección Configuración → Personalización.
+// Selector de paleta de colores (Configuración → Personalización).
 // Cambia los colores al instante y guarda la elección en el perfil.
 import { useState, useTransition } from "react";
 import { CheckIcon } from "lucide-react";
