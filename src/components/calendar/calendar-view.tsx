@@ -7,14 +7,14 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import esLocale from "@fullcalendar/core/locales/es";
 import type { DatesSetArg, EventClickArg, EventInput, EventSourceFuncArg } from "@fullcalendar/core";
 import { addDays, format, isSameMonth, startOfWeek } from "date-fns";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { CalendarPlusIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { ScheduleSessionDialog } from "./schedule-session-dialog";
+import { AddSessionDialog } from "./add-session-dialog";
 import { SessionSheet } from "./session-sheet";
 import { UnscheduledPanel } from "./unscheduled-panel";
-import type { CalendarSession, UnscheduledPatient } from "./types";
+import type { CalendarSession, PatientOption, UnscheduledPatient } from "./types";
 import "./calendar.css";
 
 const SESSION_COLUMNS =
@@ -26,7 +26,7 @@ const DEFAULT_MAX_HOUR = 22;
 
 type ViewKey = "timeGridDay" | "timeGridThreeDay" | "timeGridWeek" | "dayGridMonth";
 
-export function CalendarView({ timeZone }: { timeZone: string }) {
+export function CalendarView({ timeZone, patients }: { timeZone: string; patients: PatientOption[] }) {
   const supabase = useRef(createClient()).current;
   const calendarRef = useRef<FullCalendar>(null);
   const isMobile = useIsMobile();
@@ -37,7 +37,8 @@ export function CalendarView({ timeZone }: { timeZone: string }) {
   const [selected, setSelected] = useState<{ session: CalendarSession; isNext: boolean } | null>(null);
   const [week, setWeek] = useState<Date | null>(null);
   const [unscheduled, setUnscheduled] = useState<UnscheduledPatient[]>([]);
-  const [toSchedule, setToSchedule] = useState<UnscheduledPatient | null>(null);
+  // Panel "Agregar sesión" abierto (con el paciente y la fecha sugeridos, si vienen de "No agendados").
+  const [adding, setAdding] = useState<{ patientId?: string; date?: Date } | null>(null);
 
   const api = () => calendarRef.current?.getApi();
 
@@ -195,6 +196,10 @@ export function CalendarView({ timeZone }: { timeZone: string }) {
               </Button>
             ))}
           </div>
+          <Button onClick={() => setAdding({})}>
+            <CalendarPlusIcon />
+            Agregar sesión
+          </Button>
         </div>
 
         <FullCalendar
@@ -233,7 +238,7 @@ export function CalendarView({ timeZone }: { timeZone: string }) {
         <UnscheduledPanel
           patients={unscheduled}
           weekLabel={week ? `${format(week, "dd/MM")} al ${format(addDays(week, 6), "dd/MM")}` : ""}
-          onSelect={setToSchedule}
+          onSelect={(p) => setAdding({ patientId: p.id, date: week && new Date() < week ? week : undefined })}
         />
       </div>
 
@@ -248,11 +253,13 @@ export function CalendarView({ timeZone }: { timeZone: string }) {
         }}
       />
 
-      <ScheduleSessionDialog
-        patient={toSchedule ? { id: toSchedule.id, name: `${toSchedule.first_name} ${toSchedule.last_name}` } : null}
-        defaultDate={week && new Date() < week ? week : undefined}
-        onOpenChange={(open) => !open && setToSchedule(null)}
-        onScheduled={refresh}
+      <AddSessionDialog
+        open={!!adding}
+        onOpenChange={(open) => !open && setAdding(null)}
+        patients={patients}
+        patientId={adding?.patientId}
+        defaultDate={adding?.date}
+        onAdded={refresh}
       />
     </div>
   );

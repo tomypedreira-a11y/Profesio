@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { SearchIcon } from "lucide-react";
 import { formatPhone } from "@/lib/phone";
-import { formatSchedule, formatSessionShort } from "@/lib/format";
+import { formatSchedules, formatSessionShort } from "@/lib/format";
+import type { ScheduleSlot } from "@/lib/schedule";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -15,8 +16,7 @@ export type PatientListItem = {
   last_name: string;
   phone: string | null;
   dni: string | null;
-  weekday: number | null;
-  start_time: string | null;
+  schedules: ScheduleSlot[];
   last_session_at: string | null;
   next_session_at: string | null;
 };
@@ -79,7 +79,7 @@ export function PatientList({
   function detail(p: PatientListItem) {
     if (sort === "recientes") return p.last_session_at ? `Última: ${formatSessionShort(p.last_session_at, timeZone)}` : "Sin sesiones";
     if (sort === "proximas") return p.next_session_at ? `Próxima: ${formatSessionShort(p.next_session_at, timeZone)}` : "Sin sesiones";
-    return formatSchedule(p.weekday, p.start_time);
+    return formatSchedules(p.schedules);
   }
 
   if (patients.length === 0) return null;

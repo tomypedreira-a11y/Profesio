@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { countryOptions, splitPhone } from "@/lib/phone";
+import { toSlots } from "@/lib/schedule";
 import { PageHeader } from "@/components/page-header";
 import { updatePatient } from "../../actions";
 import { PatientForm, type PatientFormDefaults } from "../../patient-form";
@@ -21,9 +22,7 @@ export default async function EditPatientPage({ params }: PageProps<"/pacientes/
   const defaults: PatientFormDefaults = {
     first_name: p.first_name ?? "",
     last_name: p.last_name ?? "",
-    schedule_type: p.weekday !== null ? "fixed" : "irregular",
-    weekday: p.weekday !== null ? String(p.weekday) : "",
-    start_time: p.start_time?.slice(0, 5) ?? "",
+    schedules: toSlots(p.schedules),
     phone_country: phone.country,
     phone: phone.national,
     dni: p.dni ?? "",
@@ -43,6 +42,7 @@ export default async function EditPatientPage({ params }: PageProps<"/pacientes/
         submitLabel="Guardar cambios"
         cancelHref={`/pacientes/${id}`}
         isEdit
+        archived={!p.active}
       />
     </>
   );

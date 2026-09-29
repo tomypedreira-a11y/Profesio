@@ -3,30 +3,20 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import type { FormState } from "@/lib/form-state";
-import { WEEKDAYS } from "@/lib/format";
+import type { ScheduleSlot } from "@/lib/schedule";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldTitle,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FormMessage } from "@/components/form-message";
+import { initialPlan, planDate, SessionPlanFields, type SessionPlan } from "@/components/calendar/session-plan-fields";
 import { BirthDateInput } from "./birth-date-input";
 
 export type PatientFormDefaults = {
   first_name: string;
   last_name: string;
-  schedule_type: "fixed" | "irregular";
-  weekday: string;
-  start_time: string;
+  schedules: ScheduleSlot[]; // horarios fijos vigentes; vacío = irregular
   phone_country: string;
   phone: string;
   dni: string;
@@ -38,9 +28,7 @@ export type PatientFormDefaults = {
 export const EMPTY_PATIENT: PatientFormDefaults = {
   first_name: "",
   last_name: "",
-  schedule_type: "irregular",
-  weekday: "",
-  start_time: "",
+  schedules: [],
   phone_country: "AR",
   phone: "",
   dni: "",
@@ -56,16 +44,18 @@ type PatientFormProps = {
   submitLabel: string;
   cancelHref: string;
   isEdit?: boolean;
+  archived?: boolean; // un paciente archivado no tiene sesiones: se oculta esa sección
 };
 
-export function PatientForm({ action, defaults, countries, submitLabel, cancelHref, isEdit }: PatientFormProps) {
+export function PatientForm({ action, defaults, countries, submitLabel, cancelHref, isEdit, archived }: PatientFormProps) {
   const [state, formAction, pending] = useActionState(action, {} as FormState);
   const errors = state.fieldErrors ?? {};
   // Si hubo un error, se muestran los valores que el usuario había escrito.
-  const v = (field: keyof PatientFormDefaults) => state.values?.[field] ?? defaults[field];
+  const v = (field: Exclude<keyof PatientFormDefaults, "schedules">) => state.values?.[field] ?? defaults[field];
 
-  const [scheduleType, setScheduleType] = useState<string>(v("schedule_type"));
-  const hadFixedSchedule = isEdit && defaults.schedule_type === "fixed";
+  // Las sesiones son estado del componente (no inputs sueltos), así que no se pierden si hay error.
+  const [plan, setPlan] = useState<SessionPlan>(() => initialPlan(defaults.schedules));
+  const hadFixedSchedule = isEdit && defaults.schedules.length > 0;
 
   return (
     <form action={formAction} className="flex max-w-2xl flex-col gap-4">
@@ -94,76 +84,44 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
         </CardContent>
       </Card>
 
-      {/* Frecuencia */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Frecuencia</CardTitle>
-          <CardDescription>Las sesiones duran 45 minutos.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FieldGroup>
-            <input type="hidden" name="schedule_type" value={scheduleType} />
-            <RadioGroup value={scheduleType} onValueChange={(value) => setScheduleType(String(value))} className="grid gap-3 sm:grid-cols-2">
-              <FieldLabel htmlFor="schedule-fixed">
-                <Field orientation="horizontal">
-                  <RadioGroupItem value="fixed" id="schedule-fixed" />
-                  <FieldContent>
-                    <FieldTitle>Constante</FieldTitle>
-                    <FieldDescription>Todas las semanas, mismo día y horario.</FieldDescription>
-                  </FieldContent>
-                </Field>
-              </FieldLabel>
-              <FieldLabel htmlFor="schedule-irregular">
-                <Field orientation="horizontal">
-                  <RadioGroupItem value="irregular" id="schedule-irregular" />
-                  <FieldContent>
-                    <FieldTitle>Irregular</FieldTitle>
-                    <FieldDescription>Días u horarios variables; las sesiones se agendan de a una.</FieldDescription>
-                  </FieldContent>
-                </Field>
-              </FieldLabel>
-            </RadioGroup>
-
-            {scheduleType === "fixed" && (
-              <>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field data-invalid={!!errors.weekday}>
-                    <FieldLabel htmlFor="weekday">Día</FieldLabel>
-                    <NativeSelect id="weekday" name="weekday" defaultValue={v("weekday")} aria-invalid={!!errors.weekday} className="w-full">
-                      <NativeSelectOption value="" disabled>
-                        Elegí un día
-                      </NativeSelectOption>
-                      {/* Lunes primero, domingo al final */}
-                      {[1, 2, 3, 4, 5, 6, 0].map((d) => (
-                        <NativeSelectOption key={d} value={String(d)}>
-                          {WEEKDAYS[d]}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                    <FieldError>{errors.weekday?.[0]}</FieldError>
-                  </Field>
-                  <Field data-invalid={!!errors.start_time}>
-                    <FieldLabel htmlFor="start_time">Horario</FieldLabel>
-                    <Input id="start_time" name="start_time" type="time" step={300} defaultValue={v("start_time")} aria-invalid={!!errors.start_time} />
-                    <FieldError>{errors.start_time?.[0]}</FieldError>
-                  </Field>
-                </div>
-                <FieldDescription>
-                  {hadFixedSchedule
-                    ? "Si cambiás el día u horario, se reemplazan las sesiones futuras del horario anterior. Las que tienen notas se conservan."
-                    : "Las sesiones se agendan automáticamente todas las semanas, a partir de la próxima fecha."}
-                </FieldDescription>
-              </>
-            )}
-
-            {hadFixedSchedule && scheduleType === "irregular" && (
-              <FieldDescription>
-                Al pasar a irregular se quitan las sesiones futuras del horario fijo. Las que tienen notas se conservan.
-              </FieldDescription>
-            )}
-          </FieldGroup>
-        </CardContent>
-      </Card>
+      {/* Sesiones: la misma interfaz que "Agregar sesión" */}
+      <input type="hidden" name="schedule_type" value={plan.type} />
+      <input
+        type="hidden"
+        name="schedules"
+        value={JSON.stringify(plan.slots.map((s) => ({ weekday: s.weekday === "" ? null : Number(s.weekday), start_time: s.start, end_time: s.end })))}
+      />
+      <input type="hidden" name="session_date" value={plan.type === "irregular" ? planDate(plan) : ""} />
+      <input type="hidden" name="session_start" value={plan.type === "irregular" ? plan.start : ""} />
+      <input type="hidden" name="session_end" value={plan.type === "irregular" ? plan.end : ""} />
+      {!archived && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Sesiones</CardTitle>
+            <CardDescription>Cuándo se agendan sus sesiones y cuánto duran.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <SessionPlanFields
+                value={plan}
+                onChange={setPlan}
+                error={errors.schedule?.[0]}
+                fixedHint={
+                  hadFixedSchedule
+                    ? "Los días que quites dejan de agendarse: se borran sus sesiones futuras (las que tienen informe se conservan). Los que agregues empiezan en la próxima fecha."
+                    : "Las sesiones se agendan automáticamente todas las semanas, a partir de la próxima fecha."
+                }
+                irregularHint={
+                  <>
+                    {hadFixedSchedule && "Al pasar a irregular se quitan las sesiones futuras de los horarios fijos (las que tienen informe se conservan). "}
+                    Opcional: elegí fecha, inicio y fin para agendar una sesión, o dejalos vacíos.
+                  </>
+                }
+              />
+            </FieldGroup>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Contacto y otros datos */}
       <Card>

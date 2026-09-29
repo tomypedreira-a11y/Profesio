@@ -7,6 +7,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { CalendarClockIcon, CalendarXIcon, UndoIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cancelSession, rescheduleSession, restoreSession } from "@/app/(app)/sesiones/actions";
+import { isValidRange } from "@/lib/schedule";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -147,19 +148,24 @@ function RescheduleForm({
   // Arranca con la fecha y hora actuales de la sesión (si no pasó).
   const current = new Date(formatInTimeZone(session.starts_at, timeZone, "yyyy-MM-dd'T'HH:mm"));
   const [date, setDate] = useState<Date | undefined>(current > new Date() ? current : undefined);
-  const [time, setTime] = useState(formatInTimeZone(session.starts_at, timeZone, "HH:mm"));
+  const [start, setStart] = useState(formatInTimeZone(session.starts_at, timeZone, "HH:mm"));
+  const [end, setEnd] = useState(formatInTimeZone(session.ends_at, timeZone, "HH:mm"));
   const [scope, setScope] = useState<Scope>("one");
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
 
   function submit() {
-    if (!date || !time) {
-      setError("Elegí una fecha y un horario.");
+    if (!date) {
+      setError("Elegí la fecha.");
+      return;
+    }
+    if (!isValidRange(start, end)) {
+      setError("Completá el inicio y el fin (el fin tiene que ser después del inicio).");
       return;
     }
     setError(undefined);
     startTransition(async () => {
-      const result = await rescheduleSession({ sessionId: session.id, date: format(date, "yyyy-MM-dd"), time, scope });
+      const result = await rescheduleSession({ sessionId: session.id, date: format(date, "yyyy-MM-dd"), start, end, scope });
       if (result.error) setError(result.error);
       else {
         toast.success(scope === "one" ? "Sesión reprogramada." : "Horario fijo actualizado.");
@@ -173,7 +179,7 @@ function RescheduleForm({
       <DialogHeader>
         <DialogTitle>Reprogramar sesión</DialogTitle>
         <DialogDescription>
-          {session.first_name} {session.last_name} · actualmente {formatInTimeZone(session.starts_at, timeZone, "dd/MM HH:mm")}
+          {session.first_name} {session.last_name} · actualmente {formatInTimeZone(session.starts_at, timeZone, "dd/MM HH:mm")}–{formatInTimeZone(session.ends_at, timeZone, "HH:mm")}
         </DialogDescription>
       </DialogHeader>
       <FormMessage error={error} />
@@ -184,7 +190,7 @@ function RescheduleForm({
           followingDescription="Cambia el horario fijo: desde la nueva fecha, todas las semanas ese día y horario."
         />
       )}
-      <DateTimePicker date={date} onDateChange={setDate} time={time} onTimeChange={setTime} />
+      <DateTimePicker date={date} onDateChange={setDate} start={start} end={end} onStartChange={setStart} onEndChange={setEnd} />
       <DialogFooter>
         <Button onClick={submit} disabled={pending}>
           {pending ? "Guardando…" : "Reprogramar"}

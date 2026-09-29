@@ -5,14 +5,15 @@ import { ArrowLeftIcon, MessageCircleIcon, PencilIcon } from "lucide-react";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { formatPhone, whatsappUrl } from "@/lib/phone";
-import { formatBirthDate, formatFee, formatSchedule, formatSessionLong } from "@/lib/format";
+import { formatBirthDate, formatFee, formatSchedules, formatSessionLong } from "@/lib/format";
+import { toSlots } from "@/lib/schedule";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AddSessionButton } from "@/components/calendar/add-session-button";
 import { getTimeZone } from "../queries";
 import { ArchiveButton } from "./archive-button";
-import { ScheduleButton } from "./schedule-button";
 
 export const metadata: Metadata = { title: "Paciente" };
 
@@ -54,10 +55,11 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
   ]);
 
   const fullName = `${patient.first_name} ${patient.last_name}`;
-  const hasSchedule = patient.weekday !== null;
+  const schedules = toSlots(patient.schedules);
+  const hasSchedule = schedules.length > 0;
 
   const details = [
-    { label: "Frecuencia", value: formatSchedule(patient.weekday, patient.start_time) },
+    { label: "Frecuencia", value: formatSchedules(schedules) },
     { label: "Documento", value: patient.dni },
     { label: "Fecha de nacimiento", value: patient.birth_date && formatBirthDate(patient.birth_date) },
     { label: "Email", value: patient.email, href: patient.email ? `mailto:${patient.email}` : undefined },
@@ -99,7 +101,7 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {patient.active && <ScheduleButton patient={{ id, name: fullName }} />}
+          {patient.active && <AddSessionButton patients={[{ id, name: fullName, schedules }]} patientId={id} lockPatient />}
           <Button variant="outline" render={<Link href={`/pacientes/${id}/editar`} />} nativeButton={false}>
             <PencilIcon />
             Editar

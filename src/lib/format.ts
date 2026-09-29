@@ -2,13 +2,14 @@
 import { differenceInYears } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
+import type { ScheduleSlot } from "./schedule";
 
 export const WEEKDAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-// "Martes 18:00"
-export function formatSchedule(weekday: number | null, startTime: string | null): string {
-  if (weekday === null || !startTime) return "Irregular";
-  return `${WEEKDAYS[weekday]} ${startTime.slice(0, 5)}`;
+// "Martes 18:00–19:00 · Jueves 18:00–19:00"; sin horarios fijos, "Irregular".
+export function formatSchedules(slots: ScheduleSlot[]): string {
+  if (slots.length === 0) return "Irregular";
+  return slots.map((s) => `${WEEKDAYS[s.weekday]} ${s.start_time}–${s.end_time}`).join(" · ");
 }
 
 // "mar 30/09 · 18:00"
