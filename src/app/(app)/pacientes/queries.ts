@@ -1,6 +1,7 @@
 // Consultas de pacientes compartidas entre pantallas (se ejecutan en el servidor).
 import { createClient } from "@/lib/supabase/server";
 import { toSlots } from "@/lib/schedule";
+import { DEFAULT_CALENDAR_VIEW, isCalendarView, type CalendarViewPreference } from "@/lib/calendar-views";
 import type { PatientOption } from "@/components/calendar/types";
 import type { PatientListItem } from "./patient-list";
 
@@ -13,6 +14,30 @@ export async function getTimeZone() {
     .eq("id", claims?.claims.sub ?? "")
     .single();
   return data?.timezone ?? "America/Argentina/Buenos_Aires";
+}
+
+// Vista con la que abre el calendario (preferencia del perfil).
+export async function getCalendarView(): Promise<CalendarViewPreference> {
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const { data } = await supabase
+    .from("profiles")
+    .select("calendar_view")
+    .eq("id", claims?.claims.sub ?? "")
+    .single();
+  return isCalendarView(data?.calendar_view) ? data.calendar_view : DEFAULT_CALENDAR_VIEW;
+}
+
+// Valor por sesión del perfil: lo usan los pacientes sin valor propio.
+export async function getDefaultFee(): Promise<number | null> {
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const { data } = await supabase
+    .from("profiles")
+    .select("default_session_fee")
+    .eq("id", claims?.claims.sub ?? "")
+    .single();
+  return data?.default_session_fee ?? null;
 }
 
 export async function getPatients(active: boolean): Promise<PatientListItem[]> {

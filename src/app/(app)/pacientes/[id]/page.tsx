@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddSessionButton } from "@/components/calendar/add-session-button";
-import { getTimeZone } from "../queries";
+import { getDefaultFee, getTimeZone } from "../queries";
 import { ArchiveButton } from "./archive-button";
 
 export const metadata: Metadata = { title: "Paciente" };
@@ -26,7 +26,7 @@ async function getPatient(id: string) {
 
 export default async function PatientPage({ params }: PageProps<"/pacientes/[id]">) {
   const { id } = await params;
-  const [patient, timeZone] = await Promise.all([getPatient(id), getTimeZone()]);
+  const [patient, timeZone, defaultFee] = await Promise.all([getPatient(id), getTimeZone(), getDefaultFee()]);
   if (!patient) notFound();
 
   const supabase = await createClient();
@@ -63,7 +63,14 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
     { label: "Documento", value: patient.dni },
     { label: "Fecha de nacimiento", value: patient.birth_date && formatBirthDate(patient.birth_date) },
     { label: "Email", value: patient.email, href: patient.email ? `mailto:${patient.email}` : undefined },
-    { label: "Valor por sesión", value: formatFee(patient.session_fee) },
+    {
+      label: "Valor por sesión",
+      // Sin valor propio, usa el del perfil.
+      value:
+        patient.session_fee !== null
+          ? formatFee(patient.session_fee)
+          : defaultFee !== null && `${formatFee(defaultFee)} (valor del perfil)`,
+    },
   ];
 
   return (

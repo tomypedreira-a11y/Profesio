@@ -47,16 +47,19 @@ src/
       page.tsx                   Calendario (vista principal)
       pacientes/                 Listado, alta, ficha, edición, archivados, informes
       sesiones/                  Lista de próximas sesiones + acciones de sesiones
+      ingresos/                  Resumen de cobros del mes, quiénes adeudan + acciones de cobro
       perfil/                    Perfil del psicólogo
       configuracion/             Preferencias, en secciones (hoy: Personalización)
   components/
     ui/                          Componentes de shadcn (generados por la CLI)
     calendar/                    Calendario, panel de sesión, agendar, reprogramar/cancelar
     notes/                       Editor de informes de sesión
+    payments/                    Botones de cobro y cobro dentro del panel de sesión
+    profile-defaults-provider.tsx  Duración y valor por defecto del perfil (los carga el layout)
   lib/
     supabase/{client,server,proxy}.ts
     database.types.ts            Generado por Supabase: NO editar a mano
-    phone.ts  format.ts  form-state.ts  theme.ts
+    phone.ts  format.ts  form-state.ts  theme.ts  schedule.ts  payments.ts  calendar-views.ts
 supabase/migrations/             Toda la estructura de la base, en orden
 ```
 
@@ -70,14 +73,14 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 
 | Tabla | Contenido |
 |---|---|
-| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema y zona horaria. |
+| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria, duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, vista inicial del calendario (`calendar_view`). |
 | `patients` | Pacientes. `active = false` = archivado. Teléfono en E.164. |
 | `session_series` | Horario fijo semanal (día, hora y duración). Un paciente puede tener varios. `end_date is null` = vigente. |
-| `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). |
+| `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). Cobro: `fee`, `paid_at`, `payment_method`. |
 | `session_notes` | Informes de sesión, con versiones. |
 | `audit_log` | Registro de modificaciones (lo escriben triggers). |
 
-Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `session_book`.
+Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `session_book`, `session_payments`.
 
 ### Reglas que no se pueden romper
 
@@ -94,8 +97,12 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 
 ### Reglas del dominio
 
-- **Sesiones:** la duración la elige el usuario (inicio y fin, escritos como `HH:MM`); una sesión no cruza la medianoche.
-  Sin fin, `schedule_session` usa 45 minutos y reprogramar conserva la duración (compatibilidad).
+- **Sesiones:** inicio y fin escritos como `HH:MM`; una sesión no cruza la medianoche.
+  El fin es **opcional**: vacío = inicio + duración habitual del perfil (45, 50, 60, 75 o 90 min).
+  La interfaz lo completa con `resolveEnd` (`lib/schedule.ts`, duración vía `useSessionLength()`
+  de `components/profile-defaults-provider.tsx`, que carga el layout);
+  en la base, sin fin, `schedule_session` y los horarios fijos usan `default_session_minutes()`.
+  Reprogramar sin fin (llamando directo a la base) conserva la duración.
   La base impide sesiones superpuestas no canceladas (restricción de exclusión).
   Los choques devuelven errores con `hint = 'schedule_conflict'`; mostrarlos tal cual al usuario.
 - **Horarios fijos:** se generan filas reales en `sessions` (no recurrencias calculadas al vuelo).
@@ -109,6 +116,14 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 - **Agregar sesión:** el mismo panel (`components/calendar/add-session-dialog.tsx`) en Sesiones, Calendario y la ficha
   del paciente; el formulario de paciente usa sus mismos campos (`session-plan-fields.tsx`).
   Regular = suma días fijos; irregular = una sesión suelta.
+- **Valor por sesión:** `patients.session_fee is null` = usa `profiles.default_session_fee` (no se copia al paciente,
+  así un cambio de valor en el perfil alcanza a todos los que no tienen uno propio). En la interfaz, `useDefaultFee()`.
+- **Cobros:** se cobra cada sesión realizada entera (`mark_sessions_paid(ids, método)`, `mark_session_unpaid`);
+  medios: `cash`, `transfer`, `other` (`lib/payments.ts`). `session_payments` trae las realizadas con su valor
+  (`coalesce(sessions.fee, patients.session_fee, profiles.default_session_fee)`).
+  El valor de una sesión se fija en `sessions.fee` al cobrarla o cuando cambia el valor del paciente/perfil
+  (triggers): las sesiones ya realizadas conservan el valor que regía. Una sesión cobrada no se cancela,
+  reprograma ni borra (trigger `sessions_payment_guard`): primero se deshace el cobro.
 - **Estados de sesión:** solo `scheduled` y `cancelled`. Una sesión pasada no cancelada se considera realizada.
   La "próxima sesión" se calcula (primera futura con `scheduled`); no se guarda.
 - **Informes (historia clínica, Ley 26.529):** un borrador (`draft`) se edita; uno finalizado (`final`)

@@ -11,6 +11,7 @@ import {
   SettingsIcon,
   UserRoundIcon,
   UsersIcon,
+  WalletIcon,
 } from "lucide-react";
 import { logout } from "@/app/(auth)/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Calendario", icon: CalendarDaysIcon },
   { href: "/pacientes", label: "Pacientes", icon: UsersIcon },
   { href: "/sesiones", label: "Sesiones", icon: CalendarClockIcon },
+  { href: "/ingresos", label: "Ingresos", icon: WalletIcon },
   { href: "/perfil", label: "Mi perfil", icon: UserRoundIcon },
   { href: "/configuracion", label: "Configuración", icon: SettingsIcon },
 ];
@@ -75,7 +77,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            {/* Secciones como botones "burbuja" remarcados, igual que el resto de los botones.
+                En reposo llevan el fondo del calendario; hover y activo los pintan de verde (ver sidebar.tsx). */}
+            <SidebarMenu className="gap-2">
               {NAV_ITEMS.map((item) => {
                 const isActive =
                   item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -84,6 +88,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                     <SidebarMenuButton
                       isActive={isActive}
                       tooltip={item.label}
+                      className="h-9 rounded-full border-[1.5px] border-primary-border bg-background px-3 group-data-[collapsible=icon]:p-1.5!"
                       render={<Link href={item.href} onClick={() => setOpenMobile(false)} />}
                     >
                       <item.icon />

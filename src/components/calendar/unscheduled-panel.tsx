@@ -14,7 +14,7 @@ type UnscheduledPanelProps = {
 
 export function UnscheduledPanel({ patients, weekLabel, onSelect }: UnscheduledPanelProps) {
   return (
-    <Card size="sm" className="lg:sticky lg:top-4">
+    <Card size="sm">
       <CardHeader>
         <CardTitle>No agendados</CardTitle>
         <CardDescription>Pacientes irregulares sin sesión la semana del {weekLabel}.</CardDescription>

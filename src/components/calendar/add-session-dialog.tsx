@@ -7,7 +7,7 @@ import { format, startOfDay } from "date-fns";
 import { toast } from "sonner";
 import { addSessions } from "@/app/(app)/sesiones/actions";
 import { formatSchedules } from "@/lib/format";
-import { isValidRange } from "@/lib/schedule";
+import { isValidRange, resolveEnd } from "@/lib/schedule";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,13 +18,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormMessage } from "@/components/form-message";
+import { useSessionLength } from "@/components/profile-defaults-provider";
 import { initialPlan, planDate, planSlots, SessionPlanFields, type SessionPlan } from "./session-plan-fields";
 import type { PatientOption } from "./types";
 
-// Horas escritas como HH:MM y el fin después del inicio.
-const RANGE_ERROR = "Completá el día, el inicio y el fin de cada sesión (el fin tiene que ser después del inicio).";
+// Horas escritas como HH:MM; el fin (opcional) después del inicio y sin pasar la medianoche.
+const RANGE_ERROR = "Completá el día y el inicio de cada sesión. El fin tiene que ser después del inicio, sin pasar la medianoche.";
 
 type AddSessionDialogProps = {
   open: boolean;
@@ -72,15 +73,17 @@ function AddSessionForm({
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
 
+  const minutes = useSessionLength();
   const patient = patients.find((p) => p.id === patientId);
 
   function submit() {
     if (!patient) return setError("Elegí el paciente.");
-    const slots = planSlots(plan);
+    const slots = planSlots(plan, minutes);
+    const end = resolveEnd(plan.start, plan.end, minutes);
     if (plan.type === "fixed" && !slots) return setError(RANGE_ERROR);
     if (plan.type === "irregular" && !plan.date) return setError("Elegí la fecha.");
-    if (plan.type === "irregular" && !isValidRange(plan.start, plan.end)) {
-      return setError("Completá el inicio y el fin (el fin tiene que ser después del inicio).");
+    if (plan.type === "irregular" && !isValidRange(plan.start, end)) {
+      return setError("Completá el inicio. El fin tiene que ser después del inicio, sin pasar la medianoche.");
     }
     setError(undefined);
 
@@ -88,14 +91,14 @@ function AddSessionForm({
       const result =
         plan.type === "fixed"
           ? await addSessions({ type: "fixed", patientId: patient.id, slots: slots! })
-          : await addSessions({ type: "irregular", patientId: patient.id, date: planDate(plan), start: plan.start, end: plan.end });
+          : await addSessions({ type: "irregular", patientId: patient.id, date: planDate(plan), start: plan.start, end });
       if (result.error) {
         setError(result.error);
       } else {
         toast.success(
           plan.type === "fixed"
             ? `Horario agregado: ${formatSchedules(slots!)}.`
-            : `Sesión agendada: ${format(plan.date!, "dd/MM")} de ${plan.start} a ${plan.end}.`,
+            : `Sesión agendada: ${format(plan.date!, "dd/MM")} de ${plan.start} a ${end}.`,
         );
         onDone();
       }
@@ -114,16 +117,23 @@ function AddSessionForm({
       {!lockPatient && (
         <Field>
           <FieldLabel htmlFor="add-session-patient">Paciente</FieldLabel>
-          <NativeSelect id="add-session-patient" value={patientId} onChange={(e) => setPatientId(e.target.value)} className="w-full">
-            <NativeSelectOption value="" disabled>
-              {patients.length === 0 ? "No hay pacientes activos" : "Elegí un paciente"}
-            </NativeSelectOption>
-            {patients.map((p) => (
-              <NativeSelectOption key={p.id} value={p.id}>
-                {p.name}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <Select
+            value={patientId || null}
+            onValueChange={(value) => setPatientId(value ?? "")}
+            items={patients.map((p) => ({ value: p.id, label: p.name }))}
+            disabled={patients.length === 0}
+          >
+            <SelectTrigger id="add-session-patient" className="w-full">
+              <SelectValue placeholder={patients.length === 0 ? "No hay pacientes activos" : "Elegí un paciente"} />
+            </SelectTrigger>
+            <SelectContent>
+              {patients.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
       )}
 
