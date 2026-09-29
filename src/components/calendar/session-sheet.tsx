@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { NoteEditor } from "@/components/notes/note-editor";
+import { SessionActions } from "./session-actions";
 import type { CalendarSession } from "./types";
 
 type SessionSheetProps = {
@@ -18,9 +19,10 @@ type SessionSheetProps = {
   isNext: boolean;
   timeZone: string;
   onOpenChange: (open: boolean) => void;
+  onChanged: () => void;
 };
 
-export function SessionSheet({ session, isNext, timeZone, onOpenChange }: SessionSheetProps) {
+export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChanged }: SessionSheetProps) {
   const fmt = (iso: string, pattern: string) => formatInTimeZone(iso, timeZone, pattern, { locale: es });
 
   return (
@@ -66,6 +68,8 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange }: Sessio
                   {formatPhone(session.phone)}
                 </a>
               )}
+
+              <SessionActions session={session} timeZone={timeZone} onChanged={onChanged} />
 
               <Button variant="outline" render={<Link href={`/pacientes/${session.patient_id}`} />} nativeButton={false}>
                 <UserRoundIcon />

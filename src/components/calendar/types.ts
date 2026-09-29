@@ -9,6 +9,7 @@ export type CalendarSession = {
   first_name: string;
   last_name: string;
   phone: string | null;
+  series_active: boolean;
 };
 
 export type UnscheduledPatient = { id: string; first_name: string; last_name: string };
