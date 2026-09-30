@@ -149,3 +149,26 @@
   --session-cancelled-border: oklch(0.52 0.08 5);
   --session-cancelled-foreground: oklch(0.86 0.05 5);
 }
+
+/* Vacaciones: los días se pintan de rosa pastel (tema claro) o lila pastel (tema oscuro).
+   Translúcido y como imagen de fondo, para sumarse al color de "hoy" sin taparlo.
+   En el oscuro, el lila va más transparente: pleno encandilaría y no se leerían los números. */
+:root {
+  --vacation: oklch(0.86 0.07 350 / 45%);
+}
+
+.dark {
+  --vacation: oklch(0.8 0.08 305 / 24%);
+}
+
+.fc .vacation-day,
+.fc .vacation-day .fc-list-day-cushion {
+  background-image: linear-gradient(var(--vacation), var(--vacation));
+}
+
+/* Modalidad después del nombre: "(v)" o "(p)", sin negrita para que el nombre siga resaltando. */
+.fc .session-modality {
+  font-weight: 400;
+  opacity: 0.85;
+  white-space: nowrap;
+}

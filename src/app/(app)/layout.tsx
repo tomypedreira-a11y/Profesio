@@ -9,6 +9,7 @@ import { HeaderBackButton } from "@/components/header-back-button";
 import { HeaderTitle } from "@/components/header-title";
 import { MobileNav } from "@/components/mobile-nav";
 import { ProfileDefaultsProvider } from "@/components/profile-defaults-provider";
+import { VacationsProvider } from "@/components/vacations-provider";
 import { ThemeSync } from "@/components/theme-provider";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -20,11 +21,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const claims = data?.claims;
   if (!claims) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("first_name, last_name, theme, font_size, default_session_minutes, default_session_fee")
-    .eq("id", claims.sub)
-    .single();
+  const [{ data: profile }, { data: vacations }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("first_name, last_name, theme, font_size, default_session_minutes, default_session_fee")
+      .eq("id", claims.sub)
+      .single(),
+    supabase.from("vacations").select("id, start_date, end_date").order("start_date"),
+  ]);
 
   // Recuerda si el panel lateral estaba abierto o colapsado.
   const sidebarOpen = (await cookies()).get("sidebar_state")?.value !== "false";
@@ -61,7 +65,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               sessionFee: profile?.default_session_fee ?? null,
             }}
           >
-            {children}
+            <VacationsProvider value={vacations ?? []}>{children}</VacationsProvider>
           </ProfileDefaultsProvider>
         </div>
       </SidebarInset>

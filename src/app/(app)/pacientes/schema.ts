@@ -46,6 +46,7 @@ export const patientSchema = z
     email: optionalText.pipe(z.email("Ingresá un email válido.").nullable()),
     birth_date: z.string().trim(),
     session_fee: z.string(),
+    modality: z.enum(["in_person", "virtual"], "Elegí presencial o virtual."),
   })
   .transform((data, ctx) => {
     // Regular: uno o más días fijos, todos con día, inicio y fin.
@@ -112,5 +113,6 @@ export const patientSchema = z
       p_session_date: session?.date,
       p_session_time: session?.start,
       p_session_end_time: session?.end,
+      p_modality: data.modality,
     };
   });

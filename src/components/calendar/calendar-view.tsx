@@ -19,7 +19,9 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { shortName, sortName } from "@/lib/format";
+import { isVacationDay } from "@/lib/vacations";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useVacations } from "@/components/vacations-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AddSessionDialog } from "./add-session-dialog";
@@ -59,6 +61,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
   const supabase = useRef(createClient()).current;
   const calendarRef = useRef<FullCalendar>(null);
   const isMobile = useIsMobile();
+  const vacations = useVacations();
   // Pantalla aparte en el celular: semana en lista y mes con un punto por sesión.
   const compact = browse && isMobile;
 
@@ -119,7 +122,11 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
           .maybeSingle(),
       ]);
 
-      const list = (sessions ?? []) as CalendarSession[];
+      // En vacaciones no se muestra ningún paciente de horario fijo: las agendadas ya se quitaron
+      // al cargarlas, y las canceladas (que se conservan) se ocultan.
+      const list = ((sessions ?? []) as CalendarSession[]).filter(
+        (s) => !(s.series_id && s.status === "cancelled" && isVacationDay(vacations, new Date(s.starts_at))),
+      );
       setNextSession((next as CalendarSession | null) ?? null);
 
       // Ampliar el horario visible si alguna sesión cae fuera de 8 a 22.
@@ -154,7 +161,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
         };
       });
     },
-    [supabase],
+    [supabase, vacations],
   );
 
   // De la semana indicada: pacientes irregulares activos sin sesión (no cancelada) y sesiones por día.
@@ -227,12 +234,23 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
   // la hora y el comienzo del nombre, y si la sesión tiene más alto el nombre sigue en la línea de abajo.
   function renderSession(arg: EventContentArg) {
     // En la lista la hora tiene su propia columna; en el mes compacto la sesión es solo un punto.
-    if (arg.view.type === "listWeek") return <span className="session-name">{arg.event.title}</span>;
+    // Después del nombre, la modalidad: (v) virtual o (p) presencial.
+    const { session } = arg.event.extendedProps as { session: CalendarSession };
+    const virtual = session.modality === "virtual";
+    const modality = (
+      <>
+        {" "}
+        <span className="session-modality" title={virtual ? "Virtual" : "Presencial"}>
+          {virtual ? "(v)" : "(p)"}
+        </span>
+      </>
+    );
+    if (arg.view.type === "listWeek") return <span className="session-name">{arg.event.title}{modality}</span>;
     if (compact && arg.view.type === "dayGridMonth") return <span className="sr-only">{arg.event.title}</span>;
     return (
       <div className="session-content">
         {arg.timeText && <span className="session-time">{arg.timeText}</span>}
-        <span className="session-name">{arg.event.title}</span>
+        <span className="session-name">{arg.event.title}{modality}</span>
       </div>
     );
   }
@@ -277,6 +295,8 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
     setAdding({ patientId: p.id, date: week && new Date() < week ? week : undefined });
 
   const pad = (h: number) => `${String(h).padStart(2, "0")}:00:00`;
+  // Días de vacaciones: su columna (o su casilla, en el mes) y su encabezado se pintan.
+  const vacationClass = (arg: { date: Date }) => (isVacationDay(vacations, arg.date) ? ["vacation-day"] : []);
 
   return (
     <div className={cn("grid gap-4", !browse && "lg:grid-cols-[minmax(0,1fr)_16rem]")}>
@@ -353,6 +373,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
             weekStart={week}
             selected={day}
             counts={weekCounts}
+            isVacation={(d) => isVacationDay(vacations, d)}
             onSelect={(d) => api()?.gotoDate(d)}
           />
         )}
@@ -376,6 +397,8 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
             eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
             displayEventEnd={false} // solo la hora de inicio: deja más lugar para el nombre
             eventContent={renderSession}
+            dayCellClassNames={vacationClass}
+            dayHeaderClassNames={vacationClass}
             dayHeaderFormat={view === "dayGridMonth" ? { weekday: "short" } : { weekday: "short", day: "numeric" }}
             eventDisplay="block"
             nextDayThreshold="06:00:00" // una sesión que termina de madrugada cuenta como del día anterior
@@ -396,6 +419,10 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-(--session-next-border) bg-(--session-next)" /> Próxima sesión</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border bg-muted" /> Realizada</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-(--session-cancelled-border) bg-(--session-cancelled)" /> Cancelada</span>
+          <span>(p) Presencial · (v) Virtual</span>
+          {vacations.length > 0 && (
+            <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border bg-(--vacation)" /> Vacaciones</span>
+          )}
         </div>
       </div>
 

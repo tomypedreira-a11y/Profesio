@@ -13,6 +13,7 @@ import { FontSizeSelector } from "./font-size-selector";
 import { PreferenceSelect } from "./preference-select";
 import { SettingsSection } from "./settings-section";
 import { ThemeModeSelector } from "./theme-mode-selector";
+import { VacationSettings } from "./vacation-settings";
 
 export const metadata: Metadata = { title: "Configuración" };
 
@@ -83,6 +84,13 @@ export default async function SettingsPage() {
               value={profile?.default_session_fee ?? null}
               description="Opcional. Lo usan los pacientes que no tienen un valor propio. Las sesiones ya realizadas conservan el valor que tenían."
             />
+          </Field>
+        </SettingsSection>
+
+        <SettingsSection title="Vacaciones" description="Los días de vacaciones se pintan en el calendario.">
+          <Field>
+            <FieldLabel htmlFor="vacation_range">Períodos</FieldLabel>
+            <VacationSettings />
           </Field>
         </SettingsSection>
 

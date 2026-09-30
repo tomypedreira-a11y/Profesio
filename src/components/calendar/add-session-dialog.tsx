@@ -23,6 +23,8 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormMessage } from "@/components/form-message";
 import { useSessionLength } from "@/components/profile-defaults-provider";
+import { useVacations } from "@/components/vacations-provider";
+import { dayKey, isVacationDay } from "@/lib/vacations";
 import {
   FIRST_DATE_ERROR,
   initialPlan,
@@ -97,6 +99,17 @@ function AddSessionForm({
 
   const minutes = useSessionLength();
   const patient = patients.find((p) => p.id === patientId);
+
+  // Aviso de vacaciones: una suelta en esos días es una urgencia; un horario fijo los saltea.
+  const vacations = useVacations();
+  const vacationNotice =
+    plan.type === "irregular"
+      ? plan.date && isVacationDay(vacations, plan.date)
+        ? "Ese día estás de vacaciones: se agenda como sesión suelta, para una urgencia."
+        : undefined
+      : vacations.some((v) => v.end_date >= dayKey(today))
+        ? "Los días de tus vacaciones se saltean: esas semanas no se agenda la sesión."
+        : undefined;
 
   function submit() {
     if (!patient) return setError("Elegí el paciente.");
@@ -176,6 +189,8 @@ function AddSessionForm({
             : undefined
         }
       />
+
+      {vacationNotice && <p className="rounded-lg bg-(--vacation) px-3 py-2 text-sm">{vacationNotice}</p>}
 
       <DialogFooter>
         <Button onClick={submit} disabled={pending}>

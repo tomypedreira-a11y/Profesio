@@ -9,10 +9,11 @@ type WeekStripProps = {
   weekStart: Date; // lunes de la semana
   selected: Date;
   counts: number[] | null; // sesiones no canceladas de cada día (null mientras carga)
+  isVacation: (day: Date) => boolean;
   onSelect: (day: Date) => void;
 };
 
-export function WeekStrip({ weekStart, selected, counts, onSelect }: WeekStripProps) {
+export function WeekStrip({ weekStart, selected, counts, isVacation, onSelect }: WeekStripProps) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
@@ -33,6 +34,8 @@ export function WeekStrip({ weekStart, selected, counts, onSelect }: WeekStripPr
               active
                 ? "border-primary-border bg-primary text-primary-foreground"
                 : "border-transparent hover:bg-muted",
+              // Días de vacaciones, con el mismo color que en el calendario.
+              !active && isVacation(day) && "bg-(--vacation) hover:bg-(--vacation)",
               // Hoy se remarca aunque no esté elegido.
               !active && isToday(day) && "border-primary-border",
             )}

@@ -5,12 +5,14 @@ import { useActionState, useState } from "react";
 import { type FormState, formKey } from "@/lib/form-state";
 import { formatFee } from "@/lib/format";
 import { resolveEnd, type ScheduleSlot } from "@/lib/schedule";
+import { DEFAULT_MODALITY, type Modality } from "@/lib/modality";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormMessage } from "@/components/form-message";
+import { ModalityChoice } from "@/components/modality-choice";
 import { useDefaultFee, useSessionLength } from "@/components/profile-defaults-provider";
 import { initialPlan, planDate, planSlotsJson, SessionPlanFields, type SessionPlan } from "@/components/calendar/session-plan-fields";
 import { BirthDateInput } from "./birth-date-input";
@@ -25,6 +27,7 @@ export type PatientFormDefaults = {
   email: string;
   birth_date: string;
   session_fee: string;
+  modality: Modality;
 };
 
 export const EMPTY_PATIENT: PatientFormDefaults = {
@@ -37,6 +40,7 @@ export const EMPTY_PATIENT: PatientFormDefaults = {
   email: "",
   birth_date: "",
   session_fee: "",
+  modality: DEFAULT_MODALITY,
 };
 
 type PatientFormProps = {
@@ -53,7 +57,10 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
   const [state, formAction, pending] = useActionState(action, {} as FormState);
   const errors = state.fieldErrors ?? {};
   // Si hubo un error, se muestran los valores que el usuario había escrito.
-  const v = (field: Exclude<keyof PatientFormDefaults, "schedules">) => state.values?.[field] ?? defaults[field];
+  const v = (field: Exclude<keyof PatientFormDefaults, "schedules" | "modality">) => state.values?.[field] ?? defaults[field];
+  // Presencial o virtual: siempre una de las dos (por defecto, presencial). Como las sesiones,
+  // es estado del componente, así que no se pierde si hay error.
+  const [modality, setModality] = useState<Modality>(defaults.modality);
 
   // Las sesiones son estado del componente (no inputs sueltos), así que no se pierden si hay error.
   // Un paciente nuevo arranca como regular (lo más común); al editar, se respeta lo que tiene.
@@ -87,6 +94,17 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
                 <FieldError>{errors.last_name?.[0]}</FieldError>
               </Field>
             </div>
+            <Field data-invalid={!!errors.modality}>
+              <FieldLabel>Modalidad</FieldLabel>
+              <input type="hidden" name="modality" value={modality} />
+              <ModalityChoice idPrefix="modality" value={modality} onChange={setModality} />
+              <FieldDescription>
+                {isEdit
+                  ? "Sus sesiones usan esta modalidad, salvo las que cambies una por una. Las ya realizadas conservan la que tuvieron."
+                  : "Sus sesiones usan esta modalidad. Podés cambiarla en cada sesión."}
+              </FieldDescription>
+              <FieldError>{errors.modality?.[0]}</FieldError>
+            </Field>
           </FieldGroup>
         </CardContent>
       </Card>

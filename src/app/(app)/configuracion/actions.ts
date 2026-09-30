@@ -2,6 +2,7 @@
 
 // Cada opción de Configuración se guarda sola, en cuanto se cambia.
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { isTheme } from "@/lib/theme";
 import { isFontSize } from "@/lib/font-size";
@@ -56,4 +57,37 @@ export async function updateDefaultFee(raw: string): Promise<SaveResult> {
   const fee = parseFee(raw);
   if (fee === "invalid") return { error: "Ingresá un monto válido." };
   return saveProfile({ default_session_fee: fee });
+}
+
+// ---------------------------------------------------------------------------
+// Vacaciones: llevan botón y confirmación (quitan sesiones del calendario).
+// ---------------------------------------------------------------------------
+
+const vacationSchema = z.object({ start: z.iso.date(), end: z.iso.date() }).refine((v) => v.end >= v.start);
+
+// Devuelve cuántas sesiones de horarios fijos se quitaron.
+export async function addVacation(input: { start: string; end: string }): Promise<SaveResult & { removed?: number }> {
+  const parsed = vacationSchema.safeParse(input);
+  if (!parsed.success) return { error: "Elegí el primer y el último día de las vacaciones." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("add_vacation", { p_start: parsed.data.start, p_end: parsed.data.end });
+  // Los errores de la base (superposición, sesiones cobradas) ya vienen explicados.
+  if (error) return { error: error.code === "P0001" ? error.message : "No se pudieron cargar las vacaciones." };
+
+  // El layout carga las vacaciones (el calendario las pinta).
+  revalidatePath("/", "layout");
+  return { removed: data };
+}
+
+// Devuelve cuántas sesiones de horarios fijos volvieron al calendario.
+export async function removeVacation(id: string): Promise<SaveResult & { restored?: number }> {
+  if (!z.uuid().safeParse(id).success) return { error: "Datos inválidos." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("remove_vacation", { p_vacation_id: id });
+  if (error) return { error: error.code === "P0001" ? error.message : "No se pudieron quitar las vacaciones." };
+
+  revalidatePath("/", "layout");
+  return { restored: data };
 }

@@ -24,7 +24,7 @@ import { useSessionLength } from "@/components/profile-defaults-provider";
 import { DateTimePicker } from "./date-time-picker";
 import type { CalendarSession } from "./types";
 
-type Scope = "one" | "following";
+export type Scope = "one" | "following";
 
 type SessionActionsProps = {
   session: CalendarSession;
@@ -102,8 +102,8 @@ export function SessionActions({ session, timeZone, onChanged }: SessionActionsP
   );
 }
 
-// Elegir entre "solo esta" y "esta y las siguientes".
-function ScopeChoice({
+// Elegir entre "solo esta" y "esta y las siguientes" (también lo usa el cambio de modalidad).
+export function ScopeChoice({
   value,
   onChange,
   followingDescription,

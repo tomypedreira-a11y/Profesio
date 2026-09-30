@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { countryOptions, splitPhone } from "@/lib/phone";
 import { toSlots } from "@/lib/schedule";
+import { DEFAULT_MODALITY, isModality } from "@/lib/modality";
 import { PageHeader } from "@/components/page-header";
 import { updatePatient } from "../../actions";
 import { PatientForm, type PatientFormDefaults } from "../../patient-form";
@@ -30,6 +31,7 @@ export default async function EditPatientPage({ params }: PageProps<"/pacientes/
     // La base guarda AAAA-MM-DD; el formulario usa DD/MM/AAAA.
     birth_date: p.birth_date ? p.birth_date.split("-").reverse().join("/") : "",
     session_fee: p.session_fee !== null ? String(p.session_fee).replace(".", ",") : "",
+    modality: isModality(p.modality) ? p.modality : DEFAULT_MODALITY,
   };
 
   return (
