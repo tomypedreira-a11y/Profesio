@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon } from "lucide-react";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { formatSessionLong } from "@/lib/format";
+import { formatSessionLong, fullName } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { NoteDialogButton } from "@/components/notes/note-dialog-button";
@@ -33,13 +30,12 @@ export default async function PatientNotesPage({ params }: PageProps<"/pacientes
 
   return (
     <>
-      <Button variant="ghost" size="sm" className="self-start" render={<Link href={`/pacientes/${id}`} />} nativeButton={false}>
-        <ArrowLeftIcon />
-        {patient.first_name} {patient.last_name}
-      </Button>
+      {/* Para volver a la ficha está la flecha del encabezado. */}
       <PageHeader
         title="Anotaciones"
-        description={notes?.length === 1 ? "1 anotación de sesión" : `${notes?.length ?? 0} anotaciones de sesión`}
+        description={`${fullName(patient)} · ${
+          notes?.length === 1 ? "1 anotación de sesión" : `${notes?.length ?? 0} anotaciones de sesión`
+        }`}
       />
 
       {!notes?.length ? (

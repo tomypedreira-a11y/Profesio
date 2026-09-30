@@ -11,7 +11,6 @@ import type { DatesSetArg, EventClickArg, EventContentArg, EventInput, EventSour
 import { addDays, differenceInCalendarDays, format, isSameMonth, startOfWeek } from "date-fns";
 import Link from "next/link";
 import {
-  ArrowLeftIcon,
   CalendarDaysIcon,
   CalendarPlusIcon,
   ChevronLeftIcon,
@@ -84,15 +83,19 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
   // En el celular la pantalla principal muestra siempre la semana como tira de días (sin importar
   // la vista del perfil); las otras vistas se miran en /calendario. En PC la semana es la grilla de 7 días.
   // En la pantalla aparte, la semana es la lista en el celular y la grilla en PC.
+  // El cambio va en una microtarea: FullCalendar re-renderiza con flushSync, y React no lo permite
+  // dentro de un efecto ("flushSync was called from inside a lifecycle method").
   useEffect(() => {
-    const calendar = calendarRef.current?.getApi();
-    if (!calendar) return;
-    const type = calendar.view.type;
-    if (browse) {
-      if (isMobile && type === "timeGridWeek") calendar.changeView("listWeek");
-      else if (!isMobile && type === "listWeek") calendar.changeView("timeGridWeek");
-    } else if (isMobile && type !== "timeGridWeekMobile") calendar.changeView("timeGridWeekMobile");
-    else if (!isMobile && type === "timeGridWeekMobile") calendar.changeView("timeGridWeek");
+    queueMicrotask(() => {
+      const calendar = calendarRef.current?.getApi();
+      if (!calendar) return;
+      const type = calendar.view.type;
+      if (browse) {
+        if (isMobile && type === "timeGridWeek") calendar.changeView("listWeek");
+        else if (!isMobile && type === "listWeek") calendar.changeView("timeGridWeek");
+      } else if (isMobile && type !== "timeGridWeekMobile") calendar.changeView("timeGridWeekMobile");
+      else if (!isMobile && type === "timeGridWeekMobile") calendar.changeView("timeGridWeek");
+    });
   }, [isMobile, browse]);
 
   // Carga las sesiones del rango visible. FullCalendar la llama al cambiar de fecha o vista.
@@ -322,18 +325,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
               !browse && "md:order-none md:w-auto md:flex-1",
             )}
           >
-            {browse && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="-ml-2"
-                render={<Link href="/" />}
-                nativeButton={false}
-                aria-label="Volver al calendario"
-              >
-                <ArrowLeftIcon />
-              </Button>
-            )}
+            {/* Para volver al calendario está la flecha del encabezado, como en las demás pantallas. */}
             <h2 className="text-lg font-semibold first-letter:uppercase">{title}</h2>
           </div>
           {!browse && (
