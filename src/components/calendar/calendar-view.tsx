@@ -6,8 +6,8 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import esLocale from "@fullcalendar/core/locales/es";
 import type { DatesSetArg, EventClickArg, EventInput, EventSourceFuncArg } from "@fullcalendar/core";
-import { addDays, format, isSameMonth, startOfWeek } from "date-fns";
-import { CalendarPlusIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { addDays, differenceInCalendarDays, format, isSameMonth, startOfWeek } from "date-fns";
+import { CalendarPlusIcon, ChevronLeftIcon, ChevronRightIcon, UserRoundSearchIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { shortName, sortName } from "@/lib/format";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { AddSessionDialog } from "./add-session-dialog";
 import { NextSessionPanel } from "./next-session-panel";
 import { SessionSheet } from "./session-sheet";
-import { UnscheduledPanel } from "./unscheduled-panel";
+import { UnscheduledPanel, UnscheduledSheet } from "./unscheduled-panel";
+import { WeekStrip } from "./week-strip";
 import type { CalendarViewPreference } from "@/lib/calendar-views";
 import type { CalendarSession, PatientOption, UnscheduledPatient } from "./types";
 import "./calendar.css";
@@ -27,7 +28,13 @@ const SESSION_COLUMNS =
 const DEFAULT_MIN_HOUR = 8;
 const DEFAULT_MAX_HOUR = 22;
 
-type ViewKey = "timeGridDay" | "timeGridThreeDay" | "timeGridWeek" | "dayGridMonth";
+type ViewKey = "timeGridDay" | "timeGridWeek" | "timeGridWeekMobile" | "dayGridMonth";
+
+// Semana en el celular (la semana entera no entra): se ve un día, elegido en la tira de días,
+// y las flechas avanzan de a una semana.
+const CUSTOM_VIEWS = {
+  timeGridWeekMobile: { type: "timeGrid", duration: { days: 1 }, dateIncrement: { weeks: 1 }, dayHeaders: false },
+};
 
 type CalendarViewProps = {
   timeZone: string;
@@ -44,8 +51,13 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
   const [view, setView] = useState<ViewKey>(initialView);
   const [hours, setHours] = useState({ min: DEFAULT_MIN_HOUR, max: DEFAULT_MAX_HOUR });
   const [selected, setSelected] = useState<{ session: CalendarSession; isNext: boolean } | null>(null);
+  const [day, setDay] = useState<Date | null>(null); // primer día visible (el elegido en la tira)
   const [week, setWeek] = useState<Date | null>(null);
+  const weekRef = useRef<Date | null>(null);
   const [unscheduled, setUnscheduled] = useState<UnscheduledPatient[]>([]);
+  const [showUnscheduled, setShowUnscheduled] = useState(false);
+  // Sesiones no canceladas de cada día de la semana, para la tira del celular (null mientras carga).
+  const [weekCounts, setWeekCounts] = useState<number[] | null>(null);
   // Próxima sesión de todas (undefined mientras carga), para destacarla y mostrarla en el panel.
   const [nextSession, setNextSession] = useState<CalendarSession | null | undefined>(undefined);
   // Panel "Agregar sesión" abierto (con el paciente y la fecha sugeridos, si vienen de "No agendados").
@@ -53,14 +65,13 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
 
   const api = () => calendarRef.current?.getApi();
 
-  // En el celular, si la vista inicial es la semana, se muestran 3 días (la semana entera no entra).
-  const adjustedForMobile = useRef(false);
+  // La semana cambia de forma según el tamaño de pantalla: grilla de 7 días en PC, tira de días en el celular.
   useEffect(() => {
-    if (isMobile && !adjustedForMobile.current) {
-      adjustedForMobile.current = true;
-      if (initialView === "timeGridWeek") api()?.changeView("timeGridThreeDay");
-    }
-  }, [isMobile, initialView]);
+    const calendar = calendarRef.current?.getApi();
+    if (!calendar) return;
+    if (isMobile && calendar.view.type === "timeGridWeek") calendar.changeView("timeGridWeekMobile");
+    else if (!isMobile && calendar.view.type === "timeGridWeekMobile") calendar.changeView("timeGridWeek");
+  }, [isMobile]);
 
   // Carga las sesiones del rango visible. FullCalendar la llama al cambiar de fecha o vista.
   const fetchEvents = useCallback(
@@ -121,19 +132,26 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
     [supabase],
   );
 
-  // Pacientes irregulares activos sin sesión (no cancelada) en la semana indicada.
-  const loadUnscheduled = useCallback(
+  // De la semana indicada: pacientes irregulares activos sin sesión (no cancelada) y sesiones por día.
+  const loadWeek = useCallback(
     async (weekStart: Date) => {
       const weekEnd = addDays(weekStart, 7);
       const [{ data: irregular }, { data: booked }] = await Promise.all([
         supabase.from("patient_list").select("id, first_name, last_name").eq("active", true).is("weekday", null),
         supabase
           .from("sessions")
-          .select("patient_id")
+          .select("patient_id, starts_at")
           .eq("status", "scheduled")
           .gte("starts_at", weekStart.toISOString())
           .lt("starts_at", weekEnd.toISOString()),
       ]);
+      // Si mientras tanto se pasó a otra semana, esta respuesta ya no sirve.
+      if (weekRef.current?.getTime() !== weekStart.getTime()) return;
+
+      const counts = Array<number>(7).fill(0);
+      for (const b of booked ?? []) counts[differenceInCalendarDays(new Date(b.starts_at), weekStart)]++;
+      setWeekCounts(counts);
+
       const bookedIds = new Set((booked ?? []).map((b) => b.patient_id));
       const collator = new Intl.Collator("es");
       setUnscheduled(
@@ -147,19 +165,35 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
 
   // Al cambiar de fecha o vista: actualizar el título y la semana de "No agendados".
   function handleDatesSet(arg: DatesSetArg) {
-    setTitle(arg.view.title);
-    setView(arg.view.type as ViewKey);
+    const type = arg.view.type as ViewKey;
+    setView(type);
+    setDay(arg.view.currentStart);
 
     // En la vista mensual se usa la semana actual (si es el mes que se ve) o la primera del mes.
     const today = new Date();
     const reference =
-      arg.view.type === "dayGridMonth"
+      type === "dayGridMonth"
         ? isSameMonth(today, arg.view.currentStart) ? today : arg.view.currentStart
         : arg.view.currentStart;
     const weekStart = startOfWeek(reference, { weekStartsOn: 1 });
+
+    // La semana del celular muestra un solo día, pero el título es el de la semana.
+    setTitle(
+      type === "timeGridWeekMobile"
+        ? arg.view.calendar.formatRange(weekStart, addDays(weekStart, 6), {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            separator: " – ",
+          })
+        : arg.view.title,
+    );
+
     if (!week || weekStart.getTime() !== week.getTime()) {
+      weekRef.current = weekStart;
       setWeek(weekStart);
-      void loadUnscheduled(weekStart);
+      setWeekCounts(null);
+      void loadWeek(weekStart);
     }
   }
 
@@ -173,15 +207,18 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
 
   function refresh() {
     refetchEvents();
-    if (week) void loadUnscheduled(week);
+    if (week) void loadWeek(week);
   }
 
   const viewOptions: { key: ViewKey; label: string }[] = [
     { key: "timeGridDay", label: "Día" },
-    ...(isMobile ? [{ key: "timeGridThreeDay" as ViewKey, label: "3 días" }] : []),
-    { key: "timeGridWeek", label: "Semana" },
+    { key: isMobile ? "timeGridWeekMobile" : "timeGridWeek", label: "Semana" },
     { key: "dayGridMonth", label: "Mes" },
   ];
+
+  const weekLabel = week ? `${format(week, "dd/MM")} al ${format(addDays(week, 6), "dd/MM")}` : "";
+  const scheduleUnscheduled = (p: UnscheduledPatient) =>
+    setAdding({ patientId: p.id, date: week && new Date() < week ? week : undefined });
 
   const pad = (h: number) => `${String(h).padStart(2, "0")}:00:00`;
 
@@ -214,18 +251,39 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
               </Button>
             ))}
           </div>
-          <Button onClick={() => setAdding({})}>
-            <CalendarPlusIcon />
-            Agregar sesión
-          </Button>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Button className="flex-1" onClick={() => setAdding({})}>
+              <CalendarPlusIcon />
+              Agregar sesión
+            </Button>
+            {/* En el celular "No agendados" no ocupa lugar arriba: se abre desde acá. */}
+            <Button variant="outline" className="flex-1 md:hidden" onClick={() => setShowUnscheduled(true)}>
+              <UserRoundSearchIcon />
+              Sin agendar
+              {unscheduled.length > 0 && (
+                <span className="rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
+                  {unscheduled.length}
+                </span>
+              )}
+            </Button>
+          </div>
         </div>
+
+        {view === "timeGridWeekMobile" && week && day && (
+          <WeekStrip
+            weekStart={week}
+            selected={day}
+            counts={weekCounts}
+            onSelect={(d) => api()?.gotoDate(d)}
+          />
+        )}
 
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin]}
           locale={esLocale}
           initialView={initialView}
-          views={{ timeGridThreeDay: { type: "timeGrid", duration: { days: 3 } } }}
+          views={CUSTOM_VIEWS}
           headerToolbar={false}
           height="auto"
           allDaySlot={false}
@@ -261,12 +319,18 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
           onSelect={(session) => setSelected({ session, isNext: true })}
           onStarted={refetchEvents}
         />
-        <UnscheduledPanel
-          patients={unscheduled}
-          weekLabel={week ? `${format(week, "dd/MM")} al ${format(addDays(week, 6), "dd/MM")}` : ""}
-          onSelect={(p) => setAdding({ patientId: p.id, date: week && new Date() < week ? week : undefined })}
-        />
+        <div className="max-md:hidden">
+          <UnscheduledPanel patients={unscheduled} weekLabel={weekLabel} onSelect={scheduleUnscheduled} />
+        </div>
       </div>
+
+      <UnscheduledSheet
+        open={showUnscheduled}
+        onOpenChange={setShowUnscheduled}
+        patients={unscheduled}
+        weekLabel={weekLabel}
+        onSelect={scheduleUnscheduled}
+      />
 
       <SessionSheet
         session={selected?.session ?? null}
