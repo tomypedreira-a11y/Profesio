@@ -94,6 +94,8 @@ function VacationItem({ vacation, current }: { vacation: Vacation; current: bool
 function AddVacation() {
   const [range, setRange] = useState<DateRange | undefined>();
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Controlado: en Base UI, AlertDialogAction no cierra el diálogo solo.
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
   const today = startOfDay(new Date());
@@ -102,6 +104,7 @@ function AddVacation() {
 
   function add() {
     if (!from || !to) return;
+    setConfirmOpen(false);
     startTransition(async () => {
       const result = await addVacation({ start: dayKey(from), end: dayKey(to) });
       setError(result.error);
@@ -145,7 +148,7 @@ function AddVacation() {
           </PopoverContent>
         </Popover>
 
-        <AlertDialog>
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
           <AlertDialogTrigger render={<Button disabled={!from || pending} />}>
             <TreePalmIcon />
             {pending ? "Cargando…" : "Agregar vacaciones"}
@@ -161,7 +164,7 @@ function AddVacation() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={add}>Cargar vacaciones</AlertDialogAction>
+              <AlertDialogAction onClick={add} disabled={pending}>Cargar vacaciones</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
