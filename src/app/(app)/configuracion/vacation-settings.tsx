@@ -78,7 +78,7 @@ function VacationItem({ vacation, current }: { vacation: Vacation; current: bool
   }
 
   return (
-    <li className="flex items-center gap-3 rounded-lg border bg-(--vacation) px-3 py-2 text-sm">
+    <li className="flex items-center gap-3 rounded-lg border border-(--vacation-border) bg-(--vacation) px-3 py-2 text-sm">
       <TreePalmIcon className="size-4 shrink-0 text-muted-foreground" />
       <span className="flex-1 first-letter:uppercase">
         {formatRange(parseISO(vacation.start_date), parseISO(vacation.end_date))}

@@ -421,7 +421,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-(--session-cancelled-border) bg-(--session-cancelled)" /> Cancelada</span>
           <span>(p) Presencial · (v) Virtual</span>
           {vacations.length > 0 && (
-            <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border bg-(--vacation)" /> Vacaciones</span>
+            <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-(--vacation-border) bg-(--vacation)" /> Vacaciones</span>
           )}
         </div>
       </div>

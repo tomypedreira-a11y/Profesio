@@ -150,15 +150,18 @@
   --session-cancelled-foreground: oklch(0.86 0.05 5);
 }
 
-/* Vacaciones: los días se pintan de rosa pastel (tema claro) o lila pastel (tema oscuro).
+/* Vacaciones: los días se pintan de turquesa suave, bien marcado para que se distingan de un vistazo.
    Translúcido y como imagen de fondo, para sumarse al color de "hoy" sin taparlo.
-   En el oscuro, el lila va más transparente: pleno encandilaría y no se leerían los números. */
+   En el oscuro va más transparente: pleno encandilaría y no se leerían los números.
+   --vacation-border remarca las muestras (leyenda, lista de vacaciones). */
 :root {
-  --vacation: oklch(0.86 0.07 350 / 45%);
+  --vacation: oklch(0.8 0.11 190 / 55%);
+  --vacation-border: oklch(0.62 0.12 192);
 }
 
 .dark {
-  --vacation: oklch(0.8 0.08 305 / 24%);
+  --vacation: oklch(0.72 0.12 190 / 32%);
+  --vacation-border: oklch(0.72 0.12 190);
 }
 
 .fc .vacation-day,
