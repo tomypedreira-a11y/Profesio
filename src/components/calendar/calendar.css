@@ -25,6 +25,12 @@
   height: 2rem;
 }
 
+/* En la semana de PC las 7 columnas son angostas y "13:00 Juan Sebastian G." no entra en una línea:
+   cada hora es más alta para que una sesión de 45 minutos tenga dos líneas (hora y nombre completo). */
+.fc .fc-timeGridWeek-view .fc-timegrid-slot {
+  height: 3.25rem;
+}
+
 .fc .fc-timegrid-slot-label-cushion,
 .fc .fc-daygrid-day-number {
   color: var(--muted-foreground);
@@ -38,6 +44,62 @@
   border-width: 1.5px;
   cursor: pointer;
   border-radius: 0.375rem;
+}
+
+/* Contenido de la sesión (renderSession en calendar-view.tsx): hora y nombre como texto corrido.
+   El nombre sigue en la línea de abajo si no entra; lo que no cabe en el alto de la sesión queda oculto. */
+.fc .session-content {
+  height: 100%;
+  overflow: hidden;
+  padding: 0.125rem 0.25rem;
+  line-height: 1.1;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.fc .session-time {
+  margin-right: 0.35em;
+  font-size: 0.9em;
+  opacity: 0.8;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.fc .session-name {
+  font-weight: 600;
+}
+
+/* Pantalla aparte de vistas en el celular (.calendar-compact en calendar-view.tsx). */
+
+/* Semana en lista: la fila no lleva el borde de las sesiones; el punto de color indica el estado. */
+.calendar-compact .fc-list-table {
+  font-size: 0.9375rem;
+}
+
+.calendar-compact .fc .fc-list-event.session {
+  border-width: 0;
+  box-shadow: none;
+}
+
+/* Mes: un punto por sesión (los nombres no entran en celdas tan angostas); tocar el día lo abre. */
+.calendar-compact .fc-dayGridMonth-view .fc-daygrid-day-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  min-height: 0;
+  padding: 0 0.25rem 0.375rem;
+}
+
+.calendar-compact .fc-dayGridMonth-view .fc-daygrid-event-harness {
+  margin: 0 !important; /* FullCalendar lo apila con margin-top en línea */
+}
+
+.calendar-compact .fc-dayGridMonth-view .fc-daygrid-event {
+  width: 0.625rem;
+  height: 0.625rem;
+  margin: 0;
+  padding: 0;
+  border-radius: 999px;
 }
 
 .fc .session-next {
@@ -61,7 +123,7 @@
   --fc-event-text-color: var(--muted-foreground);
 }
 
-/* Color de la próxima sesión: amarillo pastel (resalta sin impactar), el mismo en los dos temas.
+/* Color de la próxima sesión: amarillo pastel (resalta sin impactar).
    El borde es un tono más intenso para que el pastel no se pierda sobre el beige. */
 :root {
   --session-next: oklch(0.94 0.07 98);
@@ -76,8 +138,13 @@
   --session-cancelled-foreground: oklch(0.45 0.09 25);
 }
 
+/* Tema oscuro (noche): la próxima, en un azul más profundo que las demás sesiones
+   (que son azul lavanda) y con el anillo que ya la resalta; la cancelada, rosa viejo. */
 .dark {
-  --session-cancelled: oklch(0.36 0.06 20);
-  --session-cancelled-border: oklch(0.5 0.09 20);
-  --session-cancelled-foreground: oklch(0.85 0.05 20);
+  --session-next: oklch(0.7 0.1 245);
+  --session-next-border: oklch(0.6 0.12 248);
+  --session-next-foreground: oklch(0.2 0.05 255);
+  --session-cancelled: oklch(0.33 0.05 5);
+  --session-cancelled-border: oklch(0.52 0.08 5);
+  --session-cancelled-foreground: oklch(0.86 0.05 5);
 }

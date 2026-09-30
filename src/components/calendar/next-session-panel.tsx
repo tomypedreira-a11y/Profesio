@@ -33,12 +33,13 @@ export function NextSessionPanel({ session, timeZone, onSelect, onStarted }: Nex
     if (started) onStarted();
   }, [started, onStarted]);
 
-  // En el celular va debajo del calendario y ocupa una sola línea, sin avatar, para dejarle lugar.
+  // En el celular va debajo del calendario, sin avatar: nombre y fecha en dos líneas, y a la derecha
+  // cuánto falta (en una sola línea, con letra grande, la fecha y el tiempo tapaban el nombre).
   // En PC, en la columna angosta de la derecha, lleva avatar y el tiempo que falta pasa abajo del nombre.
   return (
     <Card size="sm" className="py-0">
       {session === undefined ? (
-        <Skeleton className="m-2 h-5 lg:h-10" />
+        <Skeleton className="m-2 h-8 lg:h-10" />
       ) : session === null ? (
         <p className="px-3 py-2 text-sm text-muted-foreground lg:py-3">
           <span className="font-medium text-foreground">Próxima sesión:</span> no hay sesiones agendadas.
@@ -47,7 +48,7 @@ export function NextSessionPanel({ session, timeZone, onSelect, onStarted }: Nex
         <button
           type="button"
           onClick={() => onSelect(session)}
-          className="flex items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-accent lg:grid lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-x-3 lg:gap-y-1"
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-2 text-left transition-colors hover:bg-accent lg:grid-cols-[auto_minmax(0,1fr)]"
           title="Ver próxima sesión"
         >
           <Avatar className="size-9 max-lg:hidden lg:row-span-2">
@@ -55,11 +56,11 @@ export function NextSessionPanel({ session, timeZone, onSelect, onStarted }: Nex
               {`${session.first_name.charAt(0)}${session.last_name.charAt(0)}`.toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="flex min-w-0 flex-1 items-baseline gap-2 lg:grid lg:gap-0">
+          <div className="grid min-w-0">
             <span className="truncate text-sm font-medium">
               {session.first_name} {session.last_name}
             </span>
-            <span className="shrink-0 text-xs text-muted-foreground lg:truncate">
+            <span className="truncate text-xs text-muted-foreground">
               <span className="max-lg:hidden">Próxima: </span>
               {formatSessionShort(session.starts_at, timeZone)}
             </span>

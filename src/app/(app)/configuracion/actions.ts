@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isTheme } from "@/lib/theme";
+import { isFontSize } from "@/lib/font-size";
 import { isCalendarView } from "@/lib/calendar-views";
 import { isSessionLength } from "@/lib/schedule";
 import { parseFee } from "@/lib/format";
@@ -31,6 +32,12 @@ export async function updateTheme(theme: string): Promise<SaveResult> {
   if (!isTheme(theme)) return { error: "Elegí uno de los modos." };
   // Sin revalidar: el tema ya se aplicó en el navegador y ThemeSync podría pisarlo con uno anterior.
   return saveProfile({ theme }, false);
+}
+
+export async function updateFontSize(size: string): Promise<SaveResult> {
+  if (!isFontSize(size)) return { error: "Elegí uno de los tamaños." };
+  // Sin revalidar, como el tema: ya se aplicó en el navegador.
+  return saveProfile({ font_size: size }, false);
 }
 
 export async function updateCalendarView(view: string): Promise<SaveResult> {

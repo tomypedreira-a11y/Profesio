@@ -135,6 +135,7 @@ export type Database = {
           default_session_fee: number | null
           default_session_minutes: number
           first_name: string
+          font_size: string
           id: string
           last_name: string
           license_number: string | null
@@ -148,6 +149,7 @@ export type Database = {
           default_session_fee?: number | null
           default_session_minutes?: number
           first_name?: string
+          font_size?: string
           id: string
           last_name?: string
           license_number?: string | null
@@ -161,6 +163,7 @@ export type Database = {
           default_session_fee?: number | null
           default_session_minutes?: number
           first_name?: string
+          font_size?: string
           id?: string
           last_name?: string
           license_number?: string | null

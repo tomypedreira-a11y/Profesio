@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
+import listPlugin from "@fullcalendar/list";
+import interactionPlugin, { type DateClickArg } from "@fullcalendar/interaction";
 import esLocale from "@fullcalendar/core/locales/es";
-import type { DatesSetArg, EventClickArg, EventInput, EventSourceFuncArg } from "@fullcalendar/core";
+import type { DatesSetArg, EventClickArg, EventContentArg, EventInput, EventSourceFuncArg } from "@fullcalendar/core";
 import { addDays, differenceInCalendarDays, format, isSameMonth, startOfWeek } from "date-fns";
 import Link from "next/link";
 import {
@@ -37,12 +39,14 @@ const SESSION_COLUMNS =
 const DEFAULT_MIN_HOUR = 8;
 const DEFAULT_MAX_HOUR = 22;
 
-type ViewKey = "timeGridDay" | "timeGridWeek" | "timeGridWeekMobile" | "dayGridMonth";
+type ViewKey = "timeGridDay" | "timeGridWeek" | "timeGridWeekMobile" | "listWeek" | "dayGridMonth";
 
 // Semana en el celular (la semana entera no entra): se ve un día, elegido en la tira de días,
-// y las flechas avanzan de a una semana.
+// y las flechas avanzan de a una semana. En la pantalla aparte del celular, la semana es una lista
+// por día (en 7 columnas angostas no entraban los nombres), con inicio y fin de cada sesión.
 const CUSTOM_VIEWS = {
   timeGridWeekMobile: { type: "timeGrid", duration: { days: 1 }, dateIncrement: { weeks: 1 }, dayHeaders: false },
+  listWeek: { displayEventEnd: true },
 };
 
 type CalendarViewProps = {
@@ -59,6 +63,8 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
   const supabase = useRef(createClient()).current;
   const calendarRef = useRef<FullCalendar>(null);
   const isMobile = useIsMobile();
+  // Pantalla aparte en el celular: semana en lista y mes con un punto por sesión.
+  const compact = browse && isMobile;
 
   const [title, setTitle] = useState("");
   const [view, setView] = useState<ViewKey>(initialView);
@@ -80,11 +86,16 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
 
   // En el celular la pantalla principal muestra siempre la semana como tira de días (sin importar
   // la vista del perfil); las otras vistas se miran en /calendario. En PC la semana es la grilla de 7 días.
+  // En la pantalla aparte, la semana es la lista en el celular y la grilla en PC.
   useEffect(() => {
     const calendar = calendarRef.current?.getApi();
-    if (!calendar || browse) return;
-    if (isMobile && calendar.view.type !== "timeGridWeekMobile") calendar.changeView("timeGridWeekMobile");
-    else if (!isMobile && calendar.view.type === "timeGridWeekMobile") calendar.changeView("timeGridWeek");
+    if (!calendar) return;
+    const type = calendar.view.type;
+    if (browse) {
+      if (isMobile && type === "timeGridWeek") calendar.changeView("listWeek");
+      else if (!isMobile && type === "listWeek") calendar.changeView("timeGridWeek");
+    } else if (isMobile && type !== "timeGridWeekMobile") calendar.changeView("timeGridWeekMobile");
+    else if (!isMobile && type === "timeGridWeekMobile") calendar.changeView("timeGridWeek");
   }, [isMobile, browse]);
 
   // Carga las sesiones del rango visible. FullCalendar la llama al cambiar de fecha o vista.
@@ -212,6 +223,25 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
     }
   }
 
+  // Cada sesión: la hora y el nombre como texto corrido ("13:00 Juan Sebastian G."). Así siempre se ven
+  // la hora y el comienzo del nombre, y si la sesión tiene más alto el nombre sigue en la línea de abajo.
+  function renderSession(arg: EventContentArg) {
+    // En la lista la hora tiene su propia columna; en el mes compacto la sesión es solo un punto.
+    if (arg.view.type === "listWeek") return <span className="session-name">{arg.event.title}</span>;
+    if (compact && arg.view.type === "dayGridMonth") return <span className="sr-only">{arg.event.title}</span>;
+    return (
+      <div className="session-content">
+        {arg.timeText && <span className="session-time">{arg.timeText}</span>}
+        <span className="session-name">{arg.event.title}</span>
+      </div>
+    );
+  }
+
+  // Mes compacto: tocar un día (fuera de sus puntos) lo abre en la vista Día.
+  function handleDateClick(arg: DateClickArg) {
+    if (compact && arg.view.type === "dayGridMonth") api()?.changeView("timeGridDay", arg.date);
+  }
+
   function handleEventClick(arg: EventClickArg) {
     const { session, isNext } = arg.event.extendedProps as { session: CalendarSession; isNext: boolean };
     setSelected({ session, isNext });
@@ -227,7 +257,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
 
   const viewOptions: { key: ViewKey; label: string }[] = [
     { key: "timeGridDay", label: "Día" },
-    { key: "timeGridWeek", label: "Semana" },
+    { key: compact ? "listWeek" : "timeGridWeek", label: "Semana" },
     { key: "dayGridMonth", label: "Mes" },
   ];
 
@@ -327,30 +357,37 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
           />
         )}
 
-        <FullCalendar
-          ref={calendarRef}
-          plugins={[dayGridPlugin, timeGridPlugin]}
-          locale={esLocale}
-          initialView={initialView}
-          views={CUSTOM_VIEWS}
-          headerToolbar={false}
-          height="auto"
-          allDaySlot={false}
-          nowIndicator
-          slotMinTime={pad(hours.min)}
-          slotMaxTime={pad(hours.max)}
-          slotDuration="01:00:00"
-          slotLabelInterval="02:00:00" // grilla compacta: una fila por hora, rótulo cada 2
-          slotLabelFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
-          eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
-          dayHeaderFormat={view === "dayGridMonth" ? { weekday: "short" } : { weekday: "short", day: "numeric" }}
-          eventDisplay="block"
-          nextDayThreshold="06:00:00" // una sesión que termina de madrugada cuenta como del día anterior
-          dayMaxEvents={3}
-          events={fetchEvents}
-          datesSet={handleDatesSet}
-          eventClick={handleEventClick}
-        />
+        <div className={cn(compact && "calendar-compact")}>
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+            locale={esLocale}
+            initialView={initialView}
+            views={CUSTOM_VIEWS}
+            headerToolbar={false}
+            height="auto"
+            allDaySlot={false}
+            nowIndicator
+            slotMinTime={pad(hours.min)}
+            slotMaxTime={pad(hours.max)}
+            slotDuration="01:00:00"
+            slotLabelInterval="02:00:00" // grilla compacta: una fila por hora, rótulo cada 2
+            slotLabelFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
+            eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
+            displayEventEnd={false} // solo la hora de inicio: deja más lugar para el nombre
+            eventContent={renderSession}
+            dayHeaderFormat={view === "dayGridMonth" ? { weekday: "short" } : { weekday: "short", day: "numeric" }}
+            eventDisplay="block"
+            nextDayThreshold="06:00:00" // una sesión que termina de madrugada cuenta como del día anterior
+            dayMaxEvents={compact ? false : 3}
+            navLinks={compact} // en la lista, el nombre del día abre ese día
+            noEventsText="No hay sesiones en estos días."
+            events={fetchEvents}
+            datesSet={handleDatesSet}
+            dateClick={handleDateClick}
+            eventClick={handleEventClick}
+          />
+        </div>
 
         {/* Referencia de colores */}
         <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
