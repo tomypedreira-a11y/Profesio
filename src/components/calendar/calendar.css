@@ -169,6 +169,69 @@
   background-image: linear-gradient(var(--vacation), var(--vacation));
 }
 
+/* Borde del período: arriba y abajo en todos sus días, a la izquierda el primero y a la derecha el último.
+   Con sombras internas (no bordes) para no mover la grilla de FullCalendar. */
+.fc .vacation-day {
+  --vacation-edge: 2px;
+  --vacation-top: var(--vacation-edge);
+  --vacation-bottom: var(--vacation-edge);
+  --vacation-left: 0px;
+  --vacation-right: 0px;
+}
+
+.fc .vacation-start {
+  --vacation-left: var(--vacation-edge);
+}
+
+.fc .vacation-end {
+  --vacation-right: var(--vacation-edge);
+}
+
+/* En la semana y el día, el encabezado cierra arriba y la columna abajo. */
+.fc .fc-col-header-cell.vacation-day {
+  --vacation-bottom: 0px;
+}
+
+.fc .fc-timegrid-col.vacation-day {
+  --vacation-top: 0px;
+}
+
+.fc .vacation-day > .fc-daygrid-day-frame,
+.fc .vacation-day > .fc-timegrid-col-frame,
+.fc .fc-col-header-cell.vacation-day > .fc-scrollgrid-sync-inner {
+  box-shadow:
+    inset var(--vacation-left) 0 0 var(--vacation-border),
+    inset calc(-1 * var(--vacation-right)) 0 0 var(--vacation-border),
+    inset 0 var(--vacation-top) 0 var(--vacation-border),
+    inset 0 calc(-1 * var(--vacation-bottom)) 0 var(--vacation-border);
+}
+
+/* En la lista (semana del celular), una franja a la izquierda del día. */
+.fc .fc-list-day.vacation-day .fc-list-day-cushion {
+  box-shadow: inset 4px 0 0 var(--vacation-border);
+}
+
+/* Palmerita al costado del número del día (la misma de Configuración: TreePalm de Lucide).
+   Como máscara, para que tome el color del borde en los dos temas. */
+.fc .vacation-day .fc-daygrid-day-number,
+.fc .vacation-day .fc-col-header-cell-cushion,
+.fc .vacation-day .fc-list-day-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+}
+
+.fc .vacation-day .fc-daygrid-day-number::before,
+.fc .vacation-day .fc-col-header-cell-cushion::after,
+.fc .vacation-day .fc-list-day-text::after {
+  content: "";
+  flex-shrink: 0;
+  width: 1.1em;
+  height: 1.1em;
+  background-color: var(--vacation-border);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4'/%3E%3Cpath d='M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3'/%3E%3Cpath d='M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35'/%3E%3Cpath d='M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
 /* Modalidad después del nombre: "(v)" o "(p)", sin negrita para que el nombre siga resaltando. */
 .fc .session-modality {
   font-weight: 400;

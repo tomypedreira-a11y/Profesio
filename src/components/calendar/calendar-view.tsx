@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { shortName, sortName } from "@/lib/format";
-import { isVacationDay } from "@/lib/vacations";
+import { dayKey, findVacation, isVacationDay } from "@/lib/vacations";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useVacations } from "@/components/vacations-provider";
 import { Button } from "@/components/ui/button";
@@ -296,7 +296,20 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
 
   const pad = (h: number) => `${String(h).padStart(2, "0")}:00:00`;
   // Días de vacaciones: su columna (o su casilla, en el mes) y su encabezado se pintan.
-  const vacationClass = (arg: { date: Date }) => (isVacationDay(vacations, arg.date) ? ["vacation-day"] : []);
+  // El primero y el último llevan el borde de ese lado, así se ve dónde empieza y termina el período.
+  const vacationClass = (arg: { date: Date }) => {
+    const vacation = findVacation(vacations, arg.date);
+    if (!vacation) return [];
+    const day = dayKey(arg.date);
+    return [
+      "vacation-day",
+      ...(day === vacation.start_date ? ["vacation-start"] : []),
+      ...(day === vacation.end_date ? ["vacation-end"] : []),
+    ];
+  };
+  // En el mes, el encabezado es el día de la semana (no una fecha): no se pinta.
+  const vacationHeaderClass = (arg: { date: Date; view: { type: string } }) =>
+    arg.view.type === "dayGridMonth" ? [] : vacationClass(arg);
 
   return (
     <div className={cn("grid gap-4", !browse && "lg:grid-cols-[minmax(0,1fr)_16rem]")}>
@@ -398,7 +411,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
             displayEventEnd={false} // solo la hora de inicio: deja más lugar para el nombre
             eventContent={renderSession}
             dayCellClassNames={vacationClass}
-            dayHeaderClassNames={vacationClass}
+            dayHeaderClassNames={vacationHeaderClass}
             dayHeaderFormat={view === "dayGridMonth" ? { weekday: "short" } : { weekday: "short", day: "numeric" }}
             eventDisplay="block"
             nextDayThreshold="06:00:00" // una sesión que termina de madrugada cuenta como del día anterior
