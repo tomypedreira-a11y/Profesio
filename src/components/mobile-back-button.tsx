@@ -15,7 +15,7 @@ export function MobileBackButton() {
     <Button
       variant="ghost"
       size="sm"
-      className="-ml-2 mr-auto md:hidden" // empuja "Profesio" a la derecha
+      className="-ml-2 mr-auto md:hidden" // empuja el saludo a la derecha
       render={<Link href="/" />}
       nativeButton={false}
     >
