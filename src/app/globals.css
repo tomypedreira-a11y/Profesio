@@ -151,3 +151,10 @@
     cursor: pointer;
   }
 }
+
+/* Con la barra inferior del celular, los avisos (sonner) aparecen por encima de ella. */
+@media (max-width: 767px) {
+  body:has([data-mobile-nav]) {
+    --toast-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+}
