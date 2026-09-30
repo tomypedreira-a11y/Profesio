@@ -7,8 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 const noteSchema = z.object({
   sessionId: z.uuid(),
   noteId: z.uuid().optional(), // borrador existente a actualizar
-  supersedesId: z.uuid().optional(), // informe finalizado que se corrige
-  content: z.string().trim().min(1, "Escribí el informe antes de guardarlo.").max(50000, "El informe es demasiado largo."),
+  supersedesId: z.uuid().optional(), // anotación finalizada que se corrige
+  content: z.string().trim().min(1, "Escribí la anotación antes de guardarla.").max(50000, "La anotación es demasiado larga."),
   finalize: z.boolean(),
 });
 
@@ -18,9 +18,9 @@ export type SaveNoteResult =
   | { error: string }
   | { error?: undefined; noteId: string; version: number; finalizedAt: string | null };
 
-// Guarda un informe de sesión:
+// Guarda una anotación de sesión:
 // - borrador existente → se actualiza;
-// - sin informe, o corrigiendo uno finalizado → se crea una fila nueva (versión).
+// - sin anotación, o corrigiendo una finalizada → se crea una fila nueva (versión).
 // Devuelve la fila guardada: el guardado automático sigue actualizando ese mismo borrador.
 export async function saveNote(input: SaveNoteInput): Promise<SaveNoteResult> {
   const parsed = noteSchema.safeParse(input);
@@ -38,8 +38,8 @@ export async function saveNote(input: SaveNoteInput): Promise<SaveNoteResult> {
         .single();
 
   if (error) {
-    // Mensajes de las reglas de la base (ej: "Una nota finalizada no se puede modificar").
-    return { error: error.code === "P0001" ? error.message : "No se pudo guardar el informe. Volvé a intentar." };
+    // Mensajes de las reglas de la base (ej: "Una anotación finalizada no se puede modificar").
+    return { error: error.code === "P0001" ? error.message : "No se pudo guardar la anotación. Volvé a intentar." };
   }
 
   // Los borradores se guardan solos cada pocos segundos: solo se refrescan las pantallas al finalizar.

@@ -460,6 +460,7 @@ export type Database = {
           patient_id: string | null
           payment_method: string | null
           starts_at: string | null
+          status: string | null
         }
         Relationships: []
       }

@@ -1,6 +1,6 @@
 "use client";
 
-// Botón que abre el editor de un informe en un diálogo (usado en la lista de informes).
+// Botón que abre el editor de una anotación en un diálogo (usado en la lista de anotaciones).
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ export function NoteDialogButton({ sessionId, timeZone, sessionLabel, label }: N
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Informe de sesión</DialogTitle>
+            <DialogTitle>Anotación de sesión</DialogTitle>
             <DialogDescription className="first-letter:uppercase">{sessionLabel}</DialogDescription>
           </DialogHeader>
           {open && <NoteEditor sessionId={sessionId} timeZone={timeZone} onSaved={() => router.refresh()} />}

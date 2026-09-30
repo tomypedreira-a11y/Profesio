@@ -1,7 +1,7 @@
 "use client";
 
 // Cobro de una sesión dentro de su panel: valor, estado y botón para cobrar o deshacer.
-// Una sesión futura se puede cobrar por adelantado.
+// Una sesión futura se puede cobrar por adelantado, y una cancelada también se puede cobrar.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/client";
@@ -11,7 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MarkPaidButton, MarkUnpaidButton } from "./payment-buttons";
 
-type Payment = { starts_at: string; fee: number | null; paid_at: string | null; payment_method: string | null };
+type Payment = {
+  starts_at: string;
+  fee: number | null;
+  paid_at: string | null;
+  payment_method: string | null;
+  status: string;
+};
 
 export function SessionPayment({ sessionId, timeZone }: { sessionId: string; timeZone: string }) {
   const supabase = useRef(createClient()).current;
@@ -20,7 +26,7 @@ export function SessionPayment({ sessionId, timeZone }: { sessionId: string; tim
   const load = useCallback(async () => {
     const { data } = await supabase
       .from("session_payments")
-      .select("starts_at, fee, paid_at, payment_method")
+      .select("starts_at, fee, paid_at, payment_method, status")
       .eq("id", sessionId)
       .maybeSingle();
     setPayment(data as Payment | null);
@@ -31,8 +37,10 @@ export function SessionPayment({ sessionId, timeZone }: { sessionId: string; tim
   }, [load]);
 
   if (payment === undefined) return <Skeleton className="h-9 w-full" />;
-  if (payment === null) return null; // sesión cancelada
-  const upcoming = new Date(payment.starts_at) > new Date();
+  if (payment === null) return null;
+  // "Por adelantado" solo corre para una sesión que todavía va a ocurrir.
+  const cancelled = payment.status === "cancelled";
+  const upcoming = !cancelled && new Date(payment.starts_at) > new Date();
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2">
@@ -49,7 +57,7 @@ export function SessionPayment({ sessionId, timeZone }: { sessionId: string; tim
         </>
       ) : (
         <>
-          <Badge variant="outline">{upcoming ? "Sin cobrar" : "Pendiente de cobro"}</Badge>
+          <Badge variant="outline">{upcoming || cancelled ? "Sin cobrar" : "Pendiente de cobro"}</Badge>
           <span className="ml-auto">
             <MarkPaidButton sessionIds={[sessionId]} label={upcoming ? "Cobrar por adelantado" : "Cobrar"} onDone={load} />
           </span>

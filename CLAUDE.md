@@ -45,7 +45,7 @@ src/
     auth/confirm/route.ts        Link del mail de confirmación
     (app)/                       Pantallas con sesión iniciada (layout con panel lateral)
       page.tsx                   Calendario (vista principal)
-      pacientes/                 Listado, alta, ficha, edición, archivados, informes
+      pacientes/                 Listado, alta, ficha, edición, archivados, anotaciones
       sesiones/                  Lista de próximas sesiones + acciones de sesiones
       ingresos/                  Resumen de cobros del mes, quiénes adeudan + acciones de cobro
       perfil/                    Datos profesionales (nombre, apellido, matrícula)
@@ -53,7 +53,7 @@ src/
   components/
     ui/                          Componentes de shadcn (generados por la CLI)
     calendar/                    Calendario, panel de sesión, agendar, reprogramar/cancelar
-    notes/                       Editor de informes de sesión
+    notes/                       Editor de anotaciones de sesión
     payments/                    Botones de cobro y cobro dentro del panel de sesión
     profile-defaults-provider.tsx  Duración y valor por defecto del perfil (los carga el layout)
   lib/
@@ -77,7 +77,7 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 | `patients` | Pacientes. `active = false` = archivado. Teléfono en E.164. |
 | `session_series` | Horario fijo semanal (día, hora y duración). Un paciente puede tener varios. `end_date is null` = vigente. |
 | `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). Cobro: `fee`, `paid_at`, `payment_method`. |
-| `session_notes` | Informes de sesión, con versiones. |
+| `session_notes` | Anotaciones de sesión (historia clínica), con versiones. |
 | `audit_log` | Registro de modificaciones (lo escriben triggers). |
 
 Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `session_book`, `session_payments`.
@@ -118,19 +118,22 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   Regular = suma días fijos; irregular = una sesión suelta.
 - **Valor por sesión:** `patients.session_fee is null` = usa `profiles.default_session_fee` (no se copia al paciente,
   así un cambio de valor en el perfil alcanza a todos los que no tienen uno propio). En la interfaz, `useDefaultFee()`.
-- **Cobros:** se cobra cada sesión entera (`mark_sessions_paid(ids, método)`, `mark_session_unpaid`), realizada
-  o futura (cobro por adelantado); medios: `cash`, `transfer`, `other` (`lib/payments.ts`).
-  `session_payments` trae todas las no canceladas, pasadas y futuras, con su valor
-  (`coalesce(sessions.fee, patients.session_fee, profiles.default_session_fee)`): para las realizadas, filtrar `starts_at <= now()`.
-  En Ingresos, "Cobrado" va por fecha de cobro (`paid_at`); "Pendiente" y "Adeudan", por sesiones realizadas.
+- **Cobros:** se cobra cada sesión entera (`mark_sessions_paid(ids, método)`, `mark_session_unpaid`), realizada,
+  futura (cobro por adelantado) o cancelada (ej. cancelación tardía); medios: `cash`, `transfer`, `other` (`lib/payments.ts`).
+  `session_payments` trae todas las sesiones (pasadas, futuras y canceladas) con su valor
+  (`coalesce(sessions.fee, patients.session_fee, profiles.default_session_fee)`) y su `status`:
+  para las realizadas, filtrar `status = 'scheduled'` y `starts_at <= now()`.
+  En Ingresos, "Cobrado" va por fecha de cobro (`paid_at`, incluye canceladas cobradas); "Pendiente" y "Adeudan",
+  por sesiones realizadas (una cancelada sin cobrar no es deuda).
   El valor de una sesión se fija en `sessions.fee` al cobrarla o cuando cambia el valor del paciente/perfil
-  (triggers): las sesiones ya realizadas conservan el valor que regía. Una sesión cobrada no se cancela ni se borra
-  (trigger `sessions_payment_guard`): primero se deshace el cobro. Sí se reprograma mientras no se haya realizado.
+  (triggers): las sesiones ya pasadas conservan el valor que regía. Una sesión cobrada no se cancela ni se borra
+  (trigger `sessions_payment_guard`): primero se deshace el cobro. Sí se reprograma mientras no se haya realizado,
+  y una cancelada cobrada puede volver a agendarse (el cobro la acompaña).
 - **Estados de sesión:** solo `scheduled` y `cancelled`. Una sesión pasada no cancelada se considera realizada.
   La "próxima sesión" se calcula (primera futura con `scheduled`); no se guarda.
-- **Informes (historia clínica, Ley 26.529):** un borrador (`draft`) se edita; uno finalizado (`final`)
+- **Anotaciones (historia clínica, Ley 26.529):** en la interfaz se llaman "anotaciones" (no "informes"); en el código y la base, `notes` / `session_notes`. Un borrador (`draft`) se edita; uno finalizado (`final`)
   **no se modifica ni se borra** (lo impide un trigger). Para corregir, se inserta una fila nueva con
-  `supersedes_id`. Las sesiones con informe nunca se borran.
+  `supersedes_id`. Las sesiones con anotación nunca se borran.
   El borrador se guarda solo (`note-editor.tsx`): 3 s después de dejar de escribir, al ocultar la app y al cerrar
   el editor, de a uno por vez (cola), así una corrección crea una sola versión nueva y después la actualiza.
   Cada guardado queda en `audit_log`: no guardar por tecla. Una corrección en borrador se puede descartar

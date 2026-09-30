@@ -26,14 +26,16 @@ type PaymentRow = {
   fee: number | null;
   paid_at: string | null;
   payment_method: string | null;
+  status: string;
 };
 
-const COLUMNS = "id, patient_id, first_name, last_name, starts_at, fee, paid_at, payment_method";
+const COLUMNS = "id, patient_id, first_name, last_name, starts_at, fee, paid_at, payment_method, status";
 
 const sum = (rows: PaymentRow[]) => rows.reduce((total, r) => total + (r.fee ?? 0), 0);
 
-// Resumen de cobros: lo cobrado en el mes (por fecha de cobro, incluye lo cobrado por adelantado),
-// las sesiones realizadas del mes sin cobrar y quiénes adeudan.
+// Resumen de cobros: lo cobrado en el mes (por fecha de cobro, incluye lo cobrado por adelantado
+// y las canceladas cobradas), las sesiones realizadas del mes sin cobrar y quiénes adeudan.
+// Una cancelada sin cobrar no es deuda: se cobra solo si se decide, desde el panel de la sesión.
 export default async function IncomePage({ searchParams }: PageProps<"/ingresos">) {
   const timeZone = await getTimeZone();
   const currentMonth = formatInTimeZone(new Date(), timeZone, "yyyy-MM");
@@ -45,7 +47,7 @@ export default async function IncomePage({ searchParams }: PageProps<"/ingresos"
   const from = fromZonedTime(`${month}-01T00:00:00`, timeZone);
   const to = fromZonedTime(`${format(addMonths(monthDate, 1), "yyyy-MM")}-01T00:00:00`, timeZone);
 
-  // session_payments trae también las sesiones futuras: realizadas = ya empezaron.
+  // session_payments trae también las futuras y las canceladas: realizadas = ya empezaron y no canceladas.
   const now = new Date().toISOString();
   const supabase = await createClient();
   const [{ data: monthData }, { data: paidData }, { data: unpaidData }] = await Promise.all([
@@ -55,11 +57,18 @@ export default async function IncomePage({ searchParams }: PageProps<"/ingresos"
       .select(COLUMNS)
       .gte("starts_at", from.toISOString())
       .lt("starts_at", to.toISOString())
-      .lte("starts_at", now),
-    // Cobros del mes, sea cual sea la fecha de la sesión (incluye los adelantados).
+      .lte("starts_at", now)
+      .eq("status", "scheduled"),
+    // Cobros del mes, sea cual sea la fecha o el estado de la sesión (incluye los adelantados y las canceladas).
     supabase.from("session_payments").select(COLUMNS).gte("paid_at", from.toISOString()).lt("paid_at", to.toISOString()),
     // Todo lo adeudado, de cualquier mes.
-    supabase.from("session_payments").select(COLUMNS).is("paid_at", null).lte("starts_at", now).order("starts_at", { ascending: true }),
+    supabase
+      .from("session_payments")
+      .select(COLUMNS)
+      .is("paid_at", null)
+      .lte("starts_at", now)
+      .eq("status", "scheduled")
+      .order("starts_at", { ascending: true }),
   ]);
 
   const done = (monthData ?? []) as PaymentRow[];
@@ -130,15 +139,10 @@ export default async function IncomePage({ searchParams }: PageProps<"/ingresos"
               <ul className="divide-y">
                 {debtorList.map(([patientId, d]) => (
                   <li key={patientId} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                    <div className="min-w-0 flex-1">
-                      <Link href={`/pacientes/${patientId}`} className="block truncate font-medium hover:underline">
-                        {d.name}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {d.sessions.length} {d.sessions.length === 1 ? "sesión" : "sesiones"} · desde el{" "}
-                        {formatInTimeZone(d.sessions[0].starts_at, timeZone, "dd/MM")}
-                      </p>
-                    </div>
+                    {/* Solo quién y cuánto adeuda (sin cantidad de sesiones ni fechas). */}
+                    <Link href={`/pacientes/${patientId}`} className="min-w-0 flex-1 truncate font-medium hover:underline">
+                      {d.name}
+                    </Link>
                     <span className="text-sm font-medium tabular-nums">
                       {d.sessions.some((s) => s.fee === null) ? "Sin valor" : formatFee(sum(d.sessions))}
                     </span>
@@ -154,15 +158,20 @@ export default async function IncomePage({ searchParams }: PageProps<"/ingresos"
         <Card>
           <CardHeader>
             <CardTitle>Sesiones del mes</CardTitle>
-            <CardDescription>Las realizadas en el mes y las cobradas en el mes, incluso por adelantado.</CardDescription>
+            <CardDescription>Las realizadas en el mes y las cobradas en el mes, incluso por adelantado o canceladas.</CardDescription>
           </CardHeader>
           <CardContent>
             {rows.length === 0 ? (
               <p className="text-sm text-muted-foreground">No hay sesiones realizadas ni cobros en {monthLabel}.</p>
             ) : (
-              <ul className="divide-y">
+              // @container: la fila se acomoda al ancho de la tarjeta (angosta en el celular y en la mitad de la
+              // pantalla en PC). Angosta: dos líneas, arriba fecha, nombre y valor; abajo el estado y el botón.
+              <ul className="@container divide-y">
                 {rows.map((r) => (
-                  <li key={r.id} className="flex items-center gap-3 py-2 text-sm first:pt-0 last:pb-0">
+                  <li
+                    key={r.id}
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm first:pt-0 last:pb-0 @lg:flex-nowrap"
+                  >
                     <span className="w-12 shrink-0 tabular-nums text-muted-foreground">
                       {formatInTimeZone(r.starts_at, timeZone, "dd/MM")}
                     </span>
@@ -170,15 +179,26 @@ export default async function IncomePage({ searchParams }: PageProps<"/ingresos"
                       {r.first_name} {r.last_name}
                     </span>
                     <span className="tabular-nums">{r.fee !== null ? formatFee(r.fee) : "Sin valor"}</span>
-                    {r.paid_at ? (
-                      <>
-                        {r.starts_at > now && <Badge variant="outline">Adelantado</Badge>}
-                        <Badge variant="secondary">{paymentMethodLabel(r.payment_method)}</Badge>
-                        <MarkUnpaidButton sessionId={r.id} />
-                      </>
-                    ) : (
-                      <MarkPaidButton sessionIds={[r.id]} />
-                    )}
+                    {/* En dos líneas, alineado con el nombre (pl-15 = ancho de la fecha + separación). */}
+                    <div className="flex w-full items-center gap-2 pl-15 @lg:w-auto @lg:pl-0">
+                      {r.paid_at ? (
+                        <>
+                          {r.status === "cancelled" ? (
+                            <Badge variant="outline">Cancelada</Badge>
+                          ) : (
+                            r.starts_at > now && <Badge variant="outline">Adelantado</Badge>
+                          )}
+                          <Badge variant="secondary">{paymentMethodLabel(r.payment_method)}</Badge>
+                          <span className="ml-auto">
+                            <MarkUnpaidButton sessionId={r.id} />
+                          </span>
+                        </>
+                      ) : (
+                        <span className="ml-auto">
+                          <MarkPaidButton sessionIds={[r.id]} />
+                        </span>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

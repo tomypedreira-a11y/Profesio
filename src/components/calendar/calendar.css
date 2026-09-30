@@ -100,6 +100,7 @@
   margin: 0;
   padding: 0;
   border-radius: 999px;
+  pointer-events: none; /* el punto solo informa: el toque le llega al día, que es el que se abre */
 }
 
 .fc .session-next {
