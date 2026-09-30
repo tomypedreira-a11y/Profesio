@@ -41,8 +41,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${outfit.variable} ${lora.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        {/* Aplica el tamaño de letra recordado antes de pintar (lo mismo hace next-themes con el tema). */}
-        <script dangerouslySetInnerHTML={{ __html: FONT_SIZE_SCRIPT }} />
+        {/* Aplica el tamaño de letra recordado antes de pintar (lo mismo hace next-themes con el tema).
+            suppressHydrationWarning: algunas extensiones del navegador reescriben los <script> del <head>. */}
+        <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: FONT_SIZE_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>{children}</ThemeProvider>

@@ -3,6 +3,7 @@
 // Vista semanal del celular: los 7 días en fila; al tocar uno, el calendario muestra ese día.
 import { addDays, format, isSameDay, isToday } from "date-fns";
 import { es } from "date-fns/locale";
+import { TreePalmIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type WeekStripProps = {
@@ -21,6 +22,7 @@ export function WeekStrip({ weekStart, selected, counts, isVacation, onSelect }:
       {days.map((day, i) => {
         const active = isSameDay(day, selected);
         const count = counts?.[i] ?? 0;
+        const vacation = isVacation(day);
         return (
           <button
             key={day.toISOString()}
@@ -35,7 +37,7 @@ export function WeekStrip({ weekStart, selected, counts, isVacation, onSelect }:
                 ? "border-primary-border bg-primary text-primary-foreground"
                 : "border-transparent hover:bg-muted",
               // Días de vacaciones, con el mismo color que en el calendario.
-              !active && isVacation(day) && "bg-(--vacation) hover:bg-(--vacation)",
+              !active && vacation && "border-(--vacation-border) bg-(--vacation) hover:bg-(--vacation)",
               // Hoy se remarca aunque no esté elegido.
               !active && isToday(day) && "border-primary-border",
             )}
@@ -43,7 +45,11 @@ export function WeekStrip({ weekStart, selected, counts, isVacation, onSelect }:
             <span className={cn("text-[11px] capitalize", !active && "text-muted-foreground")}>
               {format(day, "EEEEEE", { locale: es })}
             </span>
-            <span className="text-base leading-none font-semibold">{format(day, "d")}</span>
+            <span className="flex items-center gap-0.5 text-base leading-none font-semibold">
+              {/* Palmerita al costado del número, como en el calendario. */}
+              {vacation && <TreePalmIcon className={cn("size-3", !active && "text-(--vacation-border)")} />}
+              {format(day, "d")}
+            </span>
             {/* Un punto por sesión (hasta 3); con más, el número. */}
             <span className="flex h-3 items-center gap-0.5 text-[10px] leading-none">
               {count > 3 ? (
