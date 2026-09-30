@@ -1,18 +1,27 @@
 "use client";
 
-// Cómo se agendan las sesiones: regular (uno o más días fijos cada semana)
+// Cómo se agendan las sesiones: regular (uno o más días fijos, cada 1, 2 o 3 semanas)
 // o irregular (una fecha en el calendario). Se usa en "Agregar sesión" y en el formulario de paciente.
 import type { ReactNode } from "react";
-import { format } from "date-fns";
+import { addWeeks, format, min, parseISO, startOfDay } from "date-fns";
 import { PlusIcon, XIcon } from "lucide-react";
-import { endFromDuration, isValidRange, resolveEnd, SESSION_LENGTHS, type ScheduleSlot } from "@/lib/schedule";
+import {
+  endFromDuration,
+  frequencyWeeks,
+  isValidRange,
+  resolveEnd,
+  SCHEDULE_FREQUENCIES,
+  SESSION_LENGTHS,
+  type ScheduleFrequency,
+  type ScheduleSlot,
+} from "@/lib/schedule";
 import { WEEKDAYS } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel, FieldTitle } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSessionLength } from "@/components/profile-defaults-provider";
-import { DateTimePicker } from "./date-time-picker";
+import { DatePicker, DateTimePicker } from "./date-time-picker";
 import { TimeInput } from "./time-range-fields";
 
 type PlanSlot = { weekday: string; start: string; end: string }; // "" = sin completar
@@ -23,31 +32,74 @@ const WEEKDAY_ITEMS = [1, 2, 3, 4, 5, 6, 0].map((d) => ({ value: String(d), labe
 export type SessionPlan = {
   type: "fixed" | "irregular";
   slots: PlanSlot[];
+  // Regular: una frecuencia para todos los días; si no es semanal, la fecha de la primera sesión.
+  frequency: ScheduleFrequency;
+  firstDate: Date | undefined;
   date: Date | undefined;
   start: string;
   end: string;
 };
 
+const FREQUENCY_ITEMS = SCHEDULE_FREQUENCIES.map((f) => ({ value: f.value, label: f.label }));
+
+// Próxima fecha de los horarios guardados, según su fecha de inicio y su frecuencia. Al editar se
+// muestra como "Primera sesión": si no se cambia, el paciente sigue en las mismas semanas.
+function nextScheduledDate(slots: ScheduleSlot[]): Date | undefined {
+  const today = startOfDay(new Date());
+  const dates = slots
+    .filter((s) => s.start_date)
+    .map((s) => {
+      let d = parseISO(s.start_date!);
+      while (d < today) d = addWeeks(d, frequencyWeeks(s.frequency));
+      return d;
+    });
+  return dates.length > 0 ? min(dates) : undefined;
+}
+
 // Sin horarios fijos arranca en `emptyType`: irregular al agregar una sesión, regular al crear un paciente.
 export function initialPlan(slots: ScheduleSlot[] = [], date?: Date, emptyType: SessionPlan["type"] = "irregular"): SessionPlan {
+  const frequency = slots[0]?.frequency ?? "weekly";
   return {
     type: slots.length > 0 ? "fixed" : emptyType,
     slots:
       slots.length > 0
         ? slots.map((s) => ({ weekday: String(s.weekday), start: s.start_time, end: s.end_time }))
         : [{ weekday: "", start: "", end: "" }],
+    frequency,
+    firstDate: frequency === "weekly" ? undefined : nextScheduledDate(slots),
     date,
     start: "",
     end: "",
   };
 }
 
-// Horarios del plan en el formato de la base, con el fin vacío completado con la duración habitual.
+// Regular con otra frecuencia que la semanal: hace falta la fecha de la primera sesión.
+export const missingFirstDate = (plan: SessionPlan) =>
+  plan.type === "fixed" && plan.frequency !== "weekly" && !plan.firstDate;
+
+export const FIRST_DATE_ERROR = "Elegí la fecha de la primera sesión.";
+
+// Horarios del plan como se envían a la base: el fin vacío se completa con la duración habitual,
+// y cada uno lleva la frecuencia y la semana de la primera sesión (sin fecha, la actual).
+function draftSlots(plan: SessionPlan, minutes: number) {
+  const start_date = plan.frequency !== "weekly" && plan.firstDate ? format(plan.firstDate, "yyyy-MM-dd") : undefined;
+  return plan.slots.map((s) => ({
+    weekday: s.weekday === "" ? null : Number(s.weekday),
+    start_time: s.start,
+    end_time: resolveEnd(s.start, s.end, minutes),
+    frequency: plan.frequency,
+    start_date,
+  }));
+}
+
+// Para el campo oculto del formulario de paciente (lo valida el servidor).
+export const planSlotsJson = (plan: SessionPlan, minutes: number) => JSON.stringify(draftSlots(plan, minutes));
+
 // null si falta algún dato o un fin no es posterior a su inicio.
 export function planSlots(plan: SessionPlan, minutes: number): ScheduleSlot[] | null {
-  const slots = plan.slots.map((s) => ({ weekday: s.weekday, start_time: s.start, end_time: resolveEnd(s.start, s.end, minutes) }));
-  if (slots.some((s) => s.weekday === "" || !isValidRange(s.start_time, s.end_time))) return null;
-  return slots.map((s) => ({ ...s, weekday: Number(s.weekday) }));
+  const slots = draftSlots(plan, minutes);
+  if (slots.some((s) => s.weekday === null || !isValidRange(s.start_time, s.end_time))) return null;
+  return slots.map((s) => ({ ...s, weekday: s.weekday! }));
 }
 
 export function planDate(plan: SessionPlan): string {
@@ -83,7 +135,7 @@ export function SessionPlanFields({ value, onChange, error, fixedHint, irregular
             <RadioGroupItem value="fixed" id="plan-fixed" />
             <FieldContent>
               <FieldTitle>Regular</FieldTitle>
-              <FieldDescription>Todas las semanas, los mismos días y horarios.</FieldDescription>
+              <FieldDescription>Los mismos días y horarios, cada 1, 2 o 3 semanas.</FieldDescription>
             </FieldContent>
           </Field>
         </FieldLabel>
@@ -100,6 +152,33 @@ export function SessionPlanFields({ value, onChange, error, fixedHint, irregular
 
       {value.type === "fixed" ? (
         <div className="flex flex-col gap-2">
+          <div className="mb-2 grid gap-3 sm:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="plan-frequency">Frecuencia</FieldLabel>
+              <Select
+                value={value.frequency}
+                onValueChange={(frequency) => frequency && set({ frequency: frequency as ScheduleFrequency })}
+                items={FREQUENCY_ITEMS}
+              >
+                <SelectTrigger id="plan-frequency" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FREQUENCY_ITEMS.map((f) => (
+                    <SelectItem key={f.value} value={f.value}>
+                      {f.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            {value.frequency !== "weekly" && (
+              <Field>
+                <FieldLabel htmlFor="plan-first-date">Primera sesión</FieldLabel>
+                <DatePicker id="plan-first-date" date={value.firstDate} onDateChange={(firstDate) => set({ firstDate })} />
+              </Field>
+            )}
+          </div>
           <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_2rem] gap-2 text-sm font-medium">
             <span>Día</span>
             <span>Inicio</span>
@@ -157,6 +236,11 @@ export function SessionPlanFields({ value, onChange, error, fixedHint, irregular
             <PlusIcon />
             Agregar otro día
           </Button>
+          <FieldDescription>
+            {value.frequency === "weekly"
+              ? "Se agenda todas las semanas, a partir de la próxima fecha."
+              : `Los días elegidos se agendan en la semana de la primera sesión y después cada ${frequencyWeeks(value.frequency)} semanas.`}
+          </FieldDescription>
           {fixedHint && <FieldDescription>{fixedHint}</FieldDescription>}
           <FieldDescription>{endHint}</FieldDescription>
         </div>

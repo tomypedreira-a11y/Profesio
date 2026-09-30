@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-outfit), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-lora), Georgia, serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -90,46 +90,48 @@
 }
 
 .dark {
-  /* Tema oscuro con la misma paleta que el claro (verde salvia y el beige como texto),
-     sobre superficies gris casi negro. */
-  --background: oklch(0.18 0 0);
-  --foreground: oklch(0.93 0.02 85);
+  /* Tema oscuro "noche": fondos violeta muy oscuro y apagado, botones azul pastel,
+     bordes y recuadros celestes. Todo en tonos suaves para que no encandile. */
+  --background: oklch(0.19 0.03 295);
+  /* Texto blanco luna, apenas lavanda. */
+  --foreground: oklch(0.92 0.018 285);
   /* Tarjetas un escalón más claras que el fondo; el panel lateral, uno más oscuro (como en el claro). */
-  --card: oklch(0.215 0 0);
-  --card-foreground: oklch(0.93 0.02 85);
-  --popover: oklch(0.215 0 0);
-  --popover-foreground: oklch(0.93 0.02 85);
-  /* Mismo verde que el tema claro. */
-  --primary: oklch(0.8 0.085 145);
-  --primary-foreground: oklch(0.27 0.05 150);
-  /* Borde en verde (no oliva como en el claro): sobre el negro, el oliva se veía amarillento. */
-  --primary-border: oklch(0.6 0.1 150);
-  --secondary: oklch(0.26 0.005 85);
-  --secondary-foreground: oklch(0.93 0.02 85);
-  --muted: oklch(0.25 0.004 85);
-  --muted-foreground: oklch(0.72 0.02 80);
-  /* El hover es un verde oscuro: el verde pálido del claro encandila sobre el negro. */
-  --accent: oklch(0.28 0.03 145);
-  --accent-foreground: oklch(0.925 0.045 140);
-  /* El rojo del claro, un poco más luminoso para leerse sobre el fondo oscuro. */
-  --destructive: oklch(0.68 0.16 32);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.68 0.1 145);
-  --chart-1: oklch(0.8 0.085 145);
-  --chart-2: oklch(0.62 0.09 150);
-  --chart-3: oklch(0.82 0.12 85);
-  --chart-4: oklch(0.6 0.07 60);
-  --chart-5: oklch(0.45 0.05 150);
-  --sidebar: oklch(0.16 0 0);
-  --sidebar-foreground: oklch(0.93 0.02 85);
-  /* Ítem activo del panel en verde, como en el claro; el hover, en verde oscuro. */
-  --sidebar-primary: oklch(0.8 0.085 145);
-  --sidebar-primary-foreground: oklch(0.27 0.05 150);
-  --sidebar-accent: oklch(0.28 0.03 145);
-  --sidebar-accent-foreground: oklch(0.925 0.045 140);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.68 0.1 145);
+  --card: oklch(0.225 0.035 293);
+  --card-foreground: oklch(0.92 0.018 285);
+  --popover: oklch(0.225 0.035 293);
+  --popover-foreground: oklch(0.92 0.018 285);
+  /* Botones azul pastel (azul lavanda) con texto azul noche. */
+  --primary: oklch(0.78 0.08 260);
+  --primary-foreground: oklch(0.24 0.05 270);
+  /* Celeste pastel para remarcar botones, tarjetas y sesiones. */
+  --primary-border: oklch(0.82 0.07 225);
+  --secondary: oklch(0.26 0.04 290);
+  --secondary-foreground: oklch(0.92 0.018 285);
+  --muted: oklch(0.25 0.03 292);
+  --muted-foreground: oklch(0.74 0.03 285);
+  /* Hover en azul violáceo oscuro. */
+  --accent: oklch(0.3 0.05 272);
+  --accent-foreground: oklch(0.9 0.04 250);
+  /* Rojo coral pastel, para leerse sobre el violeta sin chillar. */
+  --destructive: oklch(0.72 0.13 20);
+  /* Bordes generales en celeste translúcido: se notan sin cortar la pantalla. */
+  --border: oklch(0.82 0.07 225 / 22%);
+  --input: oklch(0.82 0.07 225 / 30%);
+  --ring: oklch(0.76 0.08 235);
+  --chart-1: oklch(0.78 0.08 260);
+  --chart-2: oklch(0.82 0.07 225);
+  --chart-3: oklch(0.78 0.08 305);
+  --chart-4: oklch(0.8 0.07 350);
+  --chart-5: oklch(0.8 0.07 170);
+  --sidebar: oklch(0.165 0.03 295);
+  --sidebar-foreground: oklch(0.92 0.018 285);
+  /* Ítem activo del panel en azul, como los botones; el hover, en azul violáceo oscuro. */
+  --sidebar-primary: oklch(0.78 0.08 260);
+  --sidebar-primary-foreground: oklch(0.24 0.05 270);
+  --sidebar-accent: oklch(0.3 0.05 272);
+  --sidebar-accent-foreground: oklch(0.9 0.04 250);
+  --sidebar-border: oklch(0.82 0.07 225 / 22%);
+  --sidebar-ring: oklch(0.76 0.08 235);
 }
 
 @layer base {
@@ -141,6 +143,20 @@
   }
   html {
     @apply font-sans;
+  }
+  /* Tamaño de letra del perfil (Configuración): todo está en rem, así que agranda la interfaz entera.
+     En porcentaje, para respetar el tamaño que cada uno tenga elegido en el navegador. */
+  html[data-font-size="large"] {
+    font-size: 112.5%;
+  }
+  html[data-font-size="xlarge"] {
+    font-size: 125%;
+  }
+  /* Títulos en Lora; los de tarjetas y paneles ya usan font-heading (componentes de shadcn). */
+  h1,
+  h2,
+  h3 {
+    @apply font-heading;
   }
   /* Tailwind 4 dejó los botones con cursor normal: se vuelve a la manito en todo lo que se puede clickear. */
   :is(button, [role="button"], [role^="menuitem"], [role="radio"], [role="option"], select):not(

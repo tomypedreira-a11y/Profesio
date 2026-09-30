@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { SearchIcon } from "lucide-react";
 import { formatPhone } from "@/lib/phone";
-import { formatSchedules, formatSessionShort, sortName } from "@/lib/format";
+import { formatSessionShort, sortName } from "@/lib/format";
 import type { ScheduleSlot } from "@/lib/schedule";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -74,11 +74,12 @@ export function PatientList({
     return sorted;
   }, [patients, query, sort]);
 
-  // Qué dato mostrar a la derecha según el orden elegido.
+  // Qué dato mostrar a la derecha según el orden elegido. En orden alfabético, nada: los días fijos
+  // (con 3 o más) le quitaban lugar al nombre, y se ven en la ficha.
   function detail(p: PatientListItem) {
     if (sort === "recientes") return p.last_session_at ? `Última: ${formatSessionShort(p.last_session_at, timeZone)}` : "Sin sesiones";
     if (sort === "proximas") return p.next_session_at ? `Próxima: ${formatSessionShort(p.next_session_at, timeZone)}` : "Sin sesiones";
-    return formatSchedules(p.schedules);
+    return null;
   }
 
   if (patients.length === 0) return null;
@@ -118,7 +119,7 @@ export function PatientList({
       {visible.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">No hay pacientes que coincidan con la búsqueda.</p>
       ) : (
-        <ul className="divide-y rounded-lg border">
+        <ul className="flex flex-col gap-2">
           {visible.map((p) => {
             // En orden alfabético, un separador por cada letra (como en los contactos).
             const letter = normalize(sortName(p).charAt(0)).toUpperCase();
@@ -126,18 +127,22 @@ export function PatientList({
             lastLetter = letter;
             return (
               <li key={p.id}>
-                {showLetter && (
-                  <div className="bg-muted/50 px-4 py-1 text-xs font-semibold text-muted-foreground">{letter}</div>
-                )}
-                <Link href={`/pacientes/${p.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">
+                {showLetter && <div className="px-1 pt-2 pb-1 text-xs font-semibold text-muted-foreground">{letter}</div>}
+                {/* Beige un poco más oscuro que el fondo, remarcado en oliva (como la lista de sesiones). */}
+                <Link
+                  href={`/pacientes/${p.id}`}
+                  className="flex items-center gap-3 rounded-lg border-[1.5px] border-primary-border bg-secondary px-4 py-3 text-secondary-foreground transition-[filter] hover:brightness-95"
+                >
                   <Avatar className="size-10">
-                    <AvatarFallback>{`${p.first_name.charAt(0)}${p.last_name.charAt(0)}`.toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="bg-background">
+                      {`${p.first_name.charAt(0)}${p.last_name.charAt(0)}`.toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{sortName(p)}</p>
-                    <p className="truncate text-sm text-muted-foreground">{p.phone ? formatPhone(p.phone) : "Sin teléfono"}</p>
+                    <p className="truncate text-sm opacity-75">{p.phone ? formatPhone(p.phone) : "Sin teléfono"}</p>
                   </div>
-                  <span className="shrink-0 text-right text-xs text-muted-foreground">{detail(p)}</span>
+                  {detail(p) && <span className="shrink-0 text-right text-xs opacity-75">{detail(p)}</span>}
                 </Link>
               </li>
             );

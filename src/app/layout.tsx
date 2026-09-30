@@ -1,11 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Lora, Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { FONT_SIZE_SCRIPT } from "@/lib/font-size";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Texto en Outfit (geométrica suave) y títulos en Lora (serif cálida).
+const outfit = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
+});
+
+const lora = Lora({
+  variable: "--font-lora",
   subsets: ["latin"],
 });
 
@@ -30,8 +37,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${outfit.variable} ${lora.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Aplica el tamaño de letra recordado antes de pintar (lo mismo hace next-themes con el tema). */}
+        <script dangerouslySetInnerHTML={{ __html: FONT_SIZE_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>{children}</ThemeProvider>
         {/* --toast-bottom lo define globals.css cuando está la barra inferior del celular. */}

@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/page-header";
 import { CALENDAR_VIEWS, DEFAULT_CALENDAR_VIEW } from "@/lib/calendar-views";
 import { DEFAULT_SESSION_MINUTES, SESSION_LENGTHS } from "@/lib/schedule";
+import { isFontSize } from "@/lib/font-size";
 import { updateCalendarView, updateSessionLength } from "./actions";
 import { DefaultFeeInput } from "./default-fee-input";
+import { FontSizeSelector } from "./font-size-selector";
 import { PreferenceSelect } from "./preference-select";
 import { SettingsSection } from "./settings-section";
 import { ThemeModeSelector } from "./theme-mode-selector";
@@ -24,7 +26,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("theme, calendar_view, default_session_minutes, default_session_fee")
+    .select("theme, font_size, calendar_view, default_session_minutes, default_session_fee")
     .eq("id", data.claims.sub)
     .single();
 
@@ -40,6 +42,11 @@ export default async function SettingsPage() {
           <Field>
             <FieldLabel>Modo</FieldLabel>
             <ThemeModeSelector value={profile?.theme ?? "system"} />
+          </Field>
+          <Field>
+            <FieldLabel>Tamaño de letra</FieldLabel>
+            <FontSizeSelector value={isFontSize(profile?.font_size) ? profile.font_size : "normal"} />
+            <FieldDescription>Agranda los textos y todo lo demás en proporción, en esta y en tus otras pantallas.</FieldDescription>
           </Field>
         </SettingsSection>
 

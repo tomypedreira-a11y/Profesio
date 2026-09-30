@@ -36,8 +36,9 @@ const ACCOUNT_ITEMS = [
 ] as const;
 const LOGOUT_POSITION = { x: 68, y: -52 };
 
+// "Calendario" también queda marcado en la pantalla aparte de vistas (/calendario).
 function isActivePath(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  return href === "/" ? pathname === "/" || pathname.startsWith("/calendario") : pathname.startsWith(href);
 }
 
 type MobileNavProps = {

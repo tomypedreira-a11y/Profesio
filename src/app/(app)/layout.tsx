@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/app-sidebar";
+import { FontSizeSync } from "@/components/font-size-sync";
 import { MobileNav } from "@/components/mobile-nav";
 import { ProfileDefaultsProvider } from "@/components/profile-defaults-provider";
 import { ThemeSync } from "@/components/theme-provider";
@@ -18,7 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("first_name, last_name, theme, default_session_minutes, default_session_fee")
+    .select("first_name, last_name, theme, font_size, default_session_minutes, default_session_fee")
     .eq("id", claims.sub)
     .single();
 
@@ -34,6 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <SidebarProvider defaultOpen={sidebarOpen}>
       <ThemeSync theme={profile?.theme ?? "system"} />
+      <FontSizeSync size={profile?.font_size ?? "normal"} />
       <AppSidebar user={user} />
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">

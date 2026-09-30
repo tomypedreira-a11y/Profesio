@@ -36,12 +36,28 @@ export function endFromDuration(start: string, minutes: number): string {
 export const resolveEnd = (start: string, end: string, minutes: number) =>
   end === "" ? endFromDuration(start, minutes) : end;
 
+// Cada cuántas semanas se repite un horario fijo (coinciden con session_series.frequency).
+export const SCHEDULE_FREQUENCIES = [
+  { value: "weekly", label: "Todas las semanas", weeks: 1 },
+  { value: "biweekly", label: "Semana por medio", weeks: 2 },
+  { value: "triweekly", label: "Cada 3 semanas", weeks: 3 },
+] as const;
+
+export type ScheduleFrequency = (typeof SCHEDULE_FREQUENCIES)[number]["value"];
+
+export const frequencyWeeks = (frequency: ScheduleFrequency) =>
+  SCHEDULE_FREQUENCIES.find((f) => f.value === frequency)?.weeks ?? 1;
+
 // weekday: 0 = domingo … 6 = sábado (como extract(dow) en Postgres).
+// start_date: al guardar, cualquier día de la semana de la primera sesión (sin fecha, la actual);
+// al leer de patient_list, la fecha de inicio del horario (define en qué semanas cae).
 export const scheduleSlotSchema = z
   .object({
     weekday: z.number().int().min(0).max(6),
     start_time: timeSchema,
     end_time: timeSchema,
+    frequency: z.enum(["weekly", "biweekly", "triweekly"]).default("weekly"),
+    start_date: z.iso.date().optional(),
   })
   .refine((s) => s.end_time > s.start_time);
 

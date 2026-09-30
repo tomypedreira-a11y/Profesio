@@ -135,6 +135,7 @@ export type Database = {
           default_session_fee: number | null
           default_session_minutes: number
           first_name: string
+          font_size: string
           id: string
           last_name: string
           license_number: string | null
@@ -148,6 +149,7 @@ export type Database = {
           default_session_fee?: number | null
           default_session_minutes?: number
           first_name?: string
+          font_size?: string
           id: string
           last_name?: string
           license_number?: string | null
@@ -161,6 +163,7 @@ export type Database = {
           default_session_fee?: number | null
           default_session_minutes?: number
           first_name?: string
+          font_size?: string
           id?: string
           last_name?: string
           license_number?: string | null
@@ -503,6 +506,7 @@ export type Database = {
       }
       default_session_minutes: { Args: never; Returns: number }
       extend_series: { Args: never; Returns: number }
+      frequency_weeks: { Args: { p_frequency: string }; Returns: number }
       generate_series_sessions: {
         Args: {
           p_series_id: string
@@ -540,6 +544,10 @@ export type Database = {
           p_time: string
         }
         Returns: undefined
+      }
+      same_series_cycle: {
+        Args: { p_a: string; p_b: string; p_weeks: number }
+        Returns: boolean
       }
       schedule_session: {
         Args: {
