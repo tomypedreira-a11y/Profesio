@@ -35,6 +35,7 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { SidebarArt } from "@/components/sidebar-art";
 
 const NAV_ITEMS = [
   { href: "/", label: "Calendario", icon: CalendarDaysIcon },
@@ -68,7 +69,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
+      {/* Dibujo de fondo: va primero y lo demás es `relative`, así queda por detrás. */}
+      <SidebarArt />
+
+      <SidebarHeader className="relative">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<Link href="/" />}>
@@ -81,7 +85,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="relative">
         <SidebarGroup>
           <SidebarGroupContent>
             {/* Secciones como botones "burbuja" remarcados, igual que el resto de los botones.
@@ -111,7 +115,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="relative">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/app-sidebar";
 import { FontSizeSync } from "@/components/font-size-sync";
+import { HeaderTitle } from "@/components/header-title";
 import { MobileBackButton } from "@/components/mobile-back-button";
 import { MobileNav } from "@/components/mobile-nav";
 import { ProfileDefaultsProvider } from "@/components/profile-defaults-provider";
@@ -44,7 +45,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
           <Separator orientation="vertical" className="mr-2 hidden h-4 md:block" />
           <MobileBackButton />
-          <span className="text-sm font-medium text-muted-foreground">Profesio</span>
+          {/* En px (no rem): no cambia con el tamaño de letra elegido en Configuración. */}
+          <HeaderTitle firstName={user.firstName} className="min-w-0 text-[20px] leading-tight font-medium text-muted-foreground" />
         </header>
         {/* Abajo deja lugar para la barra inferior del celular. */}
         <div className="flex flex-1 flex-col gap-4 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6">
