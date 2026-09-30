@@ -1,6 +1,7 @@
 // Consultas de pacientes compartidas entre pantallas (se ejecutan en el servidor).
 import { createClient } from "@/lib/supabase/server";
 import { toSlots } from "@/lib/schedule";
+import { sortName } from "@/lib/format";
 import { DEFAULT_CALENDAR_VIEW, isCalendarView, type CalendarViewPreference } from "@/lib/calendar-views";
 import type { PatientOption } from "@/components/calendar/types";
 import type { PatientListItem } from "./patient-list";
@@ -49,20 +50,21 @@ export async function getPatients(active: boolean): Promise<PatientListItem[]> {
   return (data ?? []).map((p) => ({ ...p, schedules: toSlots(p.schedules) })) as PatientListItem[];
 }
 
-// Pacientes activos para el selector de "Agregar sesión", ordenados por apellido.
+// Pacientes activos para el selector de "Agregar sesión", ordenados por apellido (o nombre, si no tiene).
 export async function getPatientOptions(): Promise<PatientOption[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("patient_list")
     .select("id, first_name, last_name, schedules")
-    .eq("active", true)
-    .order("last_name")
-    .order("first_name");
-  return (data ?? []).map((p) => ({
-    id: p.id!,
-    name: `${p.last_name}, ${p.first_name}`,
-    schedules: toSlots(p.schedules),
-  }));
+    .eq("active", true);
+  const collator = new Intl.Collator("es", { sensitivity: "base" });
+  return (data ?? [])
+    .map((p) => ({
+      id: p.id!,
+      name: sortName({ first_name: p.first_name ?? "", last_name: p.last_name ?? "" }),
+      schedules: toSlots(p.schedules),
+    }))
+    .sort((a, b) => collator.compare(a.name, b.name));
 }
 
 export async function countArchived() {

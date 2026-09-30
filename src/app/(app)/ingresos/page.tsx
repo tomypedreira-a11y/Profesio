@@ -32,7 +32,8 @@ const COLUMNS = "id, patient_id, first_name, last_name, starts_at, fee, paid_at,
 
 const sum = (rows: PaymentRow[]) => rows.reduce((total, r) => total + (r.fee ?? 0), 0);
 
-// Resumen de cobros: sesiones realizadas del mes (cobradas y pendientes) y quiénes adeudan.
+// Resumen de cobros: lo cobrado en el mes (por fecha de cobro, incluye lo cobrado por adelantado),
+// las sesiones realizadas del mes sin cobrar y quiénes adeudan.
 export default async function IncomePage({ searchParams }: PageProps<"/ingresos">) {
   const timeZone = await getTimeZone();
   const currentMonth = formatInTimeZone(new Date(), timeZone, "yyyy-MM");
@@ -44,21 +45,30 @@ export default async function IncomePage({ searchParams }: PageProps<"/ingresos"
   const from = fromZonedTime(`${month}-01T00:00:00`, timeZone);
   const to = fromZonedTime(`${format(addMonths(monthDate, 1), "yyyy-MM")}-01T00:00:00`, timeZone);
 
+  // session_payments trae también las sesiones futuras: realizadas = ya empezaron.
+  const now = new Date().toISOString();
   const supabase = await createClient();
-  const [{ data: monthData }, { data: unpaidData }] = await Promise.all([
+  const [{ data: monthData }, { data: paidData }, { data: unpaidData }] = await Promise.all([
+    // Sesiones realizadas del mes.
     supabase
       .from("session_payments")
       .select(COLUMNS)
       .gte("starts_at", from.toISOString())
       .lt("starts_at", to.toISOString())
-      .order("starts_at", { ascending: false }),
+      .lte("starts_at", now),
+    // Cobros del mes, sea cual sea la fecha de la sesión (incluye los adelantados).
+    supabase.from("session_payments").select(COLUMNS).gte("paid_at", from.toISOString()).lt("paid_at", to.toISOString()),
     // Todo lo adeudado, de cualquier mes.
-    supabase.from("session_payments").select(COLUMNS).is("paid_at", null).order("starts_at", { ascending: true }),
+    supabase.from("session_payments").select(COLUMNS).is("paid_at", null).lte("starts_at", now).order("starts_at", { ascending: true }),
   ]);
 
-  const rows = (monthData ?? []) as PaymentRow[];
-  const paid = rows.filter((r) => r.paid_at);
-  const pending = rows.filter((r) => !r.paid_at);
+  const done = (monthData ?? []) as PaymentRow[];
+  const paid = (paidData ?? []) as PaymentRow[];
+  const pending = done.filter((r) => !r.paid_at);
+  // Lista del mes: las sesiones realizadas y todo lo cobrado en el mes, sin repetir.
+  const rows = [...new Map([...done, ...paid].map((r) => [r.id, r])).values()].sort((a, b) =>
+    b.starts_at.localeCompare(a.starts_at),
+  );
 
   // Deudas agrupadas por paciente, de mayor a menor.
   const debtors = new Map<string, { name: string; sessions: PaymentRow[] }>();
@@ -74,7 +84,7 @@ export default async function IncomePage({ searchParams }: PageProps<"/ingresos"
 
   return (
     <>
-      <PageHeader title="Ingresos" description="Cobros de las sesiones realizadas y quiénes adeudan." />
+      <PageHeader title="Ingresos" description="Lo cobrado en el mes, lo pendiente y quiénes adeudan." />
 
       {/* Mes */}
       <div className="flex items-center gap-2">
@@ -101,8 +111,8 @@ export default async function IncomePage({ searchParams }: PageProps<"/ingresos"
         <StatTile label="Pendiente" value={formatFee(sum(pending))} detail={`${pending.length} ${pending.length === 1 ? "sesión" : "sesiones"}`} />
         <StatTile
           label="Sesiones realizadas"
-          value={String(rows.length)}
-          detail={rows.some((r) => r.fee === null) ? "Hay sesiones sin valor cargado" : "No incluye canceladas"}
+          value={String(done.length)}
+          detail={done.some((r) => r.fee === null) ? "Hay sesiones sin valor cargado" : "No incluye canceladas"}
         />
       </div>
 
@@ -144,10 +154,11 @@ export default async function IncomePage({ searchParams }: PageProps<"/ingresos"
         <Card>
           <CardHeader>
             <CardTitle>Sesiones del mes</CardTitle>
+            <CardDescription>Las realizadas en el mes y las cobradas en el mes, incluso por adelantado.</CardDescription>
           </CardHeader>
           <CardContent>
             {rows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay sesiones realizadas en {monthLabel}.</p>
+              <p className="text-sm text-muted-foreground">No hay sesiones realizadas ni cobros en {monthLabel}.</p>
             ) : (
               <ul className="divide-y">
                 {rows.map((r) => (
@@ -161,6 +172,7 @@ export default async function IncomePage({ searchParams }: PageProps<"/ingresos"
                     <span className="tabular-nums">{r.fee !== null ? formatFee(r.fee) : "Sin valor"}</span>
                     {r.paid_at ? (
                       <>
+                        {r.starts_at > now && <Badge variant="outline">Adelantado</Badge>}
                         <Badge variant="secondary">{paymentMethodLabel(r.payment_method)}</Badge>
                         <MarkUnpaidButton sessionId={r.id} />
                       </>

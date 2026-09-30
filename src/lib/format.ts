@@ -48,6 +48,24 @@ export function formatBirthDate(date: string): string {
   return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y} (${age} años)`;
 }
 
+// El apellido del paciente es opcional: sin apellido se usa solo el nombre.
+type PersonName = { first_name: string; last_name: string };
+
+// "Ana Gómez" o "Ana".
+export function fullName(p: PersonName): string {
+  return `${p.first_name} ${p.last_name}`.trim();
+}
+
+// Para listados alfabéticos: "Gómez, Ana"; sin apellido, "Ana" (se ordena por el nombre).
+export function sortName(p: PersonName): string {
+  return p.last_name ? `${p.last_name}, ${p.first_name}` : p.first_name;
+}
+
+// Para el calendario: "Ana G." o "Ana".
+export function shortName(p: PersonName): string {
+  return p.last_name ? `${p.first_name} ${p.last_name.charAt(0)}.` : p.first_name;
+}
+
 const currency = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 2 });
 
 export function formatFee(value: number | null): string {

@@ -7,7 +7,7 @@ import { PAYMENT_METHODS } from "@/lib/payments";
 
 const methodSchema = z.string().refine((v) => PAYMENT_METHODS.some((m) => m.value === v));
 
-// Cobra una o varias sesiones realizadas (ej. "Cobrar todo" de un paciente). Devuelve { error } si no se pudo.
+// Cobra una o varias sesiones (realizadas o futuras, por adelantado) (ej. "Cobrar todo" de un paciente). Devuelve { error } si no se pudo.
 export async function markSessionsPaid(input: { sessionIds: string[]; method: string }) {
   const parsed = z.object({ sessionIds: z.array(z.uuid()).min(1), method: methodSchema }).safeParse(input);
   if (!parsed.success) return { error: "Datos inválidos." };

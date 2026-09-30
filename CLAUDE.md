@@ -118,12 +118,14 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   Regular = suma días fijos; irregular = una sesión suelta.
 - **Valor por sesión:** `patients.session_fee is null` = usa `profiles.default_session_fee` (no se copia al paciente,
   así un cambio de valor en el perfil alcanza a todos los que no tienen uno propio). En la interfaz, `useDefaultFee()`.
-- **Cobros:** se cobra cada sesión realizada entera (`mark_sessions_paid(ids, método)`, `mark_session_unpaid`);
-  medios: `cash`, `transfer`, `other` (`lib/payments.ts`). `session_payments` trae las realizadas con su valor
-  (`coalesce(sessions.fee, patients.session_fee, profiles.default_session_fee)`).
+- **Cobros:** se cobra cada sesión entera (`mark_sessions_paid(ids, método)`, `mark_session_unpaid`), realizada
+  o futura (cobro por adelantado); medios: `cash`, `transfer`, `other` (`lib/payments.ts`).
+  `session_payments` trae todas las no canceladas, pasadas y futuras, con su valor
+  (`coalesce(sessions.fee, patients.session_fee, profiles.default_session_fee)`): para las realizadas, filtrar `starts_at <= now()`.
+  En Ingresos, "Cobrado" va por fecha de cobro (`paid_at`); "Pendiente" y "Adeudan", por sesiones realizadas.
   El valor de una sesión se fija en `sessions.fee` al cobrarla o cuando cambia el valor del paciente/perfil
-  (triggers): las sesiones ya realizadas conservan el valor que regía. Una sesión cobrada no se cancela,
-  reprograma ni borra (trigger `sessions_payment_guard`): primero se deshace el cobro.
+  (triggers): las sesiones ya realizadas conservan el valor que regía. Una sesión cobrada no se cancela ni se borra
+  (trigger `sessions_payment_guard`): primero se deshace el cobro. Sí se reprograma mientras no se haya realizado.
 - **Estados de sesión:** solo `scheduled` y `cancelled`. Una sesión pasada no cancelada se considera realizada.
   La "próxima sesión" se calcula (primera futura con `scheduled`); no se guarda.
 - **Informes (historia clínica, Ley 26.529):** un borrador (`draft`) se edita; uno finalizado (`final`)

@@ -98,7 +98,7 @@ export type Database = {
           email?: string | null
           first_name: string
           id?: string
-          last_name: string
+          last_name?: string
           phone?: string | null
           psychologist_id?: string
           session_fee?: number | null
