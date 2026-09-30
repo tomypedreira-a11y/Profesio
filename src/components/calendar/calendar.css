@@ -211,6 +211,19 @@
   box-shadow: inset 4px 0 0 var(--vacation-border);
 }
 
+/* Fila "Vacaciones" de la lista (vacationSources en calendar-view.tsx): no se toca, es solo un aviso. */
+.fc .fc-list-event.vacation-marker {
+  cursor: default;
+}
+
+.fc .fc-list-event.vacation-marker:hover td {
+  background-color: transparent;
+}
+
+.fc .fc-list-event.vacation-marker .fc-list-event-dot {
+  border-color: var(--vacation-border);
+}
+
 /* Palmerita al costado del número del día (la misma de Configuración: TreePalm de Lucide).
    Como máscara, para que tome el color del borde en los dos temas. */
 .fc .vacation-day .fc-daygrid-day-number,

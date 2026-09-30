@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -8,13 +8,14 @@ import listPlugin from "@fullcalendar/list";
 import interactionPlugin, { type DateClickArg } from "@fullcalendar/interaction";
 import esLocale from "@fullcalendar/core/locales/es";
 import type { DatesSetArg, EventClickArg, EventContentArg, EventInput, EventSourceFuncArg } from "@fullcalendar/core";
-import { addDays, differenceInCalendarDays, format, isSameMonth, startOfWeek } from "date-fns";
+import { addDays, differenceInCalendarDays, format, isSameMonth, parseISO, startOfWeek } from "date-fns";
 import Link from "next/link";
 import {
   CalendarDaysIcon,
   CalendarPlusIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  TreePalmIcon,
   UserRoundSearchIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -164,6 +165,22 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
     [supabase, vacations],
   );
 
+  // La lista solo muestra los días con eventos: sin esto, un día de vacaciones sin sesiones no aparecería.
+  // Cada período va como un evento de día entero, solo en la lista (en las grillas ya se pinta el día).
+  const vacationSources = useMemo<EventInput[][]>(() => {
+    if (view !== "listWeek") return [];
+    const events = vacations.map((v) => ({
+      id: `vacation-${v.id}`,
+      title: "Vacaciones",
+      start: v.start_date,
+      end: dayKey(addDays(parseISO(v.end_date), 1)), // el fin de un evento de día entero no se incluye
+      allDay: true,
+      classNames: ["vacation-marker"],
+      extendedProps: { vacation: true },
+    }));
+    return [events];
+  }, [view, vacations]);
+
   // De la semana indicada: pacientes irregulares activos sin sesión (no cancelada) y sesiones por día.
   const loadWeek = useCallback(
     async (weekStart: Date) => {
@@ -233,6 +250,14 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
   // Cada sesión: la hora y el nombre como texto corrido ("13:00 Juan Sebastian G."). Así siempre se ven
   // la hora y el comienzo del nombre, y si la sesión tiene más alto el nombre sigue en la línea de abajo.
   function renderSession(arg: EventContentArg) {
+    if (arg.event.extendedProps.vacation) {
+      return (
+        <span className="flex items-center gap-1.5 font-medium">
+          <TreePalmIcon className="size-4 text-(--vacation-border)" />
+          {arg.event.title}
+        </span>
+      );
+    }
     // En la lista la hora tiene su propia columna; en el mes compacto la sesión es solo un punto.
     // Después del nombre, la modalidad: (v) virtual o (p) presencial.
     const { session } = arg.event.extendedProps as { session: CalendarSession };
@@ -267,6 +292,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
   }
 
   function handleEventClick(arg: EventClickArg) {
+    if (arg.event.extendedProps.vacation) return;
     // En el mes compacto los puntos no abren la sesión: se entra por el día.
     if (compact && arg.view.type === "dayGridMonth") {
       arg.jsEvent.preventDefault();
@@ -420,6 +446,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
             navLinkDayClick={openDay}
             noEventsText="No hay sesiones en estos días."
             events={fetchEvents}
+            eventSources={vacationSources}
             datesSet={handleDatesSet}
             dateClick={handleDateClick}
             eventClick={handleEventClick}
