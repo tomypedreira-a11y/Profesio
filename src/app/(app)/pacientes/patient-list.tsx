@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { SearchIcon } from "lucide-react";
 import { formatPhone } from "@/lib/phone";
-import { formatSchedules, formatSessionShort } from "@/lib/format";
+import { formatSchedules, formatSessionShort, sortName } from "@/lib/format";
 import type { ScheduleSlot } from "@/lib/schedule";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -30,8 +30,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 ];
 
 const collator = new Intl.Collator("es", { sensitivity: "base" });
-const byName = (a: PatientListItem, b: PatientListItem) =>
-  collator.compare(a.last_name, b.last_name) || collator.compare(a.first_name, b.first_name);
+const byName = (a: PatientListItem, b: PatientListItem) => collator.compare(sortName(a), sortName(b));
 
 // Compara fechas ISO dejando los pacientes sin fecha al final.
 function byDate(a: string | null, b: string | null, direction: 1 | -1) {
@@ -122,7 +121,7 @@ export function PatientList({
         <ul className="divide-y rounded-lg border">
           {visible.map((p) => {
             // En orden alfabético, un separador por cada letra (como en los contactos).
-            const letter = normalize(p.last_name.charAt(0)).toUpperCase();
+            const letter = normalize(sortName(p).charAt(0)).toUpperCase();
             const showLetter = sort === "alfabetico" && !query && letter !== lastLetter;
             lastLetter = letter;
             return (
@@ -135,9 +134,7 @@ export function PatientList({
                     <AvatarFallback>{`${p.first_name.charAt(0)}${p.last_name.charAt(0)}`.toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">
-                      {p.last_name}, {p.first_name}
-                    </p>
+                    <p className="truncate font-medium">{sortName(p)}</p>
                     <p className="truncate text-sm text-muted-foreground">{p.phone ? formatPhone(p.phone) : "Sin teléfono"}</p>
                   </div>
                   <span className="shrink-0 text-right text-xs text-muted-foreground">{detail(p)}</span>

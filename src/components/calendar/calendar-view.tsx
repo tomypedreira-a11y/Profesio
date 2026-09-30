@@ -9,6 +9,7 @@ import type { DatesSetArg, EventClickArg, EventInput, EventSourceFuncArg } from 
 import { addDays, format, isSameMonth, startOfWeek } from "date-fns";
 import { CalendarPlusIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { shortName, sortName } from "@/lib/format";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { AddSessionDialog } from "./add-session-dialog";
@@ -96,6 +97,9 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
         const endHour = end.getDate() !== start.getDate() ? 24 : end.getHours() + (end.getMinutes() > 0 ? 1 : 0);
         max = Math.max(max, endHour);
       }
+      // Las horas se rotulan de a 2: el rango arranca y termina en hora par para leer 08, 10, 12…
+      min -= min % 2;
+      max += max % 2;
       setHours((h) => (h.min === min && h.max === max ? h : { min, max }));
 
       return list.map((s) => {
@@ -106,7 +110,7 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
         if (s.ends_at < now) classNames.push("session-past");
         return {
           id: s.id,
-          title: `${s.first_name} ${s.last_name.charAt(0)}.`,
+          title: shortName(s),
           start: s.starts_at,
           end: s.ends_at,
           classNames,
@@ -135,7 +139,7 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
       setUnscheduled(
         ((irregular ?? []) as UnscheduledPatient[])
           .filter((p) => !bookedIds.has(p.id))
-          .sort((a, b) => collator.compare(a.last_name, b.last_name)),
+          .sort((a, b) => collator.compare(sortName(a), sortName(b))),
       );
     },
     [supabase],
@@ -228,7 +232,8 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
           nowIndicator
           slotMinTime={pad(hours.min)}
           slotMaxTime={pad(hours.max)}
-          slotDuration="00:30:00"
+          slotDuration="01:00:00"
+          slotLabelInterval="02:00:00" // grilla compacta: una fila por hora, rótulo cada 2
           slotLabelFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
           eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
           dayHeaderFormat={view === "dayGridMonth" ? { weekday: "short" } : { weekday: "short", day: "numeric" }}
@@ -244,7 +249,8 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
         <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border-[1.5px] border-primary-border bg-primary" /> Sesión</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-(--session-next-border) bg-(--session-next)" /> Próxima sesión</span>
-          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border bg-muted" /> Cancelada</span>
+          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border bg-muted" /> Realizada</span>
+          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-(--session-cancelled-border) bg-(--session-cancelled)" /> Cancelada</span>
         </div>
       </div>
 
@@ -279,6 +285,7 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
         patients={patients}
         patientId={adding?.patientId}
         defaultDate={adding?.date}
+        showPatientLink={!!adding?.patientId}
         onAdded={refresh}
       />
     </div>

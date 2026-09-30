@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { updateProfile } from "../actions";
-import type { FormState } from "@/lib/form-state";
+import { type FormState, formKey } from "@/lib/form-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -22,7 +22,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
   return (
     <Card className="max-w-xl">
       <CardContent>
-        <form action={action}>
+        <form key={formKey(state)} action={action}>
           <FieldGroup>
             <FormMessage error={state.error} success={state.success} />
             <div className="grid gap-3 sm:grid-cols-2">

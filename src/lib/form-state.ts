@@ -14,3 +14,9 @@ export function formValues(formData: FormData, omit: string[] = []) {
   });
   return values;
 }
+
+// Key para el <form>: cuando la acción devuelve valores (hubo un error), el formulario se remonta
+// y los campos arrancan con lo escrito. Base UI no admite cambiar el defaultValue de un campo ya montado.
+export function formKey(state: FormState) {
+  return JSON.stringify(state.values ?? null);
+}

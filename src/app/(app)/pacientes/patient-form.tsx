@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import type { FormState } from "@/lib/form-state";
+import { type FormState, formKey } from "@/lib/form-state";
 import { formatFee } from "@/lib/format";
 import { resolveEnd, type ScheduleSlot } from "@/lib/schedule";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,8 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
   const v = (field: Exclude<keyof PatientFormDefaults, "schedules">) => state.values?.[field] ?? defaults[field];
 
   // Las sesiones son estado del componente (no inputs sueltos), así que no se pierden si hay error.
-  const [plan, setPlan] = useState<SessionPlan>(() => initialPlan(defaults.schedules));
+  // Un paciente nuevo arranca como regular (lo más común); al editar, se respeta lo que tiene.
+  const [plan, setPlan] = useState<SessionPlan>(() => initialPlan(defaults.schedules, undefined, isEdit ? "irregular" : "fixed"));
   const hadFixedSchedule = isEdit && defaults.schedules.length > 0;
   // El fin vacío se completa con la duración habitual del perfil antes de enviar.
   const minutes = useSessionLength();
@@ -64,7 +65,7 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
   const defaultFee = useDefaultFee();
 
   return (
-    <form action={formAction} className="flex max-w-2xl flex-col gap-4">
+    <form key={formKey(state)} action={formAction} className="flex max-w-2xl flex-col gap-4">
       <FormMessage error={state.error} />
 
       {/* Datos principales */}
@@ -82,7 +83,7 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
               </Field>
               <Field data-invalid={!!errors.last_name}>
                 <FieldLabel htmlFor="last_name">Apellido</FieldLabel>
-                <Input id="last_name" name="last_name" defaultValue={v("last_name")} aria-invalid={!!errors.last_name} autoComplete="off" required />
+                <Input id="last_name" name="last_name" defaultValue={v("last_name")} aria-invalid={!!errors.last_name} autoComplete="off" />
                 <FieldError>{errors.last_name?.[0]}</FieldError>
               </Field>
             </div>

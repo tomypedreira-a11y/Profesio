@@ -28,9 +28,10 @@ export type SessionPlan = {
   end: string;
 };
 
-export function initialPlan(slots: ScheduleSlot[] = [], date?: Date): SessionPlan {
+// Sin horarios fijos arranca en `emptyType`: irregular al agregar una sesión, regular al crear un paciente.
+export function initialPlan(slots: ScheduleSlot[] = [], date?: Date, emptyType: SessionPlan["type"] = "irregular"): SessionPlan {
   return {
-    type: slots.length > 0 ? "fixed" : "irregular",
+    type: slots.length > 0 ? "fixed" : emptyType,
     slots:
       slots.length > 0
         ? slots.map((s) => ({ weekday: String(s.weekday), start: s.start_time, end: s.end_time }))
@@ -151,11 +152,7 @@ export function SessionPlanFields({ value, onChange, error, fixedHint, irregular
             variant="outline"
             size="sm"
             className="self-start"
-            // El día nuevo arranca con el mismo horario que el último, que suele repetirse.
-            onClick={() => {
-              const last = value.slots.at(-1);
-              set({ slots: [...value.slots, { weekday: "", start: last?.start ?? "", end: last?.end ?? "" }] });
-            }}
+            onClick={() => set({ slots: [...value.slots, { weekday: "", start: "", end: "" }] })}
           >
             <PlusIcon />
             Agregar otro día

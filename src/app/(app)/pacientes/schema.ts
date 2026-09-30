@@ -32,7 +32,7 @@ function parseBirthDate(raw: string): string | null {
 export const patientSchema = z
   .object({
     first_name: z.string().trim().min(1, "Ingresá el nombre."),
-    last_name: z.string().trim().min(1, "Ingresá el apellido."),
+    last_name: z.string().trim(), // opcional: alcanza con el nombre
     schedule_type: z.enum(["fixed", "irregular"]),
     schedules: z.string(), // JSON: [{ weekday, start_time, end_time }]
     session_date: z.string(), // irregular: primera sesión (opcional), AAAA-MM-DD

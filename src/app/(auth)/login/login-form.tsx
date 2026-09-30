@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { login } from "../actions";
-import type { FormState } from "@/lib/form-state";
+import { type FormState, formKey } from "@/lib/form-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -23,7 +23,7 @@ export function LoginForm({ linkError }: { linkError?: boolean }) {
         <CardDescription>Entrá con tu email y contraseña.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={action}>
+        <form key={formKey(state)} action={action}>
           <FieldGroup>
             <FormMessage
               error={

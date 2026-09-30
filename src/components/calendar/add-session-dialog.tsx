@@ -2,8 +2,10 @@
 
 // Panel "Agregar sesión": paciente + regular (días fijos) o irregular (una fecha).
 // Se usa en Sesiones, en el calendario y en la ficha del paciente.
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { format, startOfDay } from "date-fns";
+import { UserRoundIcon } from "lucide-react";
 import { toast } from "sonner";
 import { addSessions } from "@/app/(app)/sesiones/actions";
 import { formatSchedules } from "@/lib/format";
@@ -34,10 +36,20 @@ type AddSessionDialogProps = {
   patientId?: string; // paciente elegido de antemano
   lockPatient?: boolean; // en la ficha del paciente no se puede cambiar
   defaultDate?: Date;
+  showPatientLink?: boolean; // botón a la ficha del paciente (desde "No agendados" del calendario)
   onAdded?: () => void;
 };
 
-export function AddSessionDialog({ open, onOpenChange, patients, patientId, lockPatient, defaultDate, onAdded }: AddSessionDialogProps) {
+export function AddSessionDialog({
+  open,
+  onOpenChange,
+  patients,
+  patientId,
+  lockPatient,
+  defaultDate,
+  showPatientLink,
+  onAdded,
+}: AddSessionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
@@ -49,6 +61,7 @@ export function AddSessionDialog({ open, onOpenChange, patients, patientId, lock
             patientId={patientId}
             lockPatient={lockPatient}
             defaultDate={defaultDate}
+            showPatientLink={showPatientLink}
             onDone={() => {
               onOpenChange(false);
               onAdded?.();
@@ -65,6 +78,7 @@ function AddSessionForm({
   patientId: initialPatientId,
   lockPatient,
   defaultDate,
+  showPatientLink,
   onDone,
 }: Omit<AddSessionDialogProps, "open" | "onOpenChange" | "onAdded"> & { onDone: () => void }) {
   const today = startOfDay(new Date());
@@ -135,6 +149,13 @@ function AddSessionForm({
             </SelectContent>
           </Select>
         </Field>
+      )}
+
+      {showPatientLink && patient && (
+        <Button variant="outline" render={<Link href={`/pacientes/${patient.id}`} />} nativeButton={false}>
+          <UserRoundIcon />
+          Ver ficha del paciente
+        </Button>
       )}
 
       <SessionPlanFields
