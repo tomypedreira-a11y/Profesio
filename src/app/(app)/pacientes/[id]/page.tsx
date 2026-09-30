@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon, MessageCircleIcon, PencilIcon } from "lucide-react";
+import { MessageCircleIcon, PencilIcon } from "lucide-react";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { formatPhone, whatsappUrl } from "@/lib/phone";
@@ -51,7 +51,7 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
       .select("note_id, starts_at, content, note_status", { count: "exact" })
       .eq("patient_id", id)
       .order("starts_at", { ascending: false })
-      .limit(3),
+      .limit(1), // solo la más reciente; count trae el total para "Ver todas"
   ]);
 
   const fullName = `${patient.first_name} ${patient.last_name}`;
@@ -75,11 +75,6 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
 
   return (
     <>
-      <Button variant="ghost" size="sm" className="self-start" render={<Link href="/pacientes" />} nativeButton={false}>
-        <ArrowLeftIcon />
-        Pacientes
-      </Button>
-
       {/* Encabezado: nombre, teléfono y acciones */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -143,8 +138,8 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
         </Card>
 
         <div className="flex flex-col gap-4">
-          <NotesCard patientId={id} notes={notes ?? []} total={notesCount ?? 0} timeZone={timeZone} />
           <SessionsCard title="Próximas sesiones" sessions={upcoming ?? []} timeZone={timeZone} empty="No tiene sesiones agendadas." />
+          <NotesCard patientId={id} note={notes?.[0] ?? null} total={notesCount ?? 0} timeZone={timeZone} />
           <SessionsCard title="Últimas sesiones" sessions={past ?? []} timeZone={timeZone} empty="Todavía no tuvo sesiones." />
         </div>
       </div>
@@ -188,15 +183,15 @@ function SessionsCard({
   );
 }
 
-// Últimas anotaciones del paciente, con acceso a la lista completa.
+// La anotación más reciente del paciente, con acceso a la lista completa.
 function NotesCard({
   patientId,
-  notes,
+  note,
   total,
   timeZone,
 }: {
   patientId: string;
-  notes: { note_id: string | null; starts_at: string | null; content: string | null; note_status: string | null }[];
+  note: { note_id: string | null; starts_at: string | null; content: string | null; note_status: string | null } | null;
   total: number;
   timeZone: string;
 }) {
@@ -207,30 +202,24 @@ function NotesCard({
         {total > 0 && (
           <CardAction>
             <Button variant="link" size="sm" render={<Link href={`/pacientes/${patientId}/anotaciones`} />} nativeButton={false}>
-              Ver todos ({total})
+              Ver todas ({total})
             </Button>
           </CardAction>
         )}
       </CardHeader>
       <CardContent>
-        {notes.length === 0 ? (
+        {!note ? (
           <p className="text-sm text-muted-foreground">Todavía no hay anotaciones. Se cargan desde cada sesión en el calendario.</p>
         ) : (
-          <ul className="divide-y">
-            {notes.map((n) => (
-              <li key={n.note_id} className="py-2 first:pt-0 last:pb-0">
-                <Link href={`/pacientes/${patientId}/anotaciones#${n.note_id}`} className="group block">
-                  <div className="flex items-center justify-between gap-2 text-sm">
-                    <span className="font-medium first-letter:uppercase group-hover:underline">
-                      {formatSessionLong(n.starts_at!, timeZone)}
-                    </span>
-                    {n.note_status === "draft" && <Badge variant="secondary">Borrador</Badge>}
-                  </div>
-                  <p className="line-clamp-2 text-sm text-muted-foreground">{n.content}</p>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <Link href={`/pacientes/${patientId}/anotaciones#${note.note_id}`} className="group block">
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <span className="font-medium first-letter:uppercase group-hover:underline">
+                {formatSessionLong(note.starts_at!, timeZone)}
+              </span>
+              {note.note_status === "draft" && <Badge variant="secondary">Borrador</Badge>}
+            </div>
+            <p className="line-clamp-2 text-sm text-muted-foreground">{note.content}</p>
+          </Link>
         )}
       </CardContent>
     </Card>

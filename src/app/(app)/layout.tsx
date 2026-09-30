@@ -1,11 +1,12 @@
 // Estructura de la app para usuarios logueados: panel lateral (en el celular, barra inferior) + contenido.
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/app-sidebar";
 import { FontSizeSync } from "@/components/font-size-sync";
+import { HeaderBackButton } from "@/components/header-back-button";
 import { HeaderTitle } from "@/components/header-title";
-import { MobileBackButton } from "@/components/mobile-back-button";
 import { MobileNav } from "@/components/mobile-nav";
 import { ProfileDefaultsProvider } from "@/components/profile-defaults-provider";
 import { ThemeSync } from "@/components/theme-provider";
@@ -44,7 +45,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {/* En el celular se navega con la barra inferior: el panel lateral no se abre. */}
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
           <Separator orientation="vertical" className="mr-2 hidden h-4 md:block" />
-          <MobileBackButton />
+          {/* Flecha para volver (también registra el recorrido).
+              Suspense: lee los filtros de la URL (useSearchParams). */}
+          <Suspense fallback={null}>
+            <HeaderBackButton />
+          </Suspense>
           {/* En px (no rem): no cambia con el tamaño de letra elegido en Configuración. */}
           <HeaderTitle firstName={user.firstName} className="min-w-0 text-[20px] leading-tight font-medium text-muted-foreground" />
         </header>
