@@ -98,9 +98,39 @@ export async function restoreSession(sessionId: string) {
       error:
         error.code === "23P01"
           ? "Ese horario ya está ocupado por otra sesión. Reprogramala en otro horario."
-          : "No se pudo deshacer la cancelación.",
+          : error.hint === "vacation"
+            ? error.message
+            : "No se pudo deshacer la cancelación.",
     };
   }
+  revalidatePath("/", "layout");
+  return {};
+}
+
+// ---------------------------------------------------------------------------
+// Modalidad (presencial o virtual): solo esta sesión, o esta y las siguientes del paciente
+// (pasa a ser la modalidad del paciente de ahí en adelante).
+// ---------------------------------------------------------------------------
+
+const modalitySchema = z.object({
+  sessionId: z.uuid(),
+  modality: z.enum(["in_person", "virtual"]),
+  scope: scopeSchema,
+});
+
+export async function setSessionModality(input: z.input<typeof modalitySchema>) {
+  const parsed = modalitySchema.safeParse(input);
+  if (!parsed.success) return { error: "Elegí presencial o virtual." };
+  const { sessionId, modality, scope } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_session_modality", {
+    p_session_id: sessionId,
+    p_modality: modality,
+    p_scope: scope,
+  });
+
+  if (error) return { error: error.code === "P0001" ? error.message : "No se pudo cambiar la modalidad." };
   revalidatePath("/", "layout");
   return {};
 }

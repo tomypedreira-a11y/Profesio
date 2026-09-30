@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
+import { VideoIcon } from "lucide-react";
 import { es } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,12 @@ export function SessionList({ sessions, nextId, todayKey, timeZone }: SessionLis
                       <span className={cn("flex-1 truncate font-medium", cancelled && "line-through")}>
                         {s.first_name} {s.last_name}
                       </span>
+                      {s.modality === "virtual" && (
+                        <Badge variant="outline">
+                          <VideoIcon />
+                          Virtual
+                        </Badge>
+                      )}
                       {cancelled && <Badge variant="outline">Cancelada</Badge>}
                       {isNext && <Badge>Próxima</Badge>}
                     </button>

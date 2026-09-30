@@ -2,10 +2,11 @@
 
 // Panel con la información de una sesión (se abre al tocarla en el calendario).
 import Link from "next/link";
-import { MessageCircleIcon, UserRoundIcon } from "lucide-react";
+import { MapPinIcon, MessageCircleIcon, UserRoundIcon, VideoIcon } from "lucide-react";
 import { formatInTimeZone } from "date-fns-tz";
 import { es } from "date-fns/locale";
 import { formatPhone, whatsappUrl } from "@/lib/phone";
+import { modalityLabel } from "@/lib/modality";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -13,6 +14,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { NoteEditor } from "@/components/notes/note-editor";
 import { SessionPayment } from "@/components/payments/session-payment";
 import { SessionActions } from "./session-actions";
+import { SessionModality } from "./session-modality";
 import type { CalendarSession } from "./types";
 
 type SessionSheetProps = {
@@ -50,7 +52,18 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
                   <Badge variant="secondary">Agendada</Badge>
                 )}
                 <Badge variant="outline">{session.series_id ? "Horario fijo" : "Sesión suelta"}</Badge>
+                {/* En una cancelada la modalidad solo se informa; en las demás se puede cambiar (abajo). */}
+                {session.status === "cancelled" && (
+                  <Badge variant="outline">
+                    {session.modality === "virtual" ? <VideoIcon /> : <MapPinIcon />}
+                    {modalityLabel(session.modality)}
+                  </Badge>
+                )}
               </div>
+
+              {session.status !== "cancelled" && (
+                <SessionModality key={`modality-${session.id}`} session={session} onChanged={onChanged} />
+              )}
 
               {session.rescheduled_from && (
                 <p className="text-muted-foreground">

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatPhone, whatsappUrl } from "@/lib/phone";
 import { formatBirthDate, formatFee, formatSchedules, formatSessionLong } from "@/lib/format";
 import { toSlots } from "@/lib/schedule";
+import { modalityLabel } from "@/lib/modality";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
 
   const details = [
     { label: "Frecuencia", value: formatSchedules(schedules) },
+    { label: "Modalidad", value: modalityLabel(patient.modality) },
     { label: "Documento", value: patient.dni },
     { label: "Fecha de nacimiento", value: patient.birth_date && formatBirthDate(patient.birth_date) },
     { label: "Email", value: patient.email, href: patient.email ? `mailto:${patient.email}` : undefined },

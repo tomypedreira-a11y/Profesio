@@ -49,7 +49,7 @@ src/
       sesiones/                  Lista de próximas sesiones + acciones de sesiones
       ingresos/                  Resumen de cobros del mes, quiénes adeudan + acciones de cobro
       perfil/                    Datos profesionales (nombre, apellido, matrícula)
-      configuracion/             Preferencias: Personalización, Calendario, Sesiones, Cuenta
+      configuracion/             Preferencias: Personalización, Calendario, Sesiones, Vacaciones, Cuenta
   components/
     ui/                          Componentes de shadcn (generados por la CLI)
     calendar/                    Calendario, panel de sesión, agendar, reprogramar/cancelar
@@ -59,7 +59,7 @@ src/
   lib/
     supabase/{client,server,proxy}.ts
     database.types.ts            Generado por Supabase: NO editar a mano
-    phone.ts  format.ts  form-state.ts  theme.ts  schedule.ts  payments.ts  calendar-views.ts
+    phone.ts  format.ts  form-state.ts  theme.ts  schedule.ts  payments.ts  calendar-views.ts  vacations.ts  modality.ts
 supabase/migrations/             Toda la estructura de la base, en orden
 ```
 
@@ -74,10 +74,11 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 | Tabla | Contenido |
 |---|---|
 | `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria, duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, vista inicial del calendario (`calendar_view`). |
-| `patients` | Pacientes. `active = false` = archivado. Teléfono en E.164. |
+| `patients` | Pacientes. `active = false` = archivado. Teléfono en E.164. `modality`: `in_person` (por defecto) o `virtual`. |
 | `session_series` | Horario fijo semanal (día, hora y duración). Un paciente puede tener varios. `end_date is null` = vigente. |
-| `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). Cobro: `fee`, `paid_at`, `payment_method`. |
+| `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). Cobro: `fee`, `paid_at`, `payment_method`. `modality` null = la del paciente. |
 | `session_notes` | Anotaciones de sesión (historia clínica), con versiones. |
+| `vacations` | Períodos de vacaciones del psicólogo (`start_date`/`end_date`, fechas de reloj, sin superponerse). |
 | `audit_log` | Registro de modificaciones (lo escriben triggers). |
 
 Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `session_book`, `session_payments`.
@@ -129,6 +130,16 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   (triggers): las sesiones ya pasadas conservan el valor que regía. Una sesión cobrada no se cancela ni se borra
   (trigger `sessions_payment_guard`): primero se deshace el cobro. Sí se reprograma mientras no se haya realizado,
   y una cancelada cobrada puede volver a agendarse (el cobro la acompaña).
+- **Modalidad (presencial / virtual):** obligatoria en el paciente (presencial por defecto). Cada sesión usa la del
+  paciente salvo que se cambie para ella (`set_session_modality`, "solo esta" o "esta y las siguientes": esta última
+  cambia la del paciente de ahí en adelante). Como con el valor, al cambiar la del paciente las sesiones ya realizadas
+  conservan la que tuvieron (trigger). `calendar_sessions.modality` trae la que corresponde. Valores en `lib/modality.ts`.
+- **Vacaciones:** en vacaciones no hay sesiones de horarios fijos; las sueltas sí (urgencias, de cualquier paciente).
+  `add_vacation` borra las futuras de horario fijo en esas fechas (si alguna está cobrada o tiene anotación, no carga nada),
+  `generate_series_sessions` saltea los días de vacaciones y el trigger `sessions_vacation_guard` impide agendar,
+  reprogramar o reactivar una de horario fijo ahí (`hint = 'vacation'`). `remove_vacation` las vuelve a generar.
+  Las canceladas de horario fijo se conservan y el calendario las oculta en esos días. La interfaz las lee con
+  `useVacations()` (`components/vacations-provider.tsx`, las carga el layout) y las pinta con `--vacation` (`calendar.css`).
 - **Estados de sesión:** solo `scheduled` y `cancelled`. Una sesión pasada no cancelada se considera realizada.
   La "próxima sesión" se calcula (primera futura con `scheduled`); no se guarda.
 - **Anotaciones (historia clínica, Ley 26.529):** en la interfaz se llaman "anotaciones" (no "informes"); en el código y la base, `notes` / `session_notes`. Un borrador (`draft`) se edita; uno finalizado (`final`)

@@ -85,6 +85,7 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+          modality: string
           phone: string | null
           psychologist_id: string
           session_fee: number | null
@@ -99,6 +100,7 @@ export type Database = {
           first_name: string
           id?: string
           last_name?: string
+          modality?: string
           phone?: string | null
           psychologist_id?: string
           session_fee?: number | null
@@ -113,6 +115,7 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string
+          modality?: string
           phone?: string | null
           psychologist_id?: string
           session_fee?: number | null
@@ -309,6 +312,7 @@ export type Database = {
           ends_at: string
           fee: number | null
           id: string
+          modality: string | null
           paid_at: string | null
           patient_id: string
           payment_method: string | null
@@ -327,6 +331,7 @@ export type Database = {
           ends_at: string
           fee?: number | null
           id?: string
+          modality?: string | null
           paid_at?: string | null
           patient_id: string
           payment_method?: string | null
@@ -345,6 +350,7 @@ export type Database = {
           ends_at?: string
           fee?: number | null
           id?: string
+          modality?: string | null
           paid_at?: string | null
           patient_id?: string
           payment_method?: string | null
@@ -380,6 +386,38 @@ export type Database = {
           },
         ]
       }
+      vacations: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          psychologist_id: string
+          start_date: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          psychologist_id?: string
+          start_date: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          psychologist_id?: string
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacations_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       calendar_sessions: {
@@ -389,6 +427,7 @@ export type Database = {
           first_name: string | null
           id: string | null
           last_name: string | null
+          modality: string | null
           patient_id: string | null
           phone: string | null
           rescheduled_from: string | null
@@ -410,6 +449,7 @@ export type Database = {
           id: string | null
           last_name: string | null
           last_session_at: string | null
+          modality: string | null
           next_session_at: string | null
           phone: string | null
           schedules: Json | null
@@ -470,6 +510,10 @@ export type Database = {
         Args: { p_patient_id: string; p_schedules: Json }
         Returns: number
       }
+      add_vacation: {
+        Args: { p_end: string; p_start: string }
+        Returns: number
+      }
       cancel_series_from: { Args: { p_session_id: string }; Returns: undefined }
       create_patient: {
         Args: {
@@ -492,6 +536,7 @@ export type Database = {
           p_email?: string
           p_first_name: string
           p_last_name: string
+          p_modality?: string
           p_phone?: string
           p_schedules?: Json
           p_session_date?: string
@@ -510,11 +555,16 @@ export type Database = {
       frequency_weeks: { Args: { p_frequency: string }; Returns: number }
       generate_series_sessions: {
         Args: {
+          p_from?: string
           p_series_id: string
           p_skip_conflicts?: boolean
           p_until: string
         }
         Returns: number
+      }
+      in_vacation: {
+        Args: { p_at: string; p_psychologist_id: string }
+        Returns: boolean
       }
       mark_session_unpaid: {
         Args: { p_session_id: string }
@@ -524,6 +574,7 @@ export type Database = {
         Args: { p_method: string; p_session_ids: string[] }
         Returns: number
       }
+      remove_vacation: { Args: { p_vacation_id: string }; Returns: number }
       replace_patient_schedules: {
         Args: { p_patient_id: string; p_schedules: Json }
         Returns: undefined
@@ -571,6 +622,10 @@ export type Database = {
         Args: { p_patient_id: string; p_start_time: string; p_weekday: number }
         Returns: undefined
       }
+      set_session_modality: {
+        Args: { p_modality: string; p_scope?: string; p_session_id: string }
+        Returns: undefined
+      }
       update_patient: {
         Args: {
           p_birth_date?: string
@@ -593,6 +648,7 @@ export type Database = {
           p_email?: string
           p_first_name: string
           p_last_name: string
+          p_modality?: string
           p_patient_id: string
           p_phone?: string
           p_schedules?: Json
