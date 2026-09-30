@@ -89,7 +89,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
             <SidebarMenu className="gap-2">
               {NAV_ITEMS.map((item) => {
                 const isActive =
-                  item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                  item.href === "/"
+                    ? pathname === "/" || pathname.startsWith("/calendario")
+                    : pathname.startsWith(item.href);
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton

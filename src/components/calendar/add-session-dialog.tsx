@@ -23,7 +23,15 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormMessage } from "@/components/form-message";
 import { useSessionLength } from "@/components/profile-defaults-provider";
-import { initialPlan, planDate, planSlots, SessionPlanFields, type SessionPlan } from "./session-plan-fields";
+import {
+  FIRST_DATE_ERROR,
+  initialPlan,
+  missingFirstDate,
+  planDate,
+  planSlots,
+  SessionPlanFields,
+  type SessionPlan,
+} from "./session-plan-fields";
 import type { PatientOption } from "./types";
 
 // Horas escritas como HH:MM; el fin (opcional) después del inicio y sin pasar la medianoche.
@@ -95,6 +103,7 @@ function AddSessionForm({
     const slots = planSlots(plan, minutes);
     const end = resolveEnd(plan.start, plan.end, minutes);
     if (plan.type === "fixed" && !slots) return setError(RANGE_ERROR);
+    if (missingFirstDate(plan)) return setError(FIRST_DATE_ERROR);
     if (plan.type === "irregular" && !plan.date) return setError("Elegí la fecha.");
     if (plan.type === "irregular" && !isValidRange(plan.start, end)) {
       return setError("Completá el inicio. El fin tiene que ser después del inicio, sin pasar la medianoche.");
@@ -164,7 +173,7 @@ function AddSessionForm({
         fixedHint={
           patient && patient.schedules.length > 0
             ? `Ya tiene: ${formatSchedules(patient.schedules)}. Los días que agregues se suman.`
-            : "Se agenda todas las semanas, a partir de la próxima fecha."
+            : undefined
         }
       />
 

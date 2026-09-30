@@ -34,7 +34,7 @@ export const patientSchema = z
     first_name: z.string().trim().min(1, "Ingresá el nombre."),
     last_name: z.string().trim(), // opcional: alcanza con el nombre
     schedule_type: z.enum(["fixed", "irregular"]),
-    schedules: z.string(), // JSON: [{ weekday, start_time, end_time }]
+    schedules: z.string(), // JSON: [{ weekday, start_time, end_time, frequency, start_date? }]
     session_date: z.string(), // irregular: primera sesión (opcional), AAAA-MM-DD
     session_start: z.string(),
     session_end: z.string(),
@@ -60,6 +60,9 @@ export const patientSchema = z
           path: ["schedule"],
           message: "Completá el día y el inicio de cada sesión. El fin tiene que ser después del inicio, sin pasar la medianoche.",
         });
+      } else if (parsed.data.some((s) => s.frequency !== "weekly" && !s.start_date)) {
+        // Semana por medio o cada 3 semanas: hay que saber en qué semana arranca.
+        ctx.addIssue({ code: "custom", path: ["schedule"], message: "Elegí la fecha de la primera sesión." });
       } else schedules = parsed.data;
     } else if (data.session_date !== "" || data.session_start !== "" || data.session_end !== "") {
       if (!z.iso.date().safeParse(data.session_date).success || !isValidRange(data.session_start, data.session_end)) {

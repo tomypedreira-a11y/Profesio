@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormMessage } from "@/components/form-message";
 import { useDefaultFee, useSessionLength } from "@/components/profile-defaults-provider";
-import { initialPlan, planDate, SessionPlanFields, type SessionPlan } from "@/components/calendar/session-plan-fields";
+import { initialPlan, planDate, planSlotsJson, SessionPlanFields, type SessionPlan } from "@/components/calendar/session-plan-fields";
 import { BirthDateInput } from "./birth-date-input";
 
 export type PatientFormDefaults = {
@@ -96,7 +96,7 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
       <input
         type="hidden"
         name="schedules"
-        value={JSON.stringify(plan.slots.map((s) => ({ weekday: s.weekday === "" ? null : Number(s.weekday), start_time: s.start, end_time: resolveEnd(s.start, s.end, minutes) })))}
+        value={planSlotsJson(plan, minutes)}
       />
       <input type="hidden" name="session_date" value={plan.type === "irregular" ? planDate(plan) : ""} />
       <input type="hidden" name="session_start" value={plan.type === "irregular" ? plan.start : ""} />
@@ -115,8 +115,8 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
                 error={errors.schedule?.[0]}
                 fixedHint={
                   hadFixedSchedule
-                    ? "Los días que quites dejan de agendarse: se borran sus sesiones futuras (las que tienen informe se conservan). Los que agregues empiezan en la próxima fecha."
-                    : "Las sesiones se agendan automáticamente todas las semanas, a partir de la próxima fecha."
+                    ? "Los días que quites, o si cambiás la frecuencia o la semana de la primera sesión, dejan de agendarse: se borran sus sesiones futuras (las que tienen informe se conservan)."
+                    : undefined
                 }
                 irregularHint={
                   <>

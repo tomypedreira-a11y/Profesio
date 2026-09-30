@@ -7,11 +7,20 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import esLocale from "@fullcalendar/core/locales/es";
 import type { DatesSetArg, EventClickArg, EventInput, EventSourceFuncArg } from "@fullcalendar/core";
 import { addDays, differenceInCalendarDays, format, isSameMonth, startOfWeek } from "date-fns";
-import { CalendarPlusIcon, ChevronLeftIcon, ChevronRightIcon, UserRoundSearchIcon } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowLeftIcon,
+  CalendarDaysIcon,
+  CalendarPlusIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  UserRoundSearchIcon,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { shortName, sortName } from "@/lib/format";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { AddSessionDialog } from "./add-session-dialog";
 import { NextSessionPanel } from "./next-session-panel";
 import { SessionSheet } from "./session-sheet";
@@ -38,11 +47,15 @@ const CUSTOM_VIEWS = {
 
 type CalendarViewProps = {
   timeZone: string;
-  patients: PatientOption[];
+  patients?: PatientOption[]; // para "Agregar sesión" (solo en la pantalla principal)
   initialView: CalendarViewPreference; // vista elegida en el perfil
+  // "browse": pantalla aparte (/calendario) para mirar cualquier vista desde el celular,
+  // sin paneles ni tira de días. Lo que se elige ahí no cambia la pantalla principal.
+  mode?: "main" | "browse";
 };
 
-export function CalendarView({ timeZone, patients, initialView }: CalendarViewProps) {
+export function CalendarView({ timeZone, patients = [], initialView, mode = "main" }: CalendarViewProps) {
+  const browse = mode === "browse";
   const supabase = useRef(createClient()).current;
   const calendarRef = useRef<FullCalendar>(null);
   const isMobile = useIsMobile();
@@ -65,13 +78,14 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
 
   const api = () => calendarRef.current?.getApi();
 
-  // La semana cambia de forma según el tamaño de pantalla: grilla de 7 días en PC, tira de días en el celular.
+  // En el celular la pantalla principal muestra siempre la semana como tira de días (sin importar
+  // la vista del perfil); las otras vistas se miran en /calendario. En PC la semana es la grilla de 7 días.
   useEffect(() => {
     const calendar = calendarRef.current?.getApi();
-    if (!calendar) return;
-    if (isMobile && calendar.view.type === "timeGridWeek") calendar.changeView("timeGridWeekMobile");
+    if (!calendar || browse) return;
+    if (isMobile && calendar.view.type !== "timeGridWeekMobile") calendar.changeView("timeGridWeekMobile");
     else if (!isMobile && calendar.view.type === "timeGridWeekMobile") calendar.changeView("timeGridWeek");
-  }, [isMobile]);
+  }, [isMobile, browse]);
 
   // Carga las sesiones del rango visible. FullCalendar la llama al cambiar de fecha o vista.
   const fetchEvents = useCallback(
@@ -189,7 +203,8 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
         : arg.view.title,
     );
 
-    if (!week || weekStart.getTime() !== week.getTime()) {
+    // "No agendados" y la tira de días son solo de la pantalla principal.
+    if (!browse && (!week || weekStart.getTime() !== week.getTime())) {
       weekRef.current = weekStart;
       setWeek(weekStart);
       setWeekCounts(null);
@@ -212,7 +227,7 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
 
   const viewOptions: { key: ViewKey; label: string }[] = [
     { key: "timeGridDay", label: "Día" },
-    { key: isMobile ? "timeGridWeekMobile" : "timeGridWeek", label: "Semana" },
+    { key: "timeGridWeek", label: "Semana" },
     { key: "dayGridMonth", label: "Mes" },
   ];
 
@@ -223,9 +238,9 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
   const pad = (h: number) => `${String(h).padStart(2, "0")}:00:00`;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
+    <div className={cn("grid gap-4", !browse && "lg:grid-cols-[minmax(0,1fr)_16rem]")}>
       <div className="flex min-w-0 flex-col gap-3">
-        {/* Barra superior: navegación, título y vistas */}
+        {/* Barra superior: navegación, vistas y título (en celular el título va arriba) */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon" onClick={() => api()?.prev()} aria-label="Anterior">
@@ -238,8 +253,20 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
               Hoy
             </Button>
           </div>
-          <h2 className="order-first w-full text-lg font-semibold first-letter:uppercase sm:order-none sm:w-auto sm:flex-1">{title}</h2>
-          <div className="ml-auto flex rounded-full border p-0.5 sm:ml-0">
+          {/* En el celular las vistas no se cambian acá: el botón abre la pantalla aparte. */}
+          {!browse && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="ml-auto md:hidden"
+              render={<Link href="/calendario" />}
+              nativeButton={false}
+              aria-label="Ver día, semana o mes"
+            >
+              <CalendarDaysIcon />
+            </Button>
+          )}
+          <div className={cn("flex rounded-full border p-0.5", browse ? "ml-auto" : "max-md:hidden")}>
             {viewOptions.map((o) => (
               <Button
                 key={o.key}
@@ -251,22 +278,44 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
               </Button>
             ))}
           </div>
-          <div className="flex w-full gap-2 sm:w-auto">
-            <Button className="flex-1" onClick={() => setAdding({})}>
-              <CalendarPlusIcon />
-              Agregar sesión
-            </Button>
-            {/* En el celular "No agendados" no ocupa lugar arriba: se abre desde acá. */}
-            <Button variant="outline" className="flex-1 md:hidden" onClick={() => setShowUnscheduled(true)}>
-              <UserRoundSearchIcon />
-              Sin agendar
-              {unscheduled.length > 0 && (
-                <span className="rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
-                  {unscheduled.length}
-                </span>
-              )}
-            </Button>
+          <div
+            className={cn(
+              "order-first flex w-full items-center gap-1",
+              !browse && "md:order-none md:w-auto md:flex-1",
+            )}
+          >
+            {browse && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="-ml-2"
+                render={<Link href="/" />}
+                nativeButton={false}
+                aria-label="Volver al calendario"
+              >
+                <ArrowLeftIcon />
+              </Button>
+            )}
+            <h2 className="text-lg font-semibold first-letter:uppercase">{title}</h2>
           </div>
+          {!browse && (
+            <div className="flex w-full gap-2 md:w-auto">
+              <Button className="flex-1" onClick={() => setAdding({})}>
+                <CalendarPlusIcon />
+                Agregar sesión
+              </Button>
+              {/* En el celular "No agendados" no ocupa lugar arriba: se abre desde acá. */}
+              <Button variant="outline" className="flex-1 md:hidden" onClick={() => setShowUnscheduled(true)}>
+                <UserRoundSearchIcon />
+                Sin agendar
+                {unscheduled.length > 0 && (
+                  <span className="rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
+                    {unscheduled.length}
+                  </span>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
 
         {view === "timeGridWeekMobile" && week && day && (
@@ -312,25 +361,30 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-4 max-lg:order-first lg:sticky lg:top-4 lg:self-start">
-        <NextSessionPanel
-          session={nextSession}
-          timeZone={timeZone}
-          onSelect={(session) => setSelected({ session, isNext: true })}
-          onStarted={refetchEvents}
-        />
-        <div className="max-md:hidden">
-          <UnscheduledPanel patients={unscheduled} weekLabel={weekLabel} onSelect={scheduleUnscheduled} />
+      {/* En PC, columna a la derecha; en el celular, debajo del calendario. */}
+      {!browse && (
+        <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:self-start">
+          <NextSessionPanel
+            session={nextSession}
+            timeZone={timeZone}
+            onSelect={(session) => setSelected({ session, isNext: true })}
+            onStarted={refetchEvents}
+          />
+          <div className="max-md:hidden">
+            <UnscheduledPanel patients={unscheduled} weekLabel={weekLabel} onSelect={scheduleUnscheduled} />
+          </div>
         </div>
-      </div>
+      )}
 
-      <UnscheduledSheet
-        open={showUnscheduled}
-        onOpenChange={setShowUnscheduled}
-        patients={unscheduled}
-        weekLabel={weekLabel}
-        onSelect={scheduleUnscheduled}
-      />
+      {!browse && (
+        <UnscheduledSheet
+          open={showUnscheduled}
+          onOpenChange={setShowUnscheduled}
+          patients={unscheduled}
+          weekLabel={weekLabel}
+          onSelect={scheduleUnscheduled}
+        />
+      )}
 
       <SessionSheet
         session={selected?.session ?? null}
@@ -343,15 +397,17 @@ export function CalendarView({ timeZone, patients, initialView }: CalendarViewPr
         }}
       />
 
-      <AddSessionDialog
-        open={!!adding}
-        onOpenChange={(open) => !open && setAdding(null)}
-        patients={patients}
-        patientId={adding?.patientId}
-        defaultDate={adding?.date}
-        showPatientLink={!!adding?.patientId}
-        onAdded={refresh}
-      />
+      {!browse && (
+        <AddSessionDialog
+          open={!!adding}
+          onOpenChange={(open) => !open && setAdding(null)}
+          patients={patients}
+          patientId={adding?.patientId}
+          defaultDate={adding?.date}
+          showPatientLink={!!adding?.patientId}
+          onAdded={refresh}
+        />
+      )}
     </div>
   );
 }

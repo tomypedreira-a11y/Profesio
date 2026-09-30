@@ -58,26 +58,32 @@ export default async function SessionsPage() {
                 {day === todayKey ? "Hoy · " : ""}
                 {formatInTimeZone(items[0].starts_at!, timeZone, "EEEE d 'de' MMMM", { locale: es })}
               </h2>
-              <ul className="divide-y rounded-lg border">
+              <ul className="flex flex-col gap-2">
                 {items.map((s) => {
                   const cancelled = s.status === "cancelled";
+                  const isNext = s.id === nextId;
                   return (
                     <li key={s.id}>
+                      {/* Beige un poco más oscuro que el fondo, remarcado en oliva; próxima y cancelada, con sus colores del calendario. */}
                       <Link
                         href={`/pacientes/${s.patient_id}`}
                         className={cn(
-                          "flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50",
-                          s.id === nextId && "border-l-4 border-l-(--session-next-border)",
+                          "flex items-center gap-3 rounded-lg border-[1.5px] px-4 py-3 transition-[filter] hover:brightness-95",
+                          cancelled
+                            ? "border-(--session-cancelled-border) bg-(--session-cancelled) text-(--session-cancelled-foreground)"
+                            : isNext
+                              ? "border-(--session-next-border) bg-(--session-next) text-(--session-next-foreground)"
+                              : "border-primary-border bg-secondary text-secondary-foreground",
                         )}
                       >
-                        <span className={cn("w-24 shrink-0 text-sm tabular-nums text-muted-foreground", cancelled && "line-through")}>
+                        <span className={cn("w-24 shrink-0 text-sm tabular-nums opacity-75", cancelled && "line-through")}>
                           {formatInTimeZone(s.starts_at!, timeZone, "HH:mm")} – {formatInTimeZone(s.ends_at!, timeZone, "HH:mm")}
                         </span>
-                        <span className={cn("flex-1 truncate font-medium", cancelled && "text-muted-foreground line-through")}>
+                        <span className={cn("flex-1 truncate font-medium", cancelled && "line-through")}>
                           {s.first_name} {s.last_name}
                         </span>
                         {cancelled && <Badge variant="outline">Cancelada</Badge>}
-                        {s.id === nextId && <Badge>Próxima</Badge>}
+                        {isNext && <Badge>Próxima</Badge>}
                       </Link>
                     </li>
                   );
