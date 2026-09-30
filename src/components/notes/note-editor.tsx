@@ -1,7 +1,7 @@
 "use client";
 
-// Informe de una sesión: se escribe como borrador (que se guarda solo) y se finaliza.
-// Un informe finalizado no se modifica: se corrige creando una versión nueva.
+// Anotación de una sesión: se escribe como borrador (que se guarda solo) y se finaliza.
+// Una anotación finalizada no se modifica: se corrige creando una versión nueva.
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { CheckIcon, LockIcon, PencilIcon } from "lucide-react";
@@ -80,7 +80,7 @@ export function NoteEditor({ sessionId, timeZone, onSaved }: NoteEditorProps) {
     setText(value);
   }, []);
 
-  // Última versión del informe de esta sesión.
+  // Última versión de la anotación de esta sesión.
   const load = useCallback(async () => {
     const { data } = await supabase
       .from("session_book")
@@ -101,7 +101,7 @@ export function NoteEditor({ sessionId, timeZone, onSaved }: NoteEditorProps) {
   // Hay cambios sin guardar respecto de la última versión (la base guarda el texto sin espacios de los bordes).
   const isDirty = useCallback(() => textRef.current.trim() !== (noteRef.current?.content ?? "").trim(), []);
 
-  // Encola un guardado. Borrador existente → se actualiza; finalizado → se crea la corrección.
+  // Encola un guardado. Borrador existente → se actualiza; finalizada → se crea la corrección.
   const persist = useCallback(
     (finalize: boolean) => {
       const run = async (): Promise<SaveNoteResult | null> => {
@@ -216,7 +216,7 @@ export function NoteEditor({ sessionId, timeZone, onSaved }: NoteEditorProps) {
       clearTimeout(timer.current);
       void persist(false)
         .then(() => saved.current && callback.current?.())
-        .catch(() => toast.error("No se pudo guardar el último cambio del informe. Revisá tu conexión."));
+        .catch(() => toast.error("No se pudo guardar el último cambio de la anotación. Revisá tu conexión."));
     };
   }, [persist]);
 
@@ -238,10 +238,10 @@ export function NoteEditor({ sessionId, timeZone, onSaved }: NoteEditorProps) {
         }
         setCorrecting(false);
         setStatus("idle");
-        toast.success("Informe finalizado.");
+        toast.success("Anotación finalizada.");
         onSavedRef.current?.();
       } catch {
-        setError("No se pudo finalizar el informe. Revisá tu conexión y volvé a intentar.");
+        setError("No se pudo finalizar la anotación. Revisá tu conexión y volvé a intentar.");
         setStatus("offline");
         // Finalizar se reintenta a mano; el borrador, solo.
         scheduleAutosave(RETRY_DELAY);
@@ -283,10 +283,10 @@ export function NoteEditor({ sessionId, timeZone, onSaved }: NoteEditorProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Informe</h3>
+        <h3 className="text-sm font-semibold">Anotación</h3>
         <div className="flex gap-1.5">
-          {note && (note.note_status === "final" ? <Badge>Finalizado</Badge> : <Badge variant="secondary">Borrador</Badge>)}
-          {note && note.version > 1 && <Badge variant="outline">Corregido (v{note.version})</Badge>}
+          {note && (note.note_status === "final" ? <Badge>Finalizada</Badge> : <Badge variant="secondary">Borrador</Badge>)}
+          {note && note.version > 1 && <Badge variant="outline">Corregida (v{note.version})</Badge>}
         </div>
       </div>
 
@@ -297,9 +297,9 @@ export function NoteEditor({ sessionId, timeZone, onSaved }: NoteEditorProps) {
           <Textarea
             value={text}
             onChange={(e) => handleChange(e.target.value)}
-            placeholder="Escribí el informe de la sesión…"
+            placeholder="Escribí la anotación de la sesión…"
             className="min-h-40"
-            aria-label="Informe de la sesión"
+            aria-label="Anotación de la sesión"
           />
           <SaveIndicator status={status} />
           {(correcting || isCorrectionDraft) && (
@@ -331,7 +331,7 @@ export function NoteEditor({ sessionId, timeZone, onSaved }: NoteEditorProps) {
           <p className="rounded-md bg-muted/50 p-3 text-sm whitespace-pre-wrap">{note?.content}</p>
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-muted-foreground">
-              {note?.finalized_at && `Finalizado el ${formatInTimeZone(note.finalized_at, timeZone, "dd/MM/yyyy HH:mm")}`}
+              {note?.finalized_at && `Finalizada el ${formatInTimeZone(note.finalized_at, timeZone, "dd/MM/yyyy HH:mm")}`}
             </span>
             <Button variant="outline" size="sm" onClick={() => setCorrecting(true)}>
               <PencilIcon />
@@ -344,9 +344,9 @@ export function NoteEditor({ sessionId, timeZone, onSaved }: NoteEditorProps) {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Finalizar el informe?</AlertDialogTitle>
+            <AlertDialogTitle>¿Finalizar la anotación?</AlertDialogTitle>
             <AlertDialogDescription>
-              Un informe finalizado forma parte de la historia clínica y ya no se puede editar. Si después necesitás
+              Una anotación finalizada forma parte de la historia clínica y ya no se puede editar. Si después necesitás
               cambiar algo, podés corregirlo: la corrección queda como una versión nueva.
             </AlertDialogDescription>
           </AlertDialogHeader>

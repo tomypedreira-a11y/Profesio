@@ -12,10 +12,10 @@ import { PageHeader } from "@/components/page-header";
 import { NoteDialogButton } from "@/components/notes/note-dialog-button";
 import { getTimeZone } from "../../queries";
 
-export const metadata: Metadata = { title: "Informes" };
+export const metadata: Metadata = { title: "Anotaciones" };
 
-// Libro de sesiones: todos los informes del paciente, del más reciente al más antiguo.
-export default async function PatientNotesPage({ params }: PageProps<"/pacientes/[id]/informes">) {
+// Libro de sesiones: todas las anotaciones del paciente, de la más reciente a la más antigua.
+export default async function PatientNotesPage({ params }: PageProps<"/pacientes/[id]/anotaciones">) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
 
@@ -37,11 +37,14 @@ export default async function PatientNotesPage({ params }: PageProps<"/pacientes
         <ArrowLeftIcon />
         {patient.first_name} {patient.last_name}
       </Button>
-      <PageHeader title="Informes" description={`${notes?.length ?? 0} informes de sesión`} />
+      <PageHeader
+        title="Anotaciones"
+        description={notes?.length === 1 ? "1 anotación de sesión" : `${notes?.length ?? 0} anotaciones de sesión`}
+      />
 
       {!notes?.length ? (
         <p className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Todavía no hay informes. Se cargan desde cada sesión en el calendario.
+          Todavía no hay anotaciones. Se cargan desde cada sesión en el calendario.
         </p>
       ) : (
         <div className="flex max-w-3xl flex-col gap-4">
@@ -52,8 +55,8 @@ export default async function PatientNotesPage({ params }: PageProps<"/pacientes
                 <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-base first-letter:uppercase">{label}</CardTitle>
                   <div className="flex items-center gap-1.5">
-                    {n.note_status === "final" ? <Badge>Finalizado</Badge> : <Badge variant="secondary">Borrador</Badge>}
-                    {n.version! > 1 && <Badge variant="outline">Corregido</Badge>}
+                    {n.note_status === "final" ? <Badge>Finalizada</Badge> : <Badge variant="secondary">Borrador</Badge>}
+                    {n.version! > 1 && <Badge variant="outline">Corregida</Badge>}
                     <NoteDialogButton
                       sessionId={n.session_id!}
                       timeZone={timeZone}

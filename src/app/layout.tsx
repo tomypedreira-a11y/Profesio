@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Lora, Outfit } from "next/font/google";
+import { KeyboardDismiss } from "@/components/keyboard-dismiss";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { FONT_SIZE_SCRIPT } from "@/lib/font-size";
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>{children}</ThemeProvider>
+        <KeyboardDismiss />
         {/* --toast-bottom lo define globals.css cuando está la barra inferior del celular. */}
         <Toaster
           offset={{ bottom: "var(--toast-bottom, 24px)" }}

@@ -1,5 +1,9 @@
 import type { ScheduleSlot } from "@/lib/schedule";
 
+// Columnas de calendar_sessions que necesita el panel de la sesión.
+export const SESSION_COLUMNS =
+  "id, patient_id, series_id, starts_at, ends_at, status, rescheduled_from, first_name, last_name, phone, series_active";
+
 export type CalendarSession = {
   id: string;
   patient_id: string;

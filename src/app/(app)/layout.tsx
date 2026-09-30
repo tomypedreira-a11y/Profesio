@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/app-sidebar";
 import { FontSizeSync } from "@/components/font-size-sync";
+import { MobileBackButton } from "@/components/mobile-back-button";
 import { MobileNav } from "@/components/mobile-nav";
 import { ProfileDefaultsProvider } from "@/components/profile-defaults-provider";
 import { ThemeSync } from "@/components/theme-provider";
@@ -42,6 +43,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {/* En el celular se navega con la barra inferior: el panel lateral no se abre. */}
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
           <Separator orientation="vertical" className="mr-2 hidden h-4 md:block" />
+          <MobileBackButton />
           <span className="text-sm font-medium text-muted-foreground">Profesio</span>
         </header>
         {/* Abajo deja lugar para la barra inferior del celular. */}

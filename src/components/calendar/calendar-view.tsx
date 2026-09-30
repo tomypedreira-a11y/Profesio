@@ -29,11 +29,8 @@ import { SessionSheet } from "./session-sheet";
 import { UnscheduledPanel, UnscheduledSheet } from "./unscheduled-panel";
 import { WeekStrip } from "./week-strip";
 import type { CalendarViewPreference } from "@/lib/calendar-views";
-import type { CalendarSession, PatientOption, UnscheduledPatient } from "./types";
+import { SESSION_COLUMNS, type CalendarSession, type PatientOption, type UnscheduledPatient } from "./types";
 import "./calendar.css";
-
-const SESSION_COLUMNS =
-  "id, patient_id, series_id, starts_at, ends_at, status, rescheduled_from, first_name, last_name, phone, series_active";
 
 // Horario visible por defecto; se amplía si hay sesiones fuera de este rango.
 const DEFAULT_MIN_HOUR = 8;
@@ -237,12 +234,23 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
     );
   }
 
-  // Mes compacto: tocar un día (fuera de sus puntos) lo abre en la vista Día.
+  // Mes compacto: tocar un día (también sobre sus puntos) lo abre en la vista Día.
   function handleDateClick(arg: DateClickArg) {
-    if (compact && arg.view.type === "dayGridMonth") api()?.changeView("timeGridDay", arg.date);
+    if (compact && arg.view.type === "dayGridMonth") openDay(arg.date);
+  }
+
+  // El número del día (en el mes) y su nombre (en la lista) llevan al mismo lugar que tocar el día.
+  // Sin esto, FullCalendar elige por su cuenta una vista de un día, que no siempre es la vista Día.
+  function openDay(date: Date) {
+    api()?.changeView("timeGridDay", date);
   }
 
   function handleEventClick(arg: EventClickArg) {
+    // En el mes compacto los puntos no abren la sesión: se entra por el día.
+    if (compact && arg.view.type === "dayGridMonth") {
+      arg.jsEvent.preventDefault();
+      return;
+    }
     const { session, isNext } = arg.event.extendedProps as { session: CalendarSession; isNext: boolean };
     setSelected({ session, isNext });
   }
@@ -380,7 +388,8 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
             eventDisplay="block"
             nextDayThreshold="06:00:00" // una sesión que termina de madrugada cuenta como del día anterior
             dayMaxEvents={compact ? false : 3}
-            navLinks={compact} // en la lista, el nombre del día abre ese día
+            navLinks={compact} // en la lista, el nombre del día abre ese día; en el mes, su número
+            navLinkDayClick={openDay}
             noEventsText="No hay sesiones en estos días."
             events={fetchEvents}
             datesSet={handleDatesSet}

@@ -243,7 +243,7 @@ function CancelForm({
         <ScopeChoice
           value={scope}
           onChange={setScope}
-          followingDescription="Termina el horario fijo: se quitan las sesiones siguientes y el paciente pasa a irregular. Las que tienen informe se conservan."
+          followingDescription="Termina el horario fijo: se quitan las sesiones siguientes y el paciente pasa a irregular. Las que tienen anotación se conservan."
         />
       )}
       <DialogFooter>

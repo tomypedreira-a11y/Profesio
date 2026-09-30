@@ -70,10 +70,8 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
                 </a>
               )}
 
-              {/* Cobro: en toda sesión no cancelada; las futuras se pueden cobrar por adelantado */}
-              {session.status === "scheduled" && (
-                <SessionPayment key={`payment-${session.id}`} sessionId={session.id} timeZone={timeZone} />
-              )}
+              {/* Cobro: en toda sesión; las futuras se pueden cobrar por adelantado y las canceladas también se cobran. */}
+              <SessionPayment key={`payment-${session.id}`} sessionId={session.id} timeZone={timeZone} />
 
               <SessionActions session={session} timeZone={timeZone} onChanged={onChanged} />
 
@@ -84,11 +82,11 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
 
               <Separator />
 
-              {/* Una sesión cancelada no se realizó: no lleva informe (la base también lo impide).
+              {/* Una sesión cancelada no se realizó: no lleva anotación (la base también lo impide).
                   key: al abrir otra sesión, el editor arranca de cero.
                   Con prefijo para no chocar con la key del cobro, que es hermano en este mismo contenedor. */}
               {session.status === "cancelled" ? (
-                <p className="text-muted-foreground">Las sesiones canceladas no llevan informe.</p>
+                <p className="text-muted-foreground">Las sesiones canceladas no llevan anotación.</p>
               ) : (
                 <NoteEditor key={`note-${session.id}`} sessionId={session.id} timeZone={timeZone} />
               )}

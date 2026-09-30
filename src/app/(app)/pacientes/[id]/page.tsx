@@ -188,7 +188,7 @@ function SessionsCard({
   );
 }
 
-// Últimos informes del paciente, con acceso a la lista completa.
+// Últimas anotaciones del paciente, con acceso a la lista completa.
 function NotesCard({
   patientId,
   notes,
@@ -203,10 +203,10 @@ function NotesCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Informes</CardTitle>
+        <CardTitle>Anotaciones</CardTitle>
         {total > 0 && (
           <CardAction>
-            <Button variant="link" size="sm" render={<Link href={`/pacientes/${patientId}/informes`} />} nativeButton={false}>
+            <Button variant="link" size="sm" render={<Link href={`/pacientes/${patientId}/anotaciones`} />} nativeButton={false}>
               Ver todos ({total})
             </Button>
           </CardAction>
@@ -214,12 +214,12 @@ function NotesCard({
       </CardHeader>
       <CardContent>
         {notes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Todavía no hay informes. Se cargan desde cada sesión en el calendario.</p>
+          <p className="text-sm text-muted-foreground">Todavía no hay anotaciones. Se cargan desde cada sesión en el calendario.</p>
         ) : (
           <ul className="divide-y">
             {notes.map((n) => (
               <li key={n.note_id} className="py-2 first:pt-0 last:pb-0">
-                <Link href={`/pacientes/${patientId}/informes#${n.note_id}`} className="group block">
+                <Link href={`/pacientes/${patientId}/anotaciones#${n.note_id}`} className="group block">
                   <div className="flex items-center justify-between gap-2 text-sm">
                     <span className="font-medium first-letter:uppercase group-hover:underline">
                       {formatSessionLong(n.starts_at!, timeZone)}

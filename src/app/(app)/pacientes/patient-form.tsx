@@ -115,12 +115,12 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
                 error={errors.schedule?.[0]}
                 fixedHint={
                   hadFixedSchedule
-                    ? "Los días que quites, o si cambiás la frecuencia o la semana de la primera sesión, dejan de agendarse: se borran sus sesiones futuras (las que tienen informe se conservan)."
+                    ? "Los días que quites, o si cambiás la frecuencia o la semana de la primera sesión, dejan de agendarse: se borran sus sesiones futuras (las que tienen anotación se conservan)."
                     : undefined
                 }
                 irregularHint={
                   <>
-                    {hadFixedSchedule && "Al pasar a irregular se quitan las sesiones futuras de los horarios fijos (las que tienen informe se conservan). "}
+                    {hadFixedSchedule && "Al pasar a irregular se quitan las sesiones futuras de los horarios fijos (las que tienen anotación se conservan). "}
                     Opcional: elegí fecha, inicio y fin para agendar una sesión, o dejalos vacíos.
                   </>
                 }
