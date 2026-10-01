@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FormMessage } from "@/components/form-message";
+import { registerPendingSave } from "@/lib/pending-saves";
 import { discardCorrection, saveNote, type SaveNoteResult } from "./actions";
 
 type Note = {
@@ -197,6 +198,16 @@ export function NoteEditor({ sessionId, timeZone, onSaved }: NoteEditorProps) {
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
   }, [autosave]);
+
+  // Antes de cerrar la sesión (menú o inactividad) se guarda lo pendiente y se espera lo que esté en camino.
+  useEffect(
+    () =>
+      registerPendingSave(async () => {
+        await autosave();
+        await queueRef.current;
+      }),
+    [autosave],
+  );
 
   // Cerrar o recargar la pestaña con cambios sin guardar: el navegador pide confirmación.
   useEffect(() => {

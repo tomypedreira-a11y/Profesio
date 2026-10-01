@@ -27,8 +27,12 @@ export async function forgetThisDevice() {
     const registration = await navigator.serviceWorker.getRegistration();
     const subscription = await registration?.pushManager.getSubscription();
     if (!subscription) return;
-    await deleteSubscription(subscription.endpoint);
+    // Primero la baja en el navegador, que no depende de la sesión: si ya venció (ej. por inactividad),
+    // el servidor rechaza deleteSubscription, pero el endpoint deja de existir y el cron borra la fila
+    // cuando el envío le responda 410.
+    const { endpoint } = subscription;
     await subscription.unsubscribe();
+    await deleteSubscription(endpoint);
   } catch {
     // sigue el cierre de sesión igual
   }

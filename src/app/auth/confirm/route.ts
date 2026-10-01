@@ -1,20 +1,26 @@
-// Destino del link del mail de confirmación de registro.
-// Valida el link, inicia la sesión y manda al usuario a la app.
+// Destino de los links de los mails (confirmación de registro y recuperación de contraseña).
+// Valida el link, inicia la sesión y manda al usuario a `next` (por defecto, el calendario).
 //
 // Acepta los dos formatos de link de Supabase:
 // - `code`: el de la plantilla original de Supabase. Funciona si el mail se abre
-//   en el mismo navegador donde se hizo el registro.
-// - `token_hash`: el de una plantilla personalizada (cuando tengamos SMTP propio).
-//   Funciona desde cualquier dispositivo.
+//   en el mismo navegador donde se hizo el registro o se pidió el link.
+// - `token_hash` + `type` (signup, email, recovery…): el de una plantilla personalizada
+//   (cuando tengamos SMTP propio). Funciona desde cualquier dispositivo.
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { startIdleTracking } from "@/lib/idle-cookies";
+import { safeNextPath } from "@/lib/safe-path";
+
+const RECOVERY_PATH = "/nueva-contrasena";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
+  const next = safeNextPath(searchParams.get("next"));
+  const isRecovery = type === "recovery" || next === RECOVERY_PATH;
 
   const url = request.nextUrl.clone();
   url.search = "";
@@ -31,11 +37,14 @@ export async function GET(request: NextRequest) {
   }
 
   if (ok) {
-    url.pathname = "/";
-    return NextResponse.redirect(url);
+    await startIdleTracking(supabase);
+    // El link de recuperación siempre termina en crear la contraseña nueva.
+    const destination = new URL(type === "recovery" ? RECOVERY_PATH : next, request.url);
+    return NextResponse.redirect(destination);
   }
 
-  url.pathname = "/login";
+  // Link de recuperación vencido: a pedir uno nuevo. Confirmación de registro: al login.
+  url.pathname = isRecovery ? "/recuperar" : "/login";
   url.searchParams.set("error", "link-invalido");
   return NextResponse.redirect(url);
 }

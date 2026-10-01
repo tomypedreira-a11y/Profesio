@@ -184,6 +184,7 @@ export type Database = {
           first_name: string
           font_size: string
           id: string
+          idle_timeout_minutes: number
           last_name: string
           license_number: string | null
           notification_show_name: boolean
@@ -202,6 +203,7 @@ export type Database = {
           first_name?: string
           font_size?: string
           id: string
+          idle_timeout_minutes?: number
           last_name?: string
           license_number?: string | null
           notification_show_name?: boolean
@@ -220,6 +222,7 @@ export type Database = {
           first_name?: string
           font_size?: string
           id?: string
+          idle_timeout_minutes?: number
           last_name?: string
           license_number?: string | null
           notification_show_name?: boolean
@@ -684,6 +687,7 @@ export type Database = {
         Args: { p_method: string; p_session_ids: string[] }
         Returns: number
       }
+      mfa_enabled: { Args: never; Returns: boolean }
       remove_vacation: { Args: { p_vacation_id: string }; Returns: number }
       replace_patient_schedules: {
         Args: { p_patient_id: string; p_schedules: Json }

@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { FontSizeSync } from "@/components/font-size-sync";
 import { HeaderBackButton } from "@/components/header-back-button";
 import { HeaderTitle } from "@/components/header-title";
+import { IdleLogout } from "@/components/idle-logout";
 import { MobileNav } from "@/components/mobile-nav";
 import { OfflineBanner } from "@/components/pwa/offline-banner";
 import { ProfileDefaultsProvider } from "@/components/profile-defaults-provider";
@@ -16,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DEFAULT_SESSION_MINUTES } from "@/lib/schedule";
 import { DEFAULT_TIME_ZONE } from "@/lib/timezones";
+import { DEFAULT_IDLE_MINUTES } from "@/lib/idle";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -26,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [{ data: profile }, { data: vacations }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("first_name, last_name, theme, font_size, default_session_minutes, default_session_fee, timezone")
+      .select("first_name, last_name, theme, font_size, default_session_minutes, default_session_fee, timezone, idle_timeout_minutes")
       .eq("id", claims.sub)
       .single(),
     supabase.from("vacations").select("id, start_date, end_date").order("start_date"),
@@ -45,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <SidebarProvider defaultOpen={sidebarOpen}>
       <ThemeSync theme={profile?.theme ?? "system"} />
       <FontSizeSync size={profile?.font_size ?? "normal"} />
+      <IdleLogout timeoutMinutes={profile?.idle_timeout_minutes ?? DEFAULT_IDLE_MINUTES} />
       <AppSidebar user={user} />
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">

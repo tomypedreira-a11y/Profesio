@@ -11,6 +11,8 @@ import { isSessionLength } from "@/lib/schedule";
 import { isTimeZone } from "@/lib/timezones";
 import { parseFee } from "@/lib/format";
 import { isSummaryTime, parseReminder } from "@/lib/notifications";
+import { isIdleTimeout } from "@/lib/idle";
+import { writeIdleCookies } from "@/lib/idle-cookies";
 import type { Database } from "@/lib/database.types";
 
 export type SaveResult = { error?: string };
@@ -129,4 +131,17 @@ export async function updateDailySummaryTime(time: string): Promise<SaveResult> 
 
 export async function updateNotificationShowName(show: boolean): Promise<SaveResult> {
   return saveProfile({ notification_show_name: show === true }, false);
+}
+
+// ---------------------------------------------------------------------------
+// Cuenta: cierre de sesión por inactividad. Además del perfil, las cookies que lee el proxy
+// (y el navegador, en todas las pestañas). Sin revalidar: IdleLogout lee la cookie.
+// ---------------------------------------------------------------------------
+
+export async function updateIdleTimeout(value: string): Promise<SaveResult> {
+  const minutes = Number(value);
+  if (!isIdleTimeout(minutes)) return { error: "Elegí una de las opciones." };
+  const result = await saveProfile({ idle_timeout_minutes: minutes }, false);
+  if (!result.error) await writeIdleCookies(minutes);
+  return result;
 }
