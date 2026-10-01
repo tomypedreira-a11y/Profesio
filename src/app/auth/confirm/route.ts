@@ -2,10 +2,10 @@
 // Valida el link, inicia la sesión y manda al usuario a `next` (por defecto, el calendario).
 //
 // Acepta los dos formatos de link de Supabase:
-// - `code`: el de la plantilla original de Supabase. Funciona si el mail se abre
+// - `code`: el de la plantilla por defecto de Supabase (la de dev). Funciona si el mail se abre
 //   en el mismo navegador donde se hizo el registro o se pidió el link.
-// - `token_hash` + `type` (signup, email, recovery…): el de una plantilla personalizada
-//   (cuando tengamos SMTP propio). Funciona desde cualquier dispositivo.
+// - `token_hash` + `type` (email, recovery, email_change): el de las plantillas de prod (ver CLAUDE.md →
+//   Infraestructura). Funciona desde cualquier dispositivo. Si cambia esta ruta, revisar esas plantillas.
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
