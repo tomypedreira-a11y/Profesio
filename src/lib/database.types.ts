@@ -75,6 +75,48 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_log: {
+        Row: {
+          for_date: string | null
+          id: string
+          kind: string
+          psychologist_id: string
+          sent_at: string
+          session_id: string | null
+        }
+        Insert: {
+          for_date?: string | null
+          id?: string
+          kind: string
+          psychologist_id: string
+          sent_at?: string
+          session_id?: string | null
+        }
+        Update: {
+          for_date?: string | null
+          id?: string
+          kind?: string
+          psychologist_id?: string
+          sent_at?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_log_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_log_session_id_psychologist_id_fkey"
+            columns: ["session_id", "psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id", "psychologist_id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           active: boolean
@@ -135,6 +177,8 @@ export type Database = {
         Row: {
           calendar_view: string
           created_at: string
+          daily_summary_enabled: boolean
+          daily_summary_time: string
           default_session_fee: number | null
           default_session_minutes: number
           first_name: string
@@ -142,6 +186,8 @@ export type Database = {
           id: string
           last_name: string
           license_number: string | null
+          notification_show_name: boolean
+          reminder_minutes: number | null
           theme: string
           timezone: string
           updated_at: string
@@ -149,6 +195,8 @@ export type Database = {
         Insert: {
           calendar_view?: string
           created_at?: string
+          daily_summary_enabled?: boolean
+          daily_summary_time?: string
           default_session_fee?: number | null
           default_session_minutes?: number
           first_name?: string
@@ -156,6 +204,8 @@ export type Database = {
           id: string
           last_name?: string
           license_number?: string | null
+          notification_show_name?: boolean
+          reminder_minutes?: number | null
           theme?: string
           timezone?: string
           updated_at?: string
@@ -163,6 +213,8 @@ export type Database = {
         Update: {
           calendar_view?: string
           created_at?: string
+          daily_summary_enabled?: boolean
+          daily_summary_time?: string
           default_session_fee?: number | null
           default_session_minutes?: number
           first_name?: string
@@ -170,11 +222,54 @@ export type Database = {
           id?: string
           last_name?: string
           license_number?: string | null
+          notification_show_name?: boolean
+          reminder_minutes?: number | null
           theme?: string
           timezone?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_used_at: string | null
+          p256dh: string
+          psychologist_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_used_at?: string | null
+          p256dh: string
+          psychologist_id?: string
+          user_agent?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_used_at?: string | null
+          p256dh?: string
+          psychologist_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       session_notes: {
         Row: {
@@ -551,6 +646,20 @@ export type Database = {
         Returns: undefined
       }
       default_session_minutes: { Args: never; Returns: number }
+      due_notifications: {
+        Args: { p_now: string }
+        Returns: {
+          for_date: string
+          kind: string
+          minutes_before: number
+          modality: string
+          patient_label: string
+          psychologist_id: string
+          session_count: number
+          session_id: string
+          start_time: string
+        }[]
+      }
       extend_series: { Args: never; Returns: number }
       frequency_weeks: { Args: { p_frequency: string }; Returns: number }
       generate_series_sessions: {

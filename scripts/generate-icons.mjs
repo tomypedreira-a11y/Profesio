@@ -16,10 +16,10 @@ const FONT_FILE = fileURLToPath(new URL("./fonts/Lora-SemiBold.ttf", import.meta
 const root = (path) => fileURLToPath(new URL(`../${path}`, import.meta.url));
 
 // La "P" en alta resolución, recortada a su contorno (fondo transparente).
-async function glyph() {
+async function glyph(color = FOREGROUND) {
   const rendered = await sharp({
     text: {
-      text: `<span foreground="${FOREGROUND}">P</span>`,
+      text: `<span foreground="${color}">P</span>`,
       fontfile: FONT_FILE,
       font: "Lora SemiBold",
       dpi: 9600,
@@ -91,5 +91,22 @@ const favicons = await Promise.all(
 );
 await writeFile(root("src/app/favicon.ico"), ico(favicons));
 await writeFile(root("src/app/icon.png"), await icon(letter, 64, { rounded: true, glyphHeight: 0.64 }));
+
+// Badge de las notificaciones: Android lo muestra en la barra de estado usando solo la silueta (el canal alfa),
+// así que va la "P" blanca sobre fondo transparente, sin el cuadrado verde.
+const badgeSize = 96;
+const badgeGlyph = await sharp(await glyph("#ffffff")).resize({ height: Math.round(badgeSize * 0.78) }).png().toBuffer({
+  resolveWithObject: true,
+});
+await sharp({ create: { width: badgeSize, height: badgeSize, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+  .composite([
+    {
+      input: badgeGlyph.data,
+      left: Math.round((badgeSize - badgeGlyph.info.width) / 2),
+      top: Math.round((badgeSize - badgeGlyph.info.height) / 2),
+    },
+  ])
+  .png({ compressionLevel: 9 })
+  .toFile(root("public/icons/badge-96.png"));
 
 console.log("Íconos generados en public/icons/ y src/app/ (favicon.ico, icon.png).");

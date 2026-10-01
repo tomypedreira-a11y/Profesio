@@ -11,9 +11,10 @@ type PreferenceSelectProps = {
   value: string;
   items: readonly { value: string; label: string }[];
   save: (value: string) => Promise<SaveResult>;
+  disabled?: boolean;
 };
 
-export function PreferenceSelect({ id, value: saved, items, save }: PreferenceSelectProps) {
+export function PreferenceSelect({ id, value: saved, items, save, disabled }: PreferenceSelectProps) {
   const [value, setValue] = useState(saved);
   const [pending, startTransition] = useTransition();
 
@@ -33,7 +34,7 @@ export function PreferenceSelect({ id, value: saved, items, save }: PreferenceSe
   }
 
   return (
-    <Select value={value} onValueChange={choose} items={items} disabled={pending}>
+    <Select value={value} onValueChange={choose} items={items} disabled={pending || disabled}>
       <SelectTrigger id={id} className="w-full sm:w-48">
         <SelectValue />
       </SelectTrigger>

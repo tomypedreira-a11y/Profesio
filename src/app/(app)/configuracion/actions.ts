@@ -10,6 +10,7 @@ import { isCalendarView } from "@/lib/calendar-views";
 import { isSessionLength } from "@/lib/schedule";
 import { isTimeZone } from "@/lib/timezones";
 import { parseFee } from "@/lib/format";
+import { isSummaryTime, parseReminder } from "@/lib/notifications";
 import type { Database } from "@/lib/database.types";
 
 export type SaveResult = { error?: string };
@@ -104,4 +105,28 @@ export async function removeVacation(id: string): Promise<SaveResult & { restore
 
   revalidatePath("/", "layout");
   return { restored: data };
+}
+
+// ---------------------------------------------------------------------------
+// Notificaciones: preferencias de la cuenta (valen para todos los dispositivos). Sin revalidar: solo las lee
+// el cron y la propia pantalla de Configuración, que ya muestra el valor nuevo.
+// ---------------------------------------------------------------------------
+
+export async function updateReminderMinutes(value: string): Promise<SaveResult> {
+  const minutes = parseReminder(value);
+  if (minutes === "invalid") return { error: "Elegí una de las opciones." };
+  return saveProfile({ reminder_minutes: minutes }, false);
+}
+
+export async function updateDailySummaryEnabled(enabled: boolean): Promise<SaveResult> {
+  return saveProfile({ daily_summary_enabled: enabled === true }, false);
+}
+
+export async function updateDailySummaryTime(time: string): Promise<SaveResult> {
+  if (!isSummaryTime(time)) return { error: "Elegí uno de los horarios." };
+  return saveProfile({ daily_summary_time: time }, false);
+}
+
+export async function updateNotificationShowName(show: boolean): Promise<SaveResult> {
+  return saveProfile({ notification_show_name: show === true }, false);
 }

@@ -10,7 +10,8 @@ export const config = {
   matcher: [
     // Todo menos archivos estáticos, imágenes (incluidos los íconos de public/icons) y los archivos de la PWA:
     // el manifest, el service worker y la pantalla sin conexión se piden sin sesión (si pasaran por acá, el
-    // service worker guardaría el login en lugar de offline.html).
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw\\.js$|offline\\.html$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // service worker guardaría el login en lugar de offline.html). Tampoco los cron (/api/cron/): no tienen sesión,
+    // los protege CRON_SECRET, y Vercel no sigue la redirección al login.
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw\\.js$|offline\\.html$|api/cron/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

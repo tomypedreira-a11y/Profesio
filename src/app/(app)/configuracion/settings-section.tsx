@@ -5,14 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FieldGroup } from "@/components/ui/field";
 
 type SettingsSectionProps = {
+  id?: string; // para enlazar a la sección (ej. /configuracion#instalar)
   title: string;
   description?: string;
   children: React.ReactNode;
 };
 
-export function SettingsSection({ title, description, children }: SettingsSectionProps) {
+export function SettingsSection({ id, title, description, children }: SettingsSectionProps) {
   return (
-    <Card>
+    // scroll-mt: al llegar por un link (#id), el título no queda pegado al borde.
+    <Card id={id} className="scroll-mt-4">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}

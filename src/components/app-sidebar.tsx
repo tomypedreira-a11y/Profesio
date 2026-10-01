@@ -39,6 +39,7 @@ import {
 import { SidebarArt } from "@/components/sidebar-art";
 import { IOSInstallDialog } from "@/components/pwa/install-app";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
+import { forgetThisDevice } from "@/lib/push-client";
 
 const NAV_ITEMS = [
   { href: "/", label: "Calendario", icon: CalendarDaysIcon },
@@ -161,7 +162,15 @@ export function AppSidebar({ user }: AppSidebarProps) {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={() => startTransition(() => logout())}>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() =>
+                    startTransition(async () => {
+                      await forgetThisDevice(); // las notificaciones de la cuenta no siguen llegando acá
+                      await logout();
+                    })
+                  }
+                >
                   <LogOutIcon />
                   Cerrar sesión
                 </DropdownMenuItem>

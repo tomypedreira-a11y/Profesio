@@ -54,6 +54,7 @@ src/
   app/
     (auth)/                      Login, registro y sus acciones
     auth/confirm/route.ts        Link del mail de confirmación
+    api/cron/notifications/      Cron de notificaciones (Vercel, cada minuto; protegido con CRON_SECRET)
     (app)/                       Pantallas con sesión iniciada (layout con panel lateral)
       page.tsx                   Calendario (vista principal)
       pacientes/                 Listado, alta, ficha, edición, archivados, anotaciones
@@ -70,6 +71,8 @@ src/
     profile-defaults-provider.tsx  Duración y valor por defecto del perfil (los carga el layout)
   lib/
     supabase/{client,server,proxy}.ts
+    supabase/admin.ts            Cliente con la secret key: SOLO para /api/cron/*
+    push.ts  push-client.ts  notifications.ts   Envío y textos (servidor), suscripción (navegador), opciones
     database.types.ts            Generado por Supabase: NO editar a mano
     phone.ts  format.ts  form-state.ts  theme.ts  schedule.ts  payments.ts  calendar-views.ts  vacations.ts  modality.ts
     zoned.ts  timezones.ts       Fechas en la zona del perfil y zonas para elegir
@@ -93,6 +96,8 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 | `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). Cobro: `fee`, `paid_at`, `payment_method`. `modality` null = la del paciente. |
 | `session_notes` | Anotaciones de sesión (historia clínica), con versiones. |
 | `vacations` | Períodos de vacaciones del psicólogo (`start_date`/`end_date`, fechas de reloj, sin superponerse). |
+| `push_subscriptions` | Dispositivos con las notificaciones activadas (endpoint y claves de Web Push). |
+| `notification_log` | Notificaciones ya enviadas (las escribe solo el cron; evita repetir envíos). |
 | `audit_log` | Registro de modificaciones (lo escriben triggers). |
 
 Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `session_book`, `session_payments`.
@@ -107,9 +112,12 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   Las funciones: `revoke execute ... from public, anon` + `grant execute ... to authenticated`.
   `01_rls.test.sql` falla si `anon` puede usar algo del esquema `public`.
 - Funciones SQL: `set search_path = ''` y nombres calificados (`public.tabla`).
-  `security invoker` salvo que sea imprescindible (solo `handle_new_user` y `write_audit_log` son `security definer`).
+  `security invoker` salvo que sea imprescindible (solo `handle_new_user`, `write_audit_log` y `due_notifications`
+  son `security definer`; esta última, ejecutable solo por `service_role`).
 - Las vistas siempre con `with (security_invoker = true)`.
-- **Nunca** usar la `service_role` / secret key en el código de la app.
+- **La `service_role` / secret key (`SUPABASE_SECRET_KEY`) se usa SOLO en `src/lib/supabase/admin.ts`**, que solo
+  importan las rutas `src/app/api/cron/*` (ESLint lo impide en el resto). Nunca en componentes, Server Actions de
+  usuario ni con prefijo `NEXT_PUBLIC`. Lo que toque, a través de funciones acotadas y tablas sin datos clínicos.
 - Relaciones entre tablas con FK compuesta `(id, psychologist_id)`: impiden vincular datos de otro psicólogo.
 
 ### Reglas del dominio
@@ -213,6 +221,24 @@ Profesio se instala como app (Chrome, Edge, Android; en iPhone/iPad desde Safari
   `experimental.useOffline` porque reintenta solas las Server Actions y podría repetir una escritura).
 - Para probarla: `npm run build && npm run start` (en `npm run dev` no hay service worker).
 
+## Notificaciones
+
+Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, librería `web-push`).
+- **Cron** (`vercel.json`, cada minuto) → `src/app/api/cron/notifications/route.ts`: exige
+  `Authorization: Bearer ${CRON_SECRET}` (está fuera del matcher de `proxy.ts`), llama a
+  `due_notifications(now())` con el cliente admin y envía a cada dispositivo del psicólogo.
+- **Deduplicación:** cada envío se registra en `notification_log` **antes** de enviarlo; los índices únicos
+  (sesión + tipo, y psicólogo + tipo + día para el resumen) hacen que una corrida repetida o superpuesta choque
+  (23505) y no lo vuelva a enviar. `due_notifications` tiene tolerancia (2 min el recordatorio, 10 el resumen)
+  por si Vercel saltea una corrida. Las suscripciones que responden 404/410 se borran.
+- **Regla: las notificaciones nunca llevan contenido de anotaciones ni datos clínicos.** Se ven en la pantalla
+  bloqueada: solo hora, modalidad y, si el psicólogo lo elige (`notification_show_name`), nombre e inicial.
+  Los textos se arman en `src/lib/push.ts`. En los logs del cron, solo cantidades.
+- Dispositivos en `push_subscriptions` (se activan en Configuración, uno por uno; al cerrar sesión se borra el de
+  ese dispositivo). Preferencias en `profiles`: `reminder_minutes`, `daily_summary_*`, `notification_show_name`.
+- Para probar el cron a mano: `curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/notifications`
+  (con `npm run build && npm run start`: sin service worker no hay notificaciones).
+
 ## Flujo de trabajo (Git)
 
 - `main` siempre funciona y está protegida: todo entra por Pull Request aprobado por el otro.
@@ -220,10 +246,12 @@ Profesio se instala como app (Chrome, Edge, Android; en iPhone/iPad desde Safari
 - Ramas `feature/...` y `fix/...`. Verificar con `git status` que no se commitea en `main`.
 - `.env.local` nunca se sube (el repo tiene `.env.example`).
 - Antes del PR: `npm run build`, `npm run lint` y `npm run test:db` sin errores.
+- **Una migración mergeada a `main` también se aplica a `profesio-prod`:** vincular prod, `db push` y volver a
+  vincular dev (verificar siempre con `npx supabase projects list` cuál está vinculado):
+  `npx supabase link --project-ref <ref de prod>` → `npx supabase db push` → `npx supabase link --project-ref <ref de dev>`.
 
 ## Pendientes conocidos
 
 - Etapa 7: separar `profesio-prod`, SMTP propio (mails en castellano), prueba con un psicólogo real.
-- Notificaciones (recordatorios de sesión): el service worker ya tiene el lugar para el evento `push`.
 - Logo definitivo (los íconos actuales son provisorios).
 - Auditoría de lecturas (hoy solo se registran modificaciones).
