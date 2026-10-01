@@ -28,7 +28,18 @@ npm run lint
 npx supabase migration new nombre   # nueva migración (vacía)
 npx supabase db push                 # aplica migraciones al proyecto vinculado
 npx supabase gen types typescript --linked | Out-File -Encoding utf8 src/lib/database.types.ts
+
+npx supabase start -x realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+npm run test:db                      # tests de la base (pgTAP), contra el Supabase local
+npx supabase db reset                # aplica de nuevo todas las migraciones en el local
+npx supabase stop
 ```
+
+**Tests de la base** (`supabase/tests/database/`, pgTAP): corren contra un Supabase **local** (necesita Docker Desktop
+abierto), nunca contra el proyecto vinculado. `supabase start` aplica todas las migraciones desde cero; después de crear
+una migración, `db reset` la aplica también en el local. Cada archivo corre en una transacción que se descarta al final,
+crea sus psicólogos en `auth.users` y actúa como ellos con `set local role authenticated` + `request.jwt.claims`.
+Una regla nueva del dominio va con su test en el mismo PR. Antes del PR: `npm run test:db`.
 
 En PowerShell 5.1, `>` guarda el archivo en UTF-16 y git lo trata como binario (diffs ilegibles): usar `Out-File -Encoding utf8`.
 
@@ -61,6 +72,7 @@ src/
     database.types.ts            Generado por Supabase: NO editar a mano
     phone.ts  format.ts  form-state.ts  theme.ts  schedule.ts  payments.ts  calendar-views.ts  vacations.ts  modality.ts
 supabase/migrations/             Toda la estructura de la base, en orden
+supabase/tests/database/         Tests de la base (pgTAP): RLS, agenda, cobros, anotaciones, vacaciones, modalidad
 ```
 
 ## Base de datos
@@ -87,9 +99,11 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 
 - **RLS en todas las tablas.** Cada fila tiene `psychologist_id` (default `auth.uid()`) y la política
   es `psychologist_id = (select auth.uid())`. Una tabla nueva sin política no se mergea.
-- **Las tablas nuevas no se exponen solas** (está desactivado en Supabase). Cada migración que crea
-  una tabla, vista o función debe incluir sus `grant ... to authenticated`.
+- **Las tablas nuevas no se exponen solas** (está desactivado en Supabase, y las migraciones le quitan
+  todo al rol `anon`, también por defecto). Cada migración que crea una tabla, vista o función debe incluir
+  sus `grant ... to authenticated`.
   Las funciones: `revoke execute ... from public, anon` + `grant execute ... to authenticated`.
+  `01_rls.test.sql` falla si `anon` puede usar algo del esquema `public`.
 - Funciones SQL: `set search_path = ''` y nombres calificados (`public.tabla`).
   `security invoker` salvo que sea imprescindible (solo `handle_new_user` y `write_audit_log` son `security definer`).
 - Las vistas siempre con `with (security_invoker = true)`.
@@ -182,7 +196,7 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 - Antes de empezar: `git checkout main && git pull && git checkout -b feature/nombre`.
 - Ramas `feature/...` y `fix/...`. Verificar con `git status` que no se commitea en `main`.
 - `.env.local` nunca se sube (el repo tiene `.env.example`).
-- Antes del PR: `npm run build` y `npm run lint` sin errores.
+- Antes del PR: `npm run build`, `npm run lint` y `npm run test:db` sin errores.
 
 ## Pendientes conocidos
 
