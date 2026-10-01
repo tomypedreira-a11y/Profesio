@@ -6,6 +6,11 @@ import { z } from "zod";
 import { isTimeZone } from "@/lib/timezones";
 import { createClient } from "@/lib/supabase/server";
 import { formValues, type FormState } from "@/lib/form-state";
+import { authErrorMessage, newPasswordSchema, passwordErrorMessage, passwordSchema } from "@/lib/auth";
+import { clearIdleCookies, startIdleTracking } from "@/lib/idle-cookies";
+import { IDLE_LOGOUT_REASON } from "@/lib/idle";
+import { mfaErrorMessage, totpCodeSchema, verifyTotp } from "@/lib/mfa";
+import { safeNextPath } from "@/lib/safe-path";
 
 const loginSchema = z.object({
   email: z.email("Ingresá un email válido."),
@@ -16,29 +21,10 @@ const signupSchema = z.object({
   first_name: z.string().trim().min(1, "Ingresá tu nombre."),
   last_name: z.string().trim().min(1, "Ingresá tu apellido."),
   email: z.email("Ingresá un email válido."),
-  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres."),
+  password: passwordSchema,
   // La del navegador (campo oculto). Si no llega o no es válida, el perfil queda en la zona por defecto.
   timezone: z.string().optional().transform((tz) => (isTimeZone(tz) ? tz : undefined)),
 });
-
-// Traduce los errores de Supabase Auth a mensajes para el usuario.
-function authErrorMessage(code: string | undefined): string {
-  switch (code) {
-    case "invalid_credentials":
-      return "Email o contraseña incorrectos.";
-    case "email_not_confirmed":
-      return "Todavía no confirmaste tu email. Revisá tu casilla (y la carpeta de spam).";
-    case "user_already_exists":
-      return "Ya existe una cuenta con ese email.";
-    case "weak_password":
-      return "La contraseña es demasiado débil. Probá con una más larga.";
-    case "over_email_send_rate_limit":
-    case "over_request_rate_limit":
-      return "Demasiados intentos. Esperá unos minutos y volvé a probar.";
-    default:
-      return "Algo salió mal. Volvé a intentar en unos minutos.";
-  }
-}
 
 export async function login(_prev: FormState, formData: FormData): Promise<FormState> {
   const values = formValues(formData, ["password"]);
@@ -53,7 +39,43 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
     return { error: authErrorMessage(error.code), values };
   }
 
+  await startIdleTracking(supabase);
+
+  // Con la verificación en dos pasos activada, falta el código.
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+    redirect("/login/verificar");
+  }
+
   redirect("/");
+}
+
+// Segundo paso del login: el código de la app. Con dos dispositivos registrados, vale el de cualquiera.
+export async function verifyLoginCode(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = totpCodeSchema.safeParse(formData.get("code") ?? "");
+  if (!parsed.success) {
+    return { fieldErrors: { code: [parsed.error.issues[0].message] } };
+  }
+
+  const supabase = await createClient();
+  const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
+  if (listError || factors.totp.length === 0) {
+    return { error: "Tu sesión expiró. Volvé a ingresar." };
+  }
+
+  let failure: string | undefined;
+  for (const factor of factors.totp) {
+    const { error } = await verifyTotp(supabase, factor.id, parsed.data);
+    failure = error?.code ?? (error ? "unknown" : undefined);
+    if (!failure || failure === "over_request_rate_limit") break;
+  }
+  if (failure) {
+    return { error: mfaErrorMessage(failure) };
+  }
+
+  // Ahora sí se puede leer el perfil: arranca el conteo con el límite elegido.
+  await startIdleTracking(supabase);
+  redirect(safeNextPath(String(formData.get("next") ?? "")));
 }
 
 export async function signup(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -86,8 +108,51 @@ export async function signup(_prev: FormState, formData: FormData): Promise<Form
   };
 }
 
-export async function logout() {
+// ---------------------------------------------------------------------------
+// Recuperar la contraseña
+// ---------------------------------------------------------------------------
+
+export async function requestPasswordReset(_prev: FormState, formData: FormData): Promise<FormState> {
+  const values = formValues(formData);
+  const parsed = z.object({ email: z.email("Ingresá un email válido.") }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { fieldErrors: z.flattenError(parsed.error).fieldErrors, values };
+  }
+
+  const origin = (await headers()).get("origin") ?? "";
   const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/login");
+  // El resultado no se muestra: siempre el mismo mensaje, para no revelar qué emails tienen cuenta.
+  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: `${origin}/auth/confirm?next=/nueva-contrasena`,
+  });
+
+  return { success: "Si existe una cuenta con ese email, te enviamos un link para crear una contraseña nueva." };
+}
+
+// Con la sesión que abrió el link de recuperación.
+export async function setNewPassword(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = newPasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (error) {
+    return { error: passwordErrorMessage(error.code) };
+  }
+  return { success: "Contraseña actualizada." };
+}
+
+// ---------------------------------------------------------------------------
+// Cerrar sesión
+// ---------------------------------------------------------------------------
+
+// Solo esta sesión. Desde el navegador se llama con signOutThisDevice (lib/sign-out.ts), que antes
+// guarda lo pendiente y desuscribe las notificaciones de este dispositivo.
+export async function logout(reason?: string) {
+  const supabase = await createClient();
+  await supabase.auth.signOut({ scope: "local" });
+  await clearIdleCookies();
+  redirect(reason === IDLE_LOGOUT_REASON ? `/login?motivo=${IDLE_LOGOUT_REASON}` : "/login");
 }

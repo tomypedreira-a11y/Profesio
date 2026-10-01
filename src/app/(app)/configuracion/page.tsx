@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -10,11 +11,15 @@ import { CALENDAR_VIEWS, DEFAULT_CALENDAR_VIEW } from "@/lib/calendar-views";
 import { DEFAULT_SESSION_MINUTES, SESSION_LENGTHS } from "@/lib/schedule";
 import { isFontSize } from "@/lib/font-size";
 import { DEFAULT_TIME_ZONE, timeZoneItems } from "@/lib/timezones";
-import { updateCalendarView, updateSessionLength, updateTimeZone } from "./actions";
+import { DEFAULT_IDLE_MINUTES, IDLE_TIMEOUTS } from "@/lib/idle";
+import { updateCalendarView, updateIdleTimeout, updateSessionLength, updateTimeZone } from "./actions";
+import { ChangePassword } from "./change-password";
 import { DefaultFeeInput } from "./default-fee-input";
 import { FontSizeSelector } from "./font-size-selector";
+import { MfaSettings } from "./mfa-settings";
 import { PreferenceSelect } from "./preference-select";
 import { SettingsSection } from "./settings-section";
+import { SignOutEverywhere } from "./sign-out-everywhere";
 import { ThemeModeSelector } from "./theme-mode-selector";
 import { VacationSettings } from "./vacation-settings";
 
@@ -28,13 +33,24 @@ export default async function SettingsPage() {
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(
-      "theme, font_size, calendar_view, default_session_minutes, default_session_fee, timezone, reminder_minutes, daily_summary_enabled, daily_summary_time, notification_show_name",
-    )
-    .eq("id", data.claims.sub)
-    .single();
+  const [{ data: profile }, { data: factors }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "theme, font_size, calendar_view, default_session_minutes, default_session_fee, timezone, reminder_minutes, daily_summary_enabled, daily_summary_time, notification_show_name, idle_timeout_minutes",
+      )
+      .eq("id", data.claims.sub)
+      .single(),
+    supabase.auth.mfa.listFactors(),
+  ]);
+
+  // Dispositivos de la verificación en dos pasos (solo los verificados).
+  const timeZone = profile?.timezone ?? DEFAULT_TIME_ZONE;
+  const mfaDevices = (factors?.totp ?? []).map((f) => ({
+    id: f.id,
+    name: f.friendly_name || "Dispositivo",
+    added: formatInTimeZone(f.created_at, timeZone, "dd/MM/yyyy"),
+  }));
 
   return (
     <>
@@ -141,6 +157,34 @@ export default async function SettingsPage() {
             <FieldLabel htmlFor="email">Email</FieldLabel>
             <Input id="email" value={data.claims.email ?? ""} disabled readOnly className="sm:max-w-sm" />
             <FieldDescription>Es el email con el que ingresás a Profesio.</FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel>Contraseña</FieldLabel>
+            <ChangePassword />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="idle_timeout_minutes">Cerrar sesión por inactividad</FieldLabel>
+            <PreferenceSelect
+              id="idle_timeout_minutes"
+              value={String(profile?.idle_timeout_minutes ?? DEFAULT_IDLE_MINUTES)}
+              items={IDLE_TIMEOUTS}
+              save={updateIdleTimeout}
+            />
+            <FieldDescription>
+              Si no usás Profesio durante ese tiempo, la sesión se cierra sola (te avisamos un minuto antes). Protege
+              los datos de tus pacientes si dejás la compu o el celular desbloqueados.
+            </FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel>Verificación en dos pasos</FieldLabel>
+            <MfaSettings devices={mfaDevices} />
+          </Field>
+          <Field>
+            <FieldLabel>Sesiones abiertas</FieldLabel>
+            <SignOutEverywhere />
+            <FieldDescription>
+              Útil si perdiste el celular o ingresaste desde una computadora compartida.
+            </FieldDescription>
           </Field>
         </SettingsSection>
       </div>

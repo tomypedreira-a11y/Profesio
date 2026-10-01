@@ -13,8 +13,7 @@ import {
   WalletIcon,
   XIcon,
 } from "lucide-react";
-import { logout } from "@/app/(auth)/actions";
-import { forgetThisDevice } from "@/lib/push-client";
+import { signOutThisDevice } from "@/lib/sign-out";
 import { cn } from "@/lib/utils";
 
 // Barra de navegación inferior, solo en el celular (en PC está el panel lateral).
@@ -150,10 +149,7 @@ export function MobileNav({ user }: MobileNavProps) {
               title="Cerrar sesión"
               tabIndex={open ? 0 : -1}
               onClick={() =>
-                startTransition(async () => {
-                  await forgetThisDevice(); // las notificaciones de la cuenta no siguen llegando acá
-                  await logout();
-                })
+                startTransition(() => signOutThisDevice())
               }
               style={fanStyle(LOGOUT_POSITION)}
               className={cn(fanClass, "border-destructive/40 bg-background text-destructive")}

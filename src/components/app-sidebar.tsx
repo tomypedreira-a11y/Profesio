@@ -14,7 +14,6 @@ import {
   UsersIcon,
   WalletIcon,
 } from "lucide-react";
-import { logout } from "@/app/(auth)/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -39,7 +38,7 @@ import {
 import { SidebarArt } from "@/components/sidebar-art";
 import { IOSInstallDialog } from "@/components/pwa/install-app";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
-import { forgetThisDevice } from "@/lib/push-client";
+import { signOutThisDevice } from "@/lib/sign-out";
 
 const NAV_ITEMS = [
   { href: "/", label: "Calendario", icon: CalendarDaysIcon },
@@ -165,10 +164,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 <DropdownMenuItem
                   variant="destructive"
                   onClick={() =>
-                    startTransition(async () => {
-                      await forgetThisDevice(); // las notificaciones de la cuenta no siguen llegando acá
-                      await logout();
-                    })
+                    startTransition(() => signOutThisDevice())
                   }
                 >
                   <LogOutIcon />

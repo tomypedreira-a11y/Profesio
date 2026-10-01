@@ -50,10 +50,10 @@ El equipo trabaja en **Windows / PowerShell**.
 
 ```
 src/
-  proxy.ts                       Sesión de Supabase + redirección al login
+  proxy.ts                       Sesión de Supabase, login, inactividad y verificación en dos pasos (lib/supabase/proxy.ts)
   app/
-    (auth)/                      Login, registro y sus acciones
-    auth/confirm/route.ts        Link del mail de confirmación
+    (auth)/                      Login, registro, /login/verificar (código MFA), /recuperar, /nueva-contrasena y sus acciones
+    auth/confirm/route.ts        Links de los mails (confirmación y recuperación; respeta `next`)
     api/cron/notifications/      Cron de notificaciones (Vercel, cada minuto; protegido con CRON_SECRET)
     (app)/                       Pantallas con sesión iniciada (layout con panel lateral)
       page.tsx                   Calendario (vista principal)
@@ -62,6 +62,7 @@ src/
       ingresos/                  Resumen de cobros del mes, quiénes adeudan + acciones de cobro
       perfil/                    Datos profesionales (nombre, apellido, matrícula)
       configuracion/             Preferencias: Personalización, Calendario, Sesiones, Vacaciones, Cuenta
+                                 (account-actions.ts: contraseña, MFA, cerrar sesión en todos los dispositivos)
   components/
     ui/                          Componentes de shadcn (generados por la CLI)
     calendar/                    Calendario, panel de sesión, agendar, reprogramar/cancelar
@@ -69,6 +70,7 @@ src/
     payments/                    Botones de cobro y cobro dentro del panel de sesión
     pwa/                         Registro del service worker, instalar la app, aviso sin conexión
     profile-defaults-provider.tsx  Duración y valor por defecto del perfil (los carga el layout)
+    idle-logout.tsx              Aviso y cierre de sesión por inactividad (en el layout de (app))
   lib/
     supabase/{client,server,proxy}.ts
     supabase/admin.ts            Cliente con la secret key: SOLO para /api/cron/*
@@ -76,8 +78,11 @@ src/
     database.types.ts            Generado por Supabase: NO editar a mano
     phone.ts  format.ts  form-state.ts  theme.ts  schedule.ts  payments.ts  calendar-views.ts  vacations.ts  modality.ts
     zoned.ts  timezones.ts       Fechas en la zona del perfil y zonas para elegir
+    idle.ts  idle-cookies.ts     Cierre por inactividad: cookies y opciones (compartido) / escritura desde el servidor
+    auth.ts  mfa.ts  safe-path.ts  Errores y validación de contraseñas, códigos TOTP, destino `next` seguro
+    sign-out.ts  pending-saves.ts  Cerrar sesión desde el navegador (guarda lo pendiente y desuscribe el dispositivo)
 supabase/migrations/             Toda la estructura de la base, en orden
-supabase/tests/database/         Tests de la base (pgTAP): RLS, agenda, cobros, anotaciones, vacaciones, modalidad
+supabase/tests/database/         Tests de la base (pgTAP): RLS, agenda, cobros, anotaciones, vacaciones, modalidad, MFA
 ```
 
 ## Base de datos
@@ -90,7 +95,7 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 
 | Tabla | Contenido |
 |---|---|
-| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria (`timezone`), duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, vista inicial del calendario (`calendar_view`). |
+| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria (`timezone`), duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, vista inicial del calendario (`calendar_view`), cierre por inactividad (`idle_timeout_minutes`: 15, 30, 60, 120 o 240). |
 | `patients` | Pacientes. `active = false` = archivado. Teléfono en E.164. `modality`: `in_person` (por defecto) o `virtual`. |
 | `session_series` | Horario fijo semanal (día, hora y duración). Un paciente puede tener varios. `end_date is null` = vigente. |
 | `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). Cobro: `fee`, `paid_at`, `payment_method`. `modality` null = la del paciente. |
@@ -112,8 +117,11 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   Las funciones: `revoke execute ... from public, anon` + `grant execute ... to authenticated`.
   `01_rls.test.sql` falla si `anon` puede usar algo del esquema `public`.
 - Funciones SQL: `set search_path = ''` y nombres calificados (`public.tabla`).
-  `security invoker` salvo que sea imprescindible (solo `handle_new_user`, `write_audit_log` y `due_notifications`
-  son `security definer`; esta última, ejecutable solo por `service_role`).
+  `security invoker` salvo que sea imprescindible (solo `handle_new_user`, `write_audit_log`, `due_notifications`
+  y `mfa_enabled` son `security definer`; `due_notifications`, ejecutable solo por `service_role`).
+- **Verificación en dos pasos en la base:** cada tabla tiene, además de la de "lo propio", una política
+  `as restrictive` que exige `aal2` si el usuario tiene un factor verificado (`public.mfa_enabled()`).
+  Una tabla nueva lleva las dos (ver `20261001150646_account_security.sql`) y su caso en `09_account_security.test.sql`.
 - Las vistas siempre con `with (security_invoker = true)`.
 - **La `service_role` / secret key (`SUPABASE_SECRET_KEY`) se usa SOLO en `src/lib/supabase/admin.ts`**, que solo
   importan las rutas `src/app/api/cron/*` (ESLint lo impide en el resto). Nunca en componentes, Server Actions de
@@ -202,7 +210,8 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 - **Configuración** (`/configuracion`): cada sección es un `<SettingsSection>` y cada opción un `<Field>` adentro.
   Las opciones se aplican al instante y se guardan en `profiles` con las acciones de `configuracion/actions.ts`
   (los textos, como el valor por sesión, al salir del campo). Mi perfil queda solo para los datos profesionales.
-  Excepción futura: cambiar email o contraseña en Cuenta llevará formulario con botón y confirmación.
+  Excepción: en Cuenta, la contraseña, la verificación en dos pasos y "cerrar sesión en todos los dispositivos"
+  llevan botón y confirmación (diálogo). Cambiar el email, cuando se sume, también.
 - Comentarios breves en castellano explicando el *porqué*.
 
 ## PWA
@@ -239,6 +248,37 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
 - Para probar el cron a mano: `curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/notifications`
   (con `npm run build && npm run start`: sin service worker no hay notificaciones).
 
+## Seguridad de la cuenta
+
+- **Contraseña:** "¿Olvidaste tu contraseña?" → `/recuperar` (siempre el mismo mensaje, exista o no la cuenta) →
+  mail → `/auth/confirm?next=/nueva-contrasena`. Cambiarla en Configuración pide la actual: se verifica con
+  `signInWithPassword` en un cliente aparte sin cookies (con el de la sesión, la reemplazaría por una aal1).
+  Mientras se use la plantilla de mail original de Supabase (`code`), el link funciona solo en el navegador donde
+  se pidió; con SMTP propio y plantilla con `token_hash`, en cualquiera.
+- **Cierre por inactividad** (`profiles.idle_timeout_minutes`, sin opción "nunca"): cookies `profesio_last_activity`
+  (ms) y `profesio_idle_timeout` (minutos) (`lib/idle.ts`). **Lo hace cumplir el proxy**: si venció, `signOut` y
+  `/login?motivo=inactividad` antes de renderizar nada, también en Server Actions (para estas responde con
+  `x-action-redirect`, como hace Next con `redirect()`: un 307 haría que fetch repita el POST en el login).
+  Así una pestaña dormida, un celular bloqueado o una compu sin JavaScript no pueden seguir usando la sesión.
+  Cada request con sesión renueva la actividad. El navegador (`IdleLogout`) suma la actividad que no llega al
+  servidor (teclas, toques, scroll; como mucho una vez por minuto), avisa un minuto antes y cierra 5 s antes del
+  límite con `signOutThisDevice` (el mismo que el menú: guarda el borrador de una anotación con `pending-saves`
+  y desuscribe las notificaciones). Las cookies no son httpOnly: el navegador escribe la actividad (solo permite
+  extender la propia sesión). Se escriben al ingresar (login, link del mail, código MFA) y al cambiar la preferencia.
+  Limitación: si la sesión ya venció en el servidor (ej. el celular estuvo bloqueado más que el límite), un borrador
+  sin guardar se pierde; en la práctica no debería haberlo (se guarda a los 3 s y al ocultar la app).
+- **Verificación en dos pasos (TOTP):** Configuración → Cuenta (hasta 2 dispositivos; quitar el último pide un código).
+  Con un factor verificado, el login sigue en `/login/verificar` y el proxy manda ahí toda ruta privada mientras la
+  sesión sea aal1. La base no devuelve nada a una sesión aal1 de ese usuario (políticas restrictivas); el cron
+  (`service_role`) y las funciones `security definer` no pasan por RLS. Supabase, al verificar un factor nuevo, cierra
+  las otras sesiones, y al verificar un código, invalida las sesiones aal1 del usuario.
+- **Cerrar sesión:** el menú cierra solo este dispositivo (`scope: "local"`; el default de Supabase es global).
+  "Cerrar sesión en todos los dispositivos" usa `scope: "global"` y borra todas las suscripciones de notificaciones.
+- **Soporte — perdió la app de códigos y no tiene otro dispositivo:** verificar la identidad del psicólogo por un
+  canal confiable (no alcanza con un mail desde la misma casilla) y recién entonces, solo en ese caso, quitarle el
+  factor en Supabase → Authentication → Users → el usuario → MFA. Eso cierra todas sus sesiones; después vuelve a
+  activarla desde Configuración.
+
 ## Flujo de trabajo (Git)
 
 - `main` siempre funciona y está protegida: todo entra por Pull Request aprobado por el otro.
@@ -246,6 +286,10 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
 - Ramas `feature/...` y `fix/...`. Verificar con `git status` que no se commitea en `main`.
 - `.env.local` nunca se sube (el repo tiene `.env.example`).
 - Antes del PR: `npm run build`, `npm run lint` y `npm run test:db` sin errores.
+- **Configuración de Supabase (dev y prod), desde el panel:** Authentication → Multi-Factor → TOTP habilitado
+  (enroll y verify); Authentication → URL Configuration → Redirect URLs con el dominio y `/**` (ej.
+  `http://localhost:3000/**`), para que `/auth/confirm?next=...` sea aceptado. La plantilla "Reset password" se
+  configura cuando haya SMTP propio (con `token_hash` y `type=recovery`, como la de confirmación).
 - **Una migración mergeada a `main` también se aplica a `profesio-prod`:** vincular prod, `db push` y volver a
   vincular dev (verificar siempre con `npx supabase projects list` cuál está vinculado):
   `npx supabase link --project-ref <ref de prod>` → `npx supabase db push` → `npx supabase link --project-ref <ref de dev>`.

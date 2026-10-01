@@ -12,7 +12,7 @@ import { FormMessage } from "@/components/form-message";
 
 const initialState: FormState = {};
 
-export function LoginForm({ linkError }: { linkError?: boolean }) {
+export function LoginForm({ linkError, idleLogout }: { linkError?: boolean; idleLogout?: boolean }) {
   const [state, action, pending] = useActionState(login, initialState);
   const errors = state.fieldErrors ?? {};
 
@@ -25,6 +25,10 @@ export function LoginForm({ linkError }: { linkError?: boolean }) {
       <CardContent>
         <form key={formKey(state)} action={action}>
           <FieldGroup>
+            {/* No es un error: se muestra como aviso. */}
+            {!state.error && idleLogout && (
+              <FormMessage success="Cerramos tu sesión por inactividad. Ingresá de nuevo." />
+            )}
             <FormMessage
               error={
                 state.error ??
@@ -45,7 +49,12 @@ export function LoginForm({ linkError }: { linkError?: boolean }) {
               <FieldError>{errors.email?.[0]}</FieldError>
             </Field>
             <Field data-invalid={!!errors.password}>
-              <FieldLabel htmlFor="password">Contraseña</FieldLabel>
+              <div className="flex items-center justify-between gap-2">
+                <FieldLabel htmlFor="password">Contraseña</FieldLabel>
+                <Link href="/recuperar" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
               <Input
                 id="password"
                 name="password"
