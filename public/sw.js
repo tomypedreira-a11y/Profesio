@@ -86,7 +86,7 @@ self.addEventListener("push", (event) => {
       icon: "/icons/icon-192.png",
       badge: "/icons/badge-96.png", // monocromo: la barra de estado de Android usa solo su silueta
       tag: data.tag, // la misma sesión no se apila dos veces
-      data: { url: data.url || "/" },
+      data: { url: data.url || "/calendario" },
     }),
   );
 });
@@ -94,7 +94,7 @@ self.addEventListener("push", (event) => {
 // Al tocarla: una ventana de Profesio que ya esté abierta va a la pantalla indicada; si no hay, se abre una.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  const url = new URL(event.notification.data?.url || "/calendario", self.location.origin).href;
 
   event.waitUntil(
     (async () => {

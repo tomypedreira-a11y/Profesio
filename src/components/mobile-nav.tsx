@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 import {
   CalendarClockIcon,
   CalendarDaysIcon,
+  CircleHelpIcon,
   LogOutIcon,
   SettingsIcon,
   UserRoundIcon,
@@ -14,13 +15,14 @@ import {
   XIcon,
 } from "lucide-react";
 import { signOutThisDevice } from "@/lib/sign-out";
+import { APP_HOME } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 // Barra de navegación inferior, solo en el celular (en PC está el panel lateral).
 // Secciones a los costados y la cuenta en el medio, que despliega sus accesos en abanico.
 
 const LEFT_ITEMS = [
-  { href: "/", label: "Calendario", icon: CalendarDaysIcon },
+  { href: APP_HOME, label: "Calendario", icon: CalendarDaysIcon },
   { href: "/pacientes", label: "Pacientes", icon: UsersIcon },
 ];
 
@@ -29,16 +31,17 @@ const RIGHT_ITEMS = [
   { href: "/ingresos", label: "Ingresos", icon: WalletIcon },
 ];
 
-// Posición final de cada acceso de la cuenta respecto del botón central (en px).
+// Posición final de cada acceso de la cuenta respecto del botón central (en px): un arco de radio 88.
 const ACCOUNT_ITEMS = [
-  { href: "/configuracion", label: "Configuración", icon: SettingsIcon, x: -68, y: -52 },
-  { href: "/perfil", label: "Mi perfil", icon: UserRoundIcon, x: 0, y: -80 },
+  { href: "/configuracion", label: "Configuración", icon: SettingsIcon, x: -76, y: -44 },
+  { href: "/perfil", label: "Mi perfil", icon: UserRoundIcon, x: -30, y: -83 },
+  { href: "/ayuda", label: "Ayuda", icon: CircleHelpIcon, x: 30, y: -83 }, // página pública (fuera de la app)
 ] as const;
-const LOGOUT_POSITION = { x: 68, y: -52 };
+const LOGOUT_POSITION = { x: 76, y: -44 };
 
-// "Calendario" también queda marcado en la pantalla aparte de vistas (/calendario).
+// "Calendario" también queda marcado en la pantalla aparte de vistas (/calendario/vistas).
 function isActivePath(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" || pathname.startsWith("/calendario") : pathname.startsWith(href);
+  return pathname.startsWith(href);
 }
 
 type MobileNavProps = {

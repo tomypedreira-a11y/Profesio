@@ -1,5 +1,5 @@
 // Destino de los links de los mails (confirmación de registro y recuperación de contraseña).
-// Valida el link, inicia la sesión y manda al usuario a `next` (por defecto, el calendario).
+// Valida el link, inicia la sesión y manda al usuario a `next` (por defecto, el calendario: APP_HOME).
 //
 // Acepta los dos formatos de link de Supabase:
 // - `code`: el de la plantilla por defecto de Supabase (la de dev). Funciona si el mail se abre

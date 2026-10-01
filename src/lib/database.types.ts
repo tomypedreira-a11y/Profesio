@@ -189,6 +189,8 @@ export type Database = {
           license_number: string | null
           notification_show_name: boolean
           reminder_minutes: number | null
+          terms_accepted_at: string | null
+          terms_version: string | null
           theme: string
           timezone: string
           updated_at: string
@@ -208,6 +210,8 @@ export type Database = {
           license_number?: string | null
           notification_show_name?: boolean
           reminder_minutes?: number | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           theme?: string
           timezone?: string
           updated_at?: string
@@ -227,6 +231,8 @@ export type Database = {
           license_number?: string | null
           notification_show_name?: boolean
           reminder_minutes?: number | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           theme?: string
           timezone?: string
           updated_at?: string

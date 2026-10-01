@@ -84,6 +84,6 @@ export function dailySummaryPayload(n: { forDate: string; sessionCount: number; 
 export const testPayload: PushPayload = {
   title: "Notificación de prueba",
   body: "Así vas a ver los recordatorios en este dispositivo.",
-  url: "/configuracion",
+  url: "/calendario", // como los recordatorios
   tag: "test",
 };

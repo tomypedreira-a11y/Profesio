@@ -43,7 +43,21 @@ Una regla nueva del dominio va con su test en el mismo PR. Antes del PR: `npm ru
 
 En PowerShell 5.1, `>` guarda el archivo en UTF-16 y git lo trata como binario (diffs ilegibles): usar `Out-File -Encoding utf8`.
 
-Si Next no toma archivos nuevos (sobre todo `proxy.ts`), borrar la caché: `.next`.
+Si Next no toma archivos nuevos (sobre todo `proxy.ts`), o el build falla con tipos de una página que ya no existe
+(`.next/dev/types`), borrar la caché: `.next`.
+
+**Datos de demo y capturas de la página promocional** (solo dev, con datos inventados):
+
+```bash
+node scripts/seed-demo.mjs            # crea (o recrea) demo@miprofesio.com en profesio-dev; DEMO_PASSWORD en .env.local
+npm run build && npm run start        # en otra terminal
+node scripts/landing-screenshots.mjs  # public/landing/*.webp (van en el repo); usa el Edge/Chrome instalados
+```
+
+`seed-demo.mjs` se niega a correr si `.env.local` no apunta a profesio-dev. Usa la secret key solo para crear el
+usuario; los datos los carga el demo con la clave pública (RLS). Un demo con anotaciones finalizadas no se puede borrar
+(Ley 26.529), así que el anterior se "jubila" (email de example.com, bloqueado). Las fechas son relativas a hoy:
+correrlo justo antes de las capturas.
 El equipo trabaja en **Windows / PowerShell**.
 
 ## Estructura
@@ -52,11 +66,14 @@ El equipo trabaja en **Windows / PowerShell**.
 src/
   proxy.ts                       Sesión de Supabase, login, inactividad y verificación en dos pasos (lib/supabase/proxy.ts)
   app/
+    (sitio)/                     Páginas públicas, con encabezado y pie propios: "/" (promocional), /ayuda,
+                                 /terminos, /privacidad (BORRADORES legales) y opengraph-image.tsx
+    robots.ts  sitemap.ts        Solo las páginas públicas (www.miprofesio.com)
     (auth)/                      Login, registro, /login/verificar (código MFA), /recuperar, /nueva-contrasena y sus acciones
     auth/confirm/route.ts        Links de los mails (confirmación y recuperación; respeta `next`)
     api/cron/notifications/      Cron de notificaciones (Vercel, cada minuto; protegido con CRON_SECRET)
     (app)/                       Pantallas con sesión iniciada (layout con panel lateral)
-      page.tsx                   Calendario (vista principal)
+      calendario/                Calendario: vista principal (APP_HOME); vistas/ = día/semana/mes desde el celular
       pacientes/                 Listado, alta, ficha, edición, archivados, anotaciones
       sesiones/                  Lista de próximas sesiones + acciones de sesiones
       ingresos/                  Resumen de cobros del mes, quiénes adeudan + acciones de cobro
@@ -71,6 +88,7 @@ src/
     pwa/                         Registro del service worker, instalar la app, aviso sin conexión
     profile-defaults-provider.tsx  Duración y valor por defecto del perfil (los carga el layout)
     idle-logout.tsx              Aviso y cierre de sesión por inactividad (en el layout de (app))
+    sitio/                       Encabezado, pie, preguntas frecuentes, botón de instalar y estructura legal del sitio
   lib/
     supabase/{client,server,proxy}.ts
     supabase/admin.ts            Cliente con la secret key: SOLO para /api/cron/*
@@ -81,8 +99,12 @@ src/
     idle.ts  idle-cookies.ts     Cierre por inactividad: cookies y opciones (compartido) / escritura desde el servidor
     auth.ts  mfa.ts  safe-path.ts  Errores y validación de contraseñas, códigos TOTP, destino `next` seguro
     sign-out.ts  pending-saves.ts  Cerrar sesión desde el navegador (guarda lo pendiente y desuscribe el dispositivo)
+    routes.ts                    APP_HOME = "/calendario": destino después de ingresar e inicio de la PWA
+    legal.ts                     Versión de los términos, fecha, datos del titular (marcadores), contacto y SITE_URL
+scripts/                         Íconos, datos de demo y capturas de la página promocional
+public/landing/                  Capturas de la app (datos ficticios) para la página promocional
 supabase/migrations/             Toda la estructura de la base, en orden
-supabase/tests/database/         Tests de la base (pgTAP): RLS, agenda, cobros, anotaciones, vacaciones, modalidad, MFA
+supabase/tests/database/         Tests de la base (pgTAP): RLS, agenda, cobros, anotaciones, vacaciones, modalidad, MFA, términos
 ```
 
 ## Base de datos
@@ -95,7 +117,7 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 
 | Tabla | Contenido |
 |---|---|
-| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria (`timezone`), duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, vista inicial del calendario (`calendar_view`), cierre por inactividad (`idle_timeout_minutes`: 15, 30, 60, 120 o 240). |
+| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria (`timezone`), duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, vista inicial del calendario (`calendar_view`), cierre por inactividad (`idle_timeout_minutes`: 15, 30, 60, 120 o 240), aceptación de los términos (`terms_accepted_at`, `terms_version`; no se modifican). |
 | `patients` | Pacientes. `active = false` = archivado. Teléfono en E.164. `modality`: `in_person` (por defecto) o `virtual`. |
 | `session_series` | Horario fijo semanal (día, hora y duración). Un paciente puede tener varios. `end_date is null` = vigente. |
 | `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). Cobro: `fee`, `paid_at`, `payment_method`. `modality` null = la del paciente. |
@@ -126,6 +148,7 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 - **La `service_role` / secret key (`SUPABASE_SECRET_KEY`) se usa SOLO en `src/lib/supabase/admin.ts`**, que solo
   importan las rutas `src/app/api/cron/*` (ESLint lo impide en el resto). Nunca en componentes, Server Actions de
   usuario ni con prefijo `NEXT_PUBLIC`. Lo que toque, a través de funciones acotadas y tablas sin datos clínicos.
+  Fuera de la app, solo `scripts/seed-demo.mjs` la usa (para crear el usuario demo, y únicamente contra dev).
 - Relaciones entre tablas con FK compuesta `(id, psychologist_id)`: impiden vincular datos de otro psicólogo.
 
 ### Reglas del dominio
@@ -248,6 +271,25 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
 - Para probar el cron a mano: `curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/notifications`
   (con `npm run build && npm run start`: sin service worker no hay notificaciones).
 
+## Sitio público y rutas
+
+- **"/" es la página promocional**; la app empieza en `/calendario` (`APP_HOME`, `lib/routes.ts`): ahí van el login,
+  el código de verificación, los links de los mails (default de `next`), `/nueva-contrasena`, las notificaciones y el
+  `start_url` del manifest (su `id` sigue siendo "/" para no duplicar las instalaciones existentes). Para mandar a
+  alguien "a la app", usar `APP_HOME`, nunca "/".
+- **Rutas públicas** (`PUBLIC_PATHS` en `lib/supabase/proxy.ts`): "/" va aparte, como ruta **exacta** (como prefijo
+  volvería públicas a todas). Las páginas de `(sitio)` se ven igual con o sin sesión (no redirigen); solo cambia el
+  botón principal ("Ir a mi agenda"). Una sección nueva de la app: sumarla a `robots.ts` (disallow).
+- **Textos de la página promocional y de las preguntas frecuentes** (`components/sitio/faq.tsx`, compartidas con
+  /ayuda): solo afirmaciones verdaderas, verificadas contra el código. Si cambia una funcionalidad, revisarlos.
+  En las páginas públicas, los botones que navegan son `<Link className={buttonVariants()}>` (rol de link, accesible),
+  no `<Button render={<Link />}>`.
+- **Legales (BORRADORES, revisar con un abogado antes de abrir la beta):** `/terminos` y `/privacidad`. Los datos del
+  titular son marcadores visibles (`OWNER` en `lib/legal.ts`). Si cambian, subir `TERMS_VERSION` y `LEGAL_UPDATED`.
+  El registro exige la casilla; `handle_new_user` guarda `profiles.terms_accepted_at` (fecha del servidor) y
+  `terms_version` (metadatos del registro), y un trigger impide modificarlos después. Las cuentas anteriores tienen null.
+  Si cambian los proveedores, las cookies o los datos que guarda la app, actualizar `/privacidad`.
+
 ## Seguridad de la cuenta
 
 - **Contraseña:** "¿Olvidaste tu contraseña?" → `/recuperar` (siempre el mismo mensaje, exista o no la cuenta) →
@@ -321,8 +363,8 @@ Sin claves ni secretos acá: están en Vercel, Supabase, Resend y `.env.local`.
 
 ## Pendientes conocidos
 
-- Página promocional en `/` y la app en `/app`.
-- Términos y condiciones y política de privacidad.
+- Revisión de los Términos y la Política de privacidad con un abogado y datos del titular (antes de abrir la beta).
+- Pedir la aceptación de los términos a las cuentas creadas antes (tienen `terms_accepted_at` null).
 - Pasar el repo a privado.
 - Beta con psicólogos reales.
 - Logo definitivo (los íconos actuales son provisorios).

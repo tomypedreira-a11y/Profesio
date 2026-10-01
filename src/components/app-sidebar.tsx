@@ -7,6 +7,7 @@ import {
   CalendarClockIcon,
   CalendarDaysIcon,
   ChevronsUpDownIcon,
+  CircleHelpIcon,
   DownloadIcon,
   LogOutIcon,
   SettingsIcon,
@@ -39,9 +40,10 @@ import { SidebarArt } from "@/components/sidebar-art";
 import { IOSInstallDialog } from "@/components/pwa/install-app";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { signOutThisDevice } from "@/lib/sign-out";
+import { APP_HOME } from "@/lib/routes";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Calendario", icon: CalendarDaysIcon },
+  { href: APP_HOME, label: "Calendario", icon: CalendarDaysIcon },
   { href: "/pacientes", label: "Pacientes", icon: UsersIcon },
   { href: "/sesiones", label: "Sesiones", icon: CalendarClockIcon },
   { href: "/ingresos", label: "Ingresos", icon: WalletIcon },
@@ -51,6 +53,7 @@ const NAV_ITEMS = [
 const ACCOUNT_ITEMS = [
   { href: "/perfil", label: "Mi perfil", icon: UserRoundIcon },
   { href: "/configuracion", label: "Configuración", icon: SettingsIcon },
+  { href: "/ayuda", label: "Ayuda", icon: CircleHelpIcon }, // página pública (fuera del panel de la app)
 ];
 
 type AppSidebarProps = {
@@ -82,7 +85,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
       <SidebarHeader className="relative">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href="/" />}>
+            <SidebarMenuButton size="lg" render={<Link href={APP_HOME} />}>
               <span className="flex aspect-square size-8 items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground">
                 P
               </span>
@@ -99,10 +102,8 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 En reposo llevan el fondo del calendario; hover y activo los pintan de verde (ver sidebar.tsx). */}
             <SidebarMenu className="gap-2">
               {NAV_ITEMS.map((item) => {
-                const isActive =
-                  item.href === "/"
-                    ? pathname === "/" || pathname.startsWith("/calendario")
-                    : pathname.startsWith(item.href);
+                // pathname.startsWith: "Calendario" también queda marcado en /calendario/vistas.
+                const isActive = pathname.startsWith(item.href);
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton

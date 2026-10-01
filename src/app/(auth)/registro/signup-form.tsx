@@ -6,6 +6,7 @@ import { signup } from "../actions";
 import { type FormState, formKey } from "@/lib/form-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { FormMessage } from "@/components/form-message";
@@ -102,6 +103,31 @@ export function SignupForm() {
               />
               <FieldDescription>Al menos 8 caracteres.</FieldDescription>
               <FieldError>{errors.password?.[0]}</FieldError>
+            </Field>
+            <Field orientation="horizontal" data-invalid={!!errors.terms}>
+              <Checkbox
+                id="terms"
+                name="terms"
+                value="accepted"
+                defaultChecked={state.values?.terms === "accepted"}
+                aria-invalid={!!errors.terms}
+                required
+              />
+              <div className="flex flex-col gap-1">
+                <FieldLabel htmlFor="terms" className="font-normal">
+                  <span>
+                    Acepto los{" "}
+                    <Link href="/terminos" target="_blank" className="underline underline-offset-4">
+                      Términos
+                    </Link>{" "}
+                    y la{" "}
+                    <Link href="/privacidad" target="_blank" className="underline underline-offset-4">
+                      Política de privacidad
+                    </Link>
+                  </span>
+                </FieldLabel>
+                <FieldError>{errors.terms?.[0]}</FieldError>
+              </div>
             </Field>
             <Button type="submit" disabled={pending} className="w-full">
               {pending ? "Creando cuenta…" : "Crear cuenta"}

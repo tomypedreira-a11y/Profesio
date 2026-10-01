@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
+import { APP_HOME } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 // Título del encabezado, con brillos al azar: al abrir la app en el calendario, un saludo según la hora
@@ -51,7 +52,7 @@ export function HeaderTitle(props: HeaderTitleProps) {
   if (!navigated && pathname !== openedAt) setNavigated(true);
 
   // key: en cada pantalla se monta de nuevo, así los brillos cambian.
-  return <TitleText key={pathname} greet={openedAt === "/" && !navigated} {...props} />;
+  return <TitleText key={pathname} greet={openedAt === APP_HOME && !navigated} {...props} />;
 }
 
 function TitleText({ greet, firstName, className }: HeaderTitleProps & { greet: boolean }) {

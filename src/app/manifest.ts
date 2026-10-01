@@ -4,11 +4,12 @@ import type { MetadataRoute } from "next";
 // Los íconos se generan con scripts/generate-icons.mjs.
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    // id: se mantiene "/" (el start_url de antes): si cambia, las instalaciones existentes quedarían duplicadas.
     id: "/",
     name: "Profesio",
     short_name: "Profesio",
     description: "Agenda y gestión de pacientes para psicólogos",
-    start_url: "/",
+    start_url: "/calendario", // APP_HOME: la app instalada abre en el calendario, no en la página promocional
     scope: "/",
     display: "standalone",
     orientation: "any",
@@ -23,7 +24,7 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
-      { name: "Calendario", url: "/", icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }] },
+      { name: "Calendario", url: "/calendario", icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }] },
       { name: "Pacientes", url: "/pacientes", icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }] },
       {
         name: "Nuevo paciente",
