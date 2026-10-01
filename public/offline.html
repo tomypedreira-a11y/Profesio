@@ -1,0 +1,103 @@
+<!doctype html>
+<!--
+  Pantalla sin conexión: la muestra el service worker (public/sw.js) cuando no se puede abrir una pantalla.
+  Autocontenida (sin archivos externos salvo el ícono, que está en el caché del service worker).
+  Colores: los de la paleta de la app (globals.css), con tema claro y oscuro.
+-->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#faf3e5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#151120" media="(prefers-color-scheme: dark)" />
+    <title>Sin conexión · Profesio</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --background: #faf3e5;
+        --card: #fffaf0;
+        --foreground: #3a2e25;
+        --muted-foreground: #7a6a5c;
+        --border: #e8dcc7;
+        --primary: #9ccd9c;
+        --primary-foreground: #163a22;
+        --primary-border: #6f8a3c;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --background: #151120;
+          --card: #1c1729;
+          --foreground: #e6e2f2;
+          --muted-foreground: #b3adc7;
+          --border: rgba(160, 205, 235, 0.22);
+          --primary: #a4b5ea;
+          --primary-foreground: #1d2142;
+          --primary-border: #a6d3ec;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+          max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        background: var(--background);
+        color: var(--foreground);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.5;
+      }
+      main {
+        width: 100%;
+        max-width: 26rem;
+        padding: 32px 24px;
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        background: var(--card);
+        text-align: center;
+      }
+      img {
+        width: 72px;
+        height: 72px;
+        border-radius: 16px;
+      }
+      h1 {
+        margin: 16px 0 8px;
+        font-family: Lora, Georgia, "Times New Roman", serif;
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+      p {
+        margin: 0 0 24px;
+        color: var(--muted-foreground);
+      }
+      button {
+        padding: 10px 24px;
+        border: 1.5px solid var(--primary-border);
+        border-radius: 999px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:focus-visible {
+        outline: 3px solid var(--primary-border);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>Sin conexión</h1>
+      <p>Profesio necesita internet para mostrar tu agenda. Revisá tu conexión y volvé a intentar.</p>
+      <button type="button" onclick="location.reload()">Reintentar</button>
+    </main>
+  </body>
+</html>

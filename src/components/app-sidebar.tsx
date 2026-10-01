@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   CalendarClockIcon,
   CalendarDaysIcon,
   ChevronsUpDownIcon,
+  DownloadIcon,
   LogOutIcon,
   SettingsIcon,
   UserRoundIcon,
@@ -36,6 +37,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { SidebarArt } from "@/components/sidebar-art";
+import { IOSInstallDialog } from "@/components/pwa/install-app";
+import { useInstallPrompt } from "@/hooks/use-install-prompt";
 
 const NAV_ITEMS = [
   { href: "/", label: "Calendario", icon: CalendarDaysIcon },
@@ -59,6 +62,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
   const [, startTransition] = useTransition();
+  // "Instalar app" solo si el navegador lo permite (o en iPhone/iPad, con los pasos de Safari).
+  const install = useInstallPrompt();
+  const showInstall = install.canInstall || (install.isIOS && !install.isInstalled);
+  const [showIOSSteps, setShowIOSSteps] = useState(false);
 
   const fullName = `${user.firstName} ${user.lastName}`.trim() || user.email;
   const initials =
@@ -145,6 +152,14 @@ export function AppSidebar({ user }: AppSidebarProps) {
                     {item.label}
                   </DropdownMenuItem>
                 ))}
+                {showInstall && (
+                  <DropdownMenuItem
+                    onClick={() => (install.canInstall ? install.promptInstall() : setShowIOSSteps(true))}
+                  >
+                    <DownloadIcon />
+                    Instalar app
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => startTransition(() => logout())}>
                   <LogOutIcon />
@@ -157,6 +172,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
       </SidebarFooter>
 
       <SidebarRail />
+      <IOSInstallDialog open={showIOSSteps} onOpenChange={setShowIOSSteps} />
     </Sidebar>
   );
 }

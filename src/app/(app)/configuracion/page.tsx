@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/page-header";
+import { InstallAppSettings } from "@/components/pwa/install-app";
 import { CALENDAR_VIEWS, DEFAULT_CALENDAR_VIEW } from "@/lib/calendar-views";
 import { DEFAULT_SESSION_MINUTES, SESSION_LENGTHS } from "@/lib/schedule";
 import { isFontSize } from "@/lib/font-size";
@@ -105,6 +106,12 @@ export default async function SettingsPage() {
           <Field>
             <FieldLabel htmlFor="vacation_range">Períodos</FieldLabel>
             <VacationSettings />
+          </Field>
+        </SettingsSection>
+
+        <SettingsSection title="Instalar la app" description="Usá Profesio como una app más de tu computadora o tu celular.">
+          <Field>
+            <InstallAppSettings />
           </Field>
         </SettingsSection>
 

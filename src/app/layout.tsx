@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Lora, Outfit } from "next/font/google";
 import { KeyboardDismiss } from "@/components/keyboard-dismiss";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { FONT_SIZE_SCRIPT } from "@/lib/font-size";
@@ -25,11 +26,25 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: { default: "Profesio", template: "%s · Profesio" },
   description: "Agenda y gestión de pacientes para psicólogos.",
+  // Instalada en iPhone/iPad (Agregar a pantalla de inicio): se abre como app, sin la barra de Safari.
+  appleWebApp: { capable: true, title: "Profesio", statusBarStyle: "default" },
+  // favicon.ico lo agrega Next solo. icon.png (src/app) también, pero solo si no hay `icons` acá: como el de iOS
+  // se declara acá, icon.png va explícito. Los genera scripts/generate-icons.mjs.
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png", sizes: "64x64" }],
+    apple: "/icons/apple-touch-icon.png",
+  },
 };
 
 // "cover" habilita env(safe-area-inset-bottom): la barra inferior no queda debajo de la barra de gestos del iPhone.
+// themeColor: color de la barra del navegador y de la ventana de la app instalada, según el tema del sistema
+// (el fondo de cada tema: beige en el claro, violeta noche en el oscuro).
 export const viewport: Viewport = {
   viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf3e5" },
+    { media: "(prefers-color-scheme: dark)", color: "#151120" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -48,6 +63,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <ThemeProvider>{children}</ThemeProvider>
         <KeyboardDismiss />
+        <ServiceWorkerRegister />
         {/* --toast-bottom lo define globals.css cuando está la barra inferior del celular. */}
         <Toaster
           offset={{ bottom: "var(--toast-bottom, 24px)" }}
