@@ -14,6 +14,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { logout } from "@/app/(auth)/actions";
+import { forgetThisDevice } from "@/lib/push-client";
 import { cn } from "@/lib/utils";
 
 // Barra de navegación inferior, solo en el celular (en PC está el panel lateral).
@@ -148,7 +149,12 @@ export function MobileNav({ user }: MobileNavProps) {
               aria-label="Cerrar sesión"
               title="Cerrar sesión"
               tabIndex={open ? 0 : -1}
-              onClick={() => startTransition(() => logout())}
+              onClick={() =>
+                startTransition(async () => {
+                  await forgetThisDevice(); // las notificaciones de la cuenta no siguen llegando acá
+                  await logout();
+                })
+              }
               style={fanStyle(LOGOUT_POSITION)}
               className={cn(fanClass, "border-destructive/40 bg-background text-destructive")}
             >

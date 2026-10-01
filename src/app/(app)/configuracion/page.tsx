@@ -5,6 +5,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/page-header";
 import { InstallAppSettings } from "@/components/pwa/install-app";
+import { NotificationSettings } from "./notification-settings";
 import { CALENDAR_VIEWS, DEFAULT_CALENDAR_VIEW } from "@/lib/calendar-views";
 import { DEFAULT_SESSION_MINUTES, SESSION_LENGTHS } from "@/lib/schedule";
 import { isFontSize } from "@/lib/font-size";
@@ -29,7 +30,9 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("theme, font_size, calendar_view, default_session_minutes, default_session_fee, timezone")
+    .select(
+      "theme, font_size, calendar_view, default_session_minutes, default_session_fee, timezone, reminder_minutes, daily_summary_enabled, daily_summary_time, notification_show_name",
+    )
     .eq("id", data.claims.sub)
     .single();
 
@@ -102,6 +105,20 @@ export default async function SettingsPage() {
           </Field>
         </SettingsSection>
 
+        <SettingsSection
+          title="Notificaciones"
+          description="Recordatorios de sesión y resumen del día. Se activan en cada dispositivo por separado."
+        >
+          <NotificationSettings
+            preferences={{
+              reminderMinutes: profile ? profile.reminder_minutes : 10,
+              dailySummaryEnabled: profile?.daily_summary_enabled ?? false,
+              dailySummaryTime: profile?.daily_summary_time ?? "08:00",
+              showName: profile?.notification_show_name ?? false,
+            }}
+          />
+        </SettingsSection>
+
         <SettingsSection title="Vacaciones" description="Los días de vacaciones se pintan en el calendario.">
           <Field>
             <FieldLabel htmlFor="vacation_range">Períodos</FieldLabel>
@@ -109,7 +126,11 @@ export default async function SettingsPage() {
           </Field>
         </SettingsSection>
 
-        <SettingsSection title="Instalar la app" description="Usá Profesio como una app más de tu computadora o tu celular.">
+        <SettingsSection
+          id="instalar"
+          title="Instalar la app"
+          description="Usá Profesio como una app más de tu computadora o tu celular."
+        >
           <Field>
             <InstallAppSettings />
           </Field>
