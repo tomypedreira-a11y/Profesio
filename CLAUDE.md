@@ -66,6 +66,7 @@ src/
     calendar/                    Calendario, panel de sesión, agendar, reprogramar/cancelar
     notes/                       Editor de anotaciones de sesión
     payments/                    Botones de cobro y cobro dentro del panel de sesión
+    pwa/                         Registro del service worker, instalar la app, aviso sin conexión
     profile-defaults-provider.tsx  Duración y valor por defecto del perfil (los carga el layout)
   lib/
     supabase/{client,server,proxy}.ts
@@ -196,6 +197,22 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   Excepción futura: cambiar email o contraseña en Cuenta llevará formulario con botón y confirmación.
 - Comentarios breves en castellano explicando el *porqué*.
 
+## PWA
+
+Profesio se instala como app (Chrome, Edge, Android; en iPhone/iPad desde Safari, "Agregar a pantalla de inicio").
+- `src/app/manifest.ts` (manifest), íconos en `public/icons/` + `src/app/favicon.ico` e `icon.png`. Se generan con
+  `node scripts/generate-icons.mjs` (diseño provisorio: "P" en Lora, fuente en `scripts/fonts/`); con el logo final,
+  cambiar el script y volver a correrlo. Si cambian `offline.html` o los íconos, subir la versión del caché en `sw.js`.
+- `public/sw.js` (lo registra `components/pwa/service-worker-register.tsx`, **solo en producción**): precachea
+  `offline.html` y los íconos; las navegaciones van a la red y, sin conexión, muestran `offline.html`.
+- **Regla: el service worker nunca cachea páginas de la app, respuestas de Supabase ni Server Actions.** Son datos
+  clínicos y no pueden quedar guardados en el dispositivo. No es una app offline.
+- `sw.js`, `offline.html` y el manifest están fuera del matcher de `proxy.ts` (se piden sin sesión).
+- Instalar: `useInstallPrompt()` (`hooks/use-install-prompt.ts`), en Configuración ("Instalar la app") y en el
+  menú del usuario. Sin conexión: `components/pwa/offline-banner.tsx` (con `navigator.onLine`; no se usa
+  `experimental.useOffline` porque reintenta solas las Server Actions y podría repetir una escritura).
+- Para probarla: `npm run build && npm run start` (en `npm run dev` no hay service worker).
+
 ## Flujo de trabajo (Git)
 
 - `main` siempre funciona y está protegida: todo entra por Pull Request aprobado por el otro.
@@ -206,6 +223,7 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 
 ## Pendientes conocidos
 
-- Etapa 7: PWA (manifest e íconos), separar `profesio-prod`, SMTP propio (mails en castellano),
-  prueba con un psicólogo real.
+- Etapa 7: separar `profesio-prod`, SMTP propio (mails en castellano), prueba con un psicólogo real.
+- Notificaciones (recordatorios de sesión): el service worker ya tiene el lugar para el evento `push`.
+- Logo definitivo (los íconos actuales son provisorios).
 - Auditoría de lecturas (hoy solo se registran modificaciones).
