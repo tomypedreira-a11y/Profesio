@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { setNewPassword } from "../actions";
 import type { FormState } from "@/lib/form-state";
+import { APP_HOME } from "@/lib/routes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
@@ -20,7 +21,7 @@ export function NewPasswordForm() {
   useEffect(() => {
     if (!state.success) return;
     toast.success(state.success);
-    router.replace("/");
+    router.replace(APP_HOME);
   }, [state, router]);
 
   return (

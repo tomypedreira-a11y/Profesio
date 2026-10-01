@@ -5,6 +5,7 @@ import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register"
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { FONT_SIZE_SCRIPT } from "@/lib/font-size";
+import { SITE_URL } from "@/lib/legal";
 import "./globals.css";
 
 // Texto en Outfit (geométrica suave) y títulos en Lora (serif cálida).
@@ -24,6 +25,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Base de las URLs absolutas (OpenGraph, canonical): siempre la de producción, también en las previews.
+  metadataBase: new URL(SITE_URL),
   title: { default: "Profesio", template: "%s · Profesio" },
   description: "Agenda y gestión de pacientes para psicólogos.",
   // Instalada en iPhone/iPad (Agregar a pantalla de inicio): se abre como app, sin la barra de Safari.

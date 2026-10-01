@@ -9,9 +9,11 @@ import {
   LAST_ACTIVITY_COOKIE,
   parseIdleMinutes,
 } from "@/lib/idle";
+import { APP_HOME } from "@/lib/routes";
 
-// Rutas que se pueden ver sin estar logueado.
-const PUBLIC_PATHS = ["/login", "/registro", "/recuperar", "/auth"];
+// Rutas que se pueden ver sin estar logueado (y sus subrutas). "/" (la página promocional) va aparte,
+// como ruta exacta: si estuviera acá, todas las rutas empezarían con ella y serían públicas.
+const PUBLIC_PATHS = ["/login", "/registro", "/recuperar", "/auth", "/ayuda", "/terminos", "/privacidad"];
 
 // Pide el código de la verificación en dos pasos: requiere sesión (aunque esté bajo /login).
 const MFA_PATH = "/login/verificar";
@@ -47,16 +49,17 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isMfaPage = pathname === MFA_PATH;
   const isPublic =
-    !isMfaPage && PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+    pathname === "/" ||
+    (!isMfaPage && PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`)));
 
   // Sin sesión y en una ruta privada → al login.
   if (!isLoggedIn && !isPublic) {
     return redirectKeepingCookies(request, response, "/login");
   }
 
-  // Con sesión y en login/registro → al calendario.
+  // Con sesión y en login/registro → al calendario. La página promocional y las legales se ven igual con sesión.
   if (isLoggedIn && (pathname === "/login" || pathname === "/registro")) {
-    return redirectKeepingCookies(request, response, "/");
+    return redirectKeepingCookies(request, response, APP_HOME);
   }
 
   if (!isLoggedIn || isPublic) return response;
@@ -85,10 +88,10 @@ export async function updateSession(request: NextRequest) {
       return redirectKeepingCookies(request, response, `${MFA_PATH}${next}`);
     }
     if (!mfaPending && isMfaPage) {
-      return redirectKeepingCookies(request, response, "/");
+      return redirectKeepingCookies(request, response, APP_HOME);
     }
   } else if (isMfaPage) {
-    return redirectKeepingCookies(request, response, "/");
+    return redirectKeepingCookies(request, response, APP_HOME);
   }
 
   // Cualquier request con sesión cuenta como actividad. Al final: setAll puede reemplazar `response`.

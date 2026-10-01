@@ -6,8 +6,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useLayoutEffect, useSyncExternalStore } from "react";
 
 // Secciones principales: se llega desde la barra inferior o el panel lateral, y empiezan un recorrido.
-// Las vistas del calendario (/calendario) se abren desde el calendario: su flecha vuelve ahí.
-const MAIN_SECTIONS = ["/", "/pacientes", "/sesiones", "/ingresos", "/perfil", "/configuracion"];
+// Las vistas del calendario (/calendario/vistas) se abren desde el calendario: su flecha vuelve ahí.
+const MAIN_SECTIONS = ["/calendario", "/pacientes", "/sesiones", "/ingresos", "/perfil", "/configuracion"];
 
 const STORAGE_KEY = "profesio:back-stack";
 const MAX_ENTRIES = 20;
@@ -27,8 +27,8 @@ function parentOf(path: string) {
 
 function labelFor(path: string) {
   const labels: Record<string, string> = {
-    "/": "Calendario",
-    "/calendario": "Vistas",
+    "/calendario": "Calendario",
+    "/calendario/vistas": "Vistas",
     "/pacientes": "Pacientes",
     "/pacientes/archivados": "Archivados",
     "/sesiones": "Sesiones",
