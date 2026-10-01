@@ -167,19 +167,27 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
 
   // La lista solo muestra los días con eventos: sin esto, un día de vacaciones sin sesiones no aparecería.
   // Cada período va como un evento de día entero, solo en la lista (en las grillas ya se pinta el día).
-  const vacationSources = useMemo<EventInput[][]>(() => {
-    if (view !== "listWeek") return [];
-    const events = vacations.map((v) => ({
-      id: `vacation-${v.id}`,
-      title: "Vacaciones",
-      start: v.start_date,
-      end: dayKey(addDays(parseISO(v.end_date), 1)), // el fin de un evento de día entero no se incluye
-      allDay: true,
-      classNames: ["vacation-marker"],
-      extendedProps: { vacation: true },
-    }));
-    return [events];
-  }, [view, vacations]);
+  const vacationEvents = useMemo<EventInput[]>(
+    () =>
+      vacations.map((v) => ({
+        id: `vacation-${v.id}`,
+        title: "Vacaciones",
+        start: v.start_date,
+        end: dayKey(addDays(parseISO(v.end_date), 1)), // el fin de un evento de día entero no se incluye
+        allDay: true,
+        classNames: ["vacation-marker"],
+        extendedProps: { vacation: true },
+      })),
+    [vacations],
+  );
+
+  // Todas las fuentes de eventos van juntas en eventSources: FullCalendar toma esa lista como completa
+  // y quita las que no estén (si las sesiones fueran aparte, por "events", se borraban al cambiar de vista
+  // y el calendario quedaba vacío). Cada fuente conserva su identidad, así no se recarga de más.
+  const eventSources = useMemo(
+    () => (view === "listWeek" ? [fetchEvents, vacationEvents] : [fetchEvents]),
+    [view, fetchEvents, vacationEvents],
+  );
 
   // De la semana indicada: pacientes irregulares activos sin sesión (no cancelada) y sesiones por día.
   const loadWeek = useCallback(
@@ -445,8 +453,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
             navLinks={compact} // en la lista, el nombre del día abre ese día; en el mes, su número
             navLinkDayClick={openDay}
             noEventsText="No hay sesiones en estos días."
-            events={fetchEvents}
-            eventSources={vacationSources}
+            eventSources={eventSources}
             datesSet={handleDatesSet}
             dateClick={handleDateClick}
             eventClick={handleEventClick}
