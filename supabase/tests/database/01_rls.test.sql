@@ -4,12 +4,35 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(18);
 
 -- Dos psicólogos de prueba (el trigger crea sus perfiles).
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'a@test.local'),
   ('22222222-2222-2222-2222-222222222222', 'b@test.local');
+
+-- El rol anónimo no tiene permisos sobre nada del esquema public (lo garantizan las migraciones,
+-- no la configuración del proyecto). Una tabla, vista o función nueva sin revocar falla acá.
+select is(
+  (select array_agg(table_name::text order by table_name) from information_schema.role_table_grants
+    where grantee = 'anon' and table_schema = 'public'),
+  null,
+  'el rol anónimo no tiene permisos sobre tablas ni vistas'
+);
+select is(
+  (select array_agg(c.relname::text order by c.relname) from pg_class c
+    where c.relnamespace = 'public'::regnamespace
+      -- case: has_sequence_privilege falla si se evalúa sobre algo que no es una secuencia.
+      and case when c.relkind = 'S' then has_sequence_privilege('anon', c.oid, 'usage') else false end),
+  null,
+  'el rol anónimo no usa secuencias'
+);
+select is(
+  (select array_agg(p.proname::text order by p.proname) from pg_proc p
+    where p.pronamespace = 'public'::regnamespace and has_function_privilege('anon', p.oid, 'execute')),
+  null,
+  'el rol anónimo no ejecuta funciones'
+);
 
 -- Psicólogo A: un paciente, una sesión y unas vacaciones.
 set local role authenticated;
@@ -74,10 +97,9 @@ select is(
   'el paciente de A no cambió'
 );
 
--- Sin sesión iniciada no se accede a nada: RLS no le muestra filas ni le deja escribir.
--- (Que además no tenga permisos sobre las tablas depende de la configuración del proyecto.)
+-- Sin sesión iniciada no se accede a nada.
 set local role anon;
-select is((select count(*)::int from public.patients), 0, 'el rol anónimo no ve pacientes');
+select throws_ok($$ select * from public.patients $$, '42501', null, 'el rol anónimo no lee pacientes');
 select throws_ok(
   $$ insert into public.patients (psychologist_id, first_name) values ('11111111-1111-1111-1111-111111111111', 'Anónimo') $$,
   '42501', null,

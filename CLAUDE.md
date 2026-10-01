@@ -99,9 +99,11 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 
 - **RLS en todas las tablas.** Cada fila tiene `psychologist_id` (default `auth.uid()`) y la política
   es `psychologist_id = (select auth.uid())`. Una tabla nueva sin política no se mergea.
-- **Las tablas nuevas no se exponen solas** (está desactivado en Supabase). Cada migración que crea
-  una tabla, vista o función debe incluir sus `grant ... to authenticated`.
+- **Las tablas nuevas no se exponen solas** (está desactivado en Supabase, y las migraciones le quitan
+  todo al rol `anon`, también por defecto). Cada migración que crea una tabla, vista o función debe incluir
+  sus `grant ... to authenticated`.
   Las funciones: `revoke execute ... from public, anon` + `grant execute ... to authenticated`.
+  `01_rls.test.sql` falla si `anon` puede usar algo del esquema `public`.
 - Funciones SQL: `set search_path = ''` y nombres calificados (`public.tabla`).
   `security invoker` salvo que sea imprescindible (solo `handle_new_user` y `write_audit_log` son `security definer`).
 - Las vistas siempre con `with (security_invoker = true)`.
