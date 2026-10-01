@@ -71,6 +71,7 @@ src/
     supabase/{client,server,proxy}.ts
     database.types.ts            Generado por Supabase: NO editar a mano
     phone.ts  format.ts  form-state.ts  theme.ts  schedule.ts  payments.ts  calendar-views.ts  vacations.ts  modality.ts
+    zoned.ts  timezones.ts       Fechas en la zona del perfil y zonas para elegir
 supabase/migrations/             Toda la estructura de la base, en orden
 supabase/tests/database/         Tests de la base (pgTAP): RLS, agenda, cobros, anotaciones, vacaciones, modalidad
 ```
@@ -85,7 +86,7 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 
 | Tabla | Contenido |
 |---|---|
-| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria, duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, vista inicial del calendario (`calendar_view`). |
+| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria (`timezone`), duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, vista inicial del calendario (`calendar_view`). |
 | `patients` | Pacientes. `active = false` = archivado. Teléfono en E.164. `modality`: `in_person` (por defecto) o `virtual`. |
 | `session_series` | Horario fijo semanal (día, hora y duración). Un paciente puede tener varios. `end_date is null` = vigente. |
 | `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). Cobro: `fee`, `paid_at`, `payment_method`. `modality` null = la del paciente. |
@@ -166,8 +167,13 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 - **Pacientes:** se archivan, no se borran. Archivar quita las sesiones futuras de su horario fijo.
 - **Teléfonos:** se guardan en E.164 (`+5491123456789`) usando `normalizePhone` de `lib/phone.ts`.
   Argentina por defecto; a los números argentinos sin 9 se les agrega (se asumen celulares, para WhatsApp).
-- **Fechas:** la base guarda `timestamptz`. Las horas "de reloj" se convierten con la zona horaria
-  de `profiles.timezone` (por defecto `America/Argentina/Buenos_Aires`).
+- **Fechas y zona horaria:** la base guarda `timestamptz`. Las horas "de reloj" se convierten con la zona horaria
+  de `profiles.timezone` (la del navegador al registrarse; si no, `America/Argentina/Buenos_Aires`), que se cambia
+  en Configuración (`set_timezone`: las sesiones futuras y los horarios fijos conservan su hora de reloj).
+  **Toda la app usa la zona del perfil, nunca la del dispositivo:** el calendario (FullCalendar con `timeZone` y
+  `time-zone-plugin.ts`), "hoy" y los selectores de fecha. En el navegador, los días se manejan "de reloj" con
+  `lib/zoned.ts` (`toWall`, `fromWall`, `todayIn`; zona vía `useTimeZone()`): no usar `new Date()` ni
+  `startOfDay(new Date())` para saber qué día es. Zonas para elegir: `lib/timezones.ts`.
 - Datos de prueba ficticios; **nunca pacientes reales** fuera de producción.
 
 ## Convenciones de código
@@ -203,4 +209,3 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 - Etapa 7: PWA (manifest e íconos), separar `profesio-prod`, SMTP propio (mails en castellano),
   prueba con un psicólogo real.
 - Auditoría de lecturas (hoy solo se registran modificaciones).
-- El calendario usa la zona horaria del dispositivo (no la del perfil).

@@ -2,6 +2,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { toSlots } from "@/lib/schedule";
 import { sortName } from "@/lib/format";
+import { DEFAULT_TIME_ZONE } from "@/lib/timezones";
 import { DEFAULT_CALENDAR_VIEW, isCalendarView, type CalendarViewPreference } from "@/lib/calendar-views";
 import type { PatientOption } from "@/components/calendar/types";
 import type { PatientListItem } from "./patient-list";
@@ -14,7 +15,7 @@ export async function getTimeZone() {
     .select("timezone")
     .eq("id", claims?.claims.sub ?? "")
     .single();
-  return data?.timezone ?? "America/Argentina/Buenos_Aires";
+  return data?.timezone ?? DEFAULT_TIME_ZONE;
 }
 
 // Vista con la que abre el calendario (preferencia del perfil).

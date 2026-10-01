@@ -3,7 +3,7 @@
 // Vacaciones: lista de períodos cargados (los que no terminaron) y alta de uno nuevo.
 // A diferencia de las demás opciones, se agrega con botón y confirmación: quita sesiones del calendario.
 import { useState, useTransition } from "react";
-import { format, parseISO, startOfDay } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es as dateFnsEs } from "date-fns/locale";
 import { CalendarIcon, TreePalmIcon, Trash2Icon } from "lucide-react";
 import { es } from "react-day-picker/locale";
@@ -25,6 +25,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { FieldDescription, FieldError } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useVacations } from "@/components/vacations-provider";
+import { useTimeZone } from "@/components/profile-defaults-provider";
+import { todayIn } from "@/lib/zoned";
 import { dayKey, type Vacation } from "@/lib/vacations";
 import { addVacation, removeVacation } from "./actions";
 
@@ -41,7 +43,7 @@ function formatRange(from: Date, to: Date) {
 }
 
 export function VacationSettings() {
-  const today = dayKey(new Date());
+  const today = dayKey(todayIn(useTimeZone()));
   // Las que ya terminaron no se muestran (siguen pintadas en el calendario).
   const vacations = useVacations().filter((v) => v.end_date >= today);
 
@@ -98,7 +100,7 @@ function AddVacation() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
-  const today = startOfDay(new Date());
+  const today = todayIn(useTimeZone());
   const from = range?.from;
   const to = range?.to ?? range?.from; // un solo día elegido = vacaciones de un día
 

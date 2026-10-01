@@ -1,20 +1,22 @@
 "use client";
 
 // Vista semanal del celular: los 7 días en fila; al tocar uno, el calendario muestra ese día.
-import { addDays, format, isSameDay, isToday } from "date-fns";
+import { addDays, format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { TreePalmIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type WeekStripProps = {
+  // Días de reloj en la zona del perfil (lib/zoned.ts), no en la del dispositivo.
   weekStart: Date; // lunes de la semana
   selected: Date;
+  today: Date;
   counts: number[] | null; // sesiones no canceladas de cada día (null mientras carga)
   isVacation: (day: Date) => boolean;
   onSelect: (day: Date) => void;
 };
 
-export function WeekStrip({ weekStart, selected, counts, isVacation, onSelect }: WeekStripProps) {
+export function WeekStrip({ weekStart, selected, today, counts, isVacation, onSelect }: WeekStripProps) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
@@ -39,7 +41,7 @@ export function WeekStrip({ weekStart, selected, counts, isVacation, onSelect }:
               // Días de vacaciones, con el mismo color que en el calendario.
               !active && vacation && "border-(--vacation-border) bg-(--vacation) hover:bg-(--vacation)",
               // Hoy se remarca aunque no esté elegido.
-              !active && isToday(day) && "border-primary-border",
+              !active && isSameDay(day, today) && "border-primary-border",
             )}
           >
             <span className={cn("text-[11px] capitalize", !active && "text-muted-foreground")}>

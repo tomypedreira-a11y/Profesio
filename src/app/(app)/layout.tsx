@@ -14,6 +14,7 @@ import { ThemeSync } from "@/components/theme-provider";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DEFAULT_SESSION_MINUTES } from "@/lib/schedule";
+import { DEFAULT_TIME_ZONE } from "@/lib/timezones";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -24,7 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [{ data: profile }, { data: vacations }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("first_name, last_name, theme, font_size, default_session_minutes, default_session_fee")
+      .select("first_name, last_name, theme, font_size, default_session_minutes, default_session_fee, timezone")
       .eq("id", claims.sub)
       .single(),
     supabase.from("vacations").select("id, start_date, end_date").order("start_date"),
@@ -63,6 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             value={{
               sessionMinutes: profile?.default_session_minutes ?? DEFAULT_SESSION_MINUTES,
               sessionFee: profile?.default_session_fee ?? null,
+              timeZone: profile?.timezone ?? DEFAULT_TIME_ZONE,
             }}
           >
             <VacationsProvider value={vacations ?? []}>{children}</VacationsProvider>

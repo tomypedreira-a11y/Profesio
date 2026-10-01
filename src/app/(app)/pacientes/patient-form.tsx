@@ -6,6 +6,7 @@ import { type FormState, formKey } from "@/lib/form-state";
 import { formatFee } from "@/lib/format";
 import { resolveEnd, type ScheduleSlot } from "@/lib/schedule";
 import { DEFAULT_MODALITY, type Modality } from "@/lib/modality";
+import { todayIn } from "@/lib/zoned";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -13,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormMessage } from "@/components/form-message";
 import { ModalityChoice } from "@/components/modality-choice";
-import { useDefaultFee, useSessionLength } from "@/components/profile-defaults-provider";
+import { useDefaultFee, useSessionLength, useTimeZone } from "@/components/profile-defaults-provider";
 import { initialPlan, planDate, planSlotsJson, SessionPlanFields, type SessionPlan } from "@/components/calendar/session-plan-fields";
 import { BirthDateInput } from "./birth-date-input";
 
@@ -64,7 +65,10 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
 
   // Las sesiones son estado del componente (no inputs sueltos), así que no se pierden si hay error.
   // Un paciente nuevo arranca como regular (lo más común); al editar, se respeta lo que tiene.
-  const [plan, setPlan] = useState<SessionPlan>(() => initialPlan(defaults.schedules, undefined, isEdit ? "irregular" : "fixed"));
+  const timeZone = useTimeZone();
+  const [plan, setPlan] = useState<SessionPlan>(() =>
+    initialPlan(defaults.schedules, undefined, isEdit ? "irregular" : "fixed", todayIn(timeZone)),
+  );
   const hadFixedSchedule = isEdit && defaults.schedules.length > 0;
   // El fin vacío se completa con la duración habitual del perfil antes de enviar.
   const minutes = useSessionLength();

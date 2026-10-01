@@ -21,6 +21,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { shortName, sortName } from "@/lib/format";
 import { dayKey, findVacation, isVacationDay } from "@/lib/vacations";
+import { fromWall, todayIn, toWall } from "@/lib/zoned";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useVacations } from "@/components/vacations-provider";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import { NextSessionPanel } from "./next-session-panel";
 import { SessionSheet } from "./session-sheet";
 import { UnscheduledPanel, UnscheduledSheet } from "./unscheduled-panel";
 import { WeekStrip } from "./week-strip";
+import { timeZonePlugin } from "./time-zone-plugin";
 import type { CalendarViewPreference } from "@/lib/calendar-views";
 import { SESSION_COLUMNS, type CalendarSession, type PatientOption, type UnscheduledPatient } from "./types";
 import "./calendar.css";
@@ -49,7 +51,7 @@ const CUSTOM_VIEWS = {
 };
 
 type CalendarViewProps = {
-  timeZone: string;
+  timeZone: string; // la del perfil: el calendario la usa aunque el dispositivo esté en otra
   patients?: PatientOption[]; // para "Agregar sesión" (solo en la pantalla principal)
   initialView: CalendarViewPreference; // vista elegida en el perfil
   // "browse": pantalla aparte (/calendario) para mirar cualquier vista desde el celular,
@@ -70,7 +72,9 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
   const [view, setView] = useState<ViewKey>(initialView);
   const [hours, setHours] = useState({ min: DEFAULT_MIN_HOUR, max: DEFAULT_MAX_HOUR });
   const [selected, setSelected] = useState<{ session: CalendarSession; isNext: boolean } | null>(null);
-  const [day, setDay] = useState<Date | null>(null); // primer día visible (el elegido en la tira)
+  // Días "de reloj" en la zona del perfil (ver lib/zoned.ts): primer día visible (el elegido en la tira)
+  // y lunes de la semana de "No agendados".
+  const [day, setDay] = useState<Date | null>(null);
   const [week, setWeek] = useState<Date | null>(null);
   const weekRef = useRef<Date | null>(null);
   const [unscheduled, setUnscheduled] = useState<UnscheduledPatient[]>([]);
@@ -126,7 +130,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
       // En vacaciones no se muestra ningún paciente de horario fijo: las agendadas ya se quitaron
       // al cargarlas, y las canceladas (que se conservan) se ocultan.
       const list = ((sessions ?? []) as CalendarSession[]).filter(
-        (s) => !(s.series_id && s.status === "cancelled" && isVacationDay(vacations, new Date(s.starts_at))),
+        (s) => !(s.series_id && s.status === "cancelled" && isVacationDay(vacations, toWall(s.starts_at, timeZone))),
       );
       setNextSession((next as CalendarSession | null) ?? null);
 
@@ -134,8 +138,8 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
       let min = DEFAULT_MIN_HOUR;
       let max = DEFAULT_MAX_HOUR;
       for (const s of list) {
-        const start = new Date(s.starts_at);
-        const end = new Date(s.ends_at);
+        const start = toWall(s.starts_at, timeZone);
+        const end = toWall(s.ends_at, timeZone);
         min = Math.min(min, start.getHours());
         // Si la sesión termina después de medianoche, se muestra hasta las 24.
         const endHour = end.getDate() !== start.getDate() ? 24 : end.getHours() + (end.getMinutes() > 0 ? 1 : 0);
@@ -162,7 +166,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
         };
       });
     },
-    [supabase, vacations],
+    [supabase, vacations, timeZone],
   );
 
   // La lista solo muestra los días con eventos: sin esto, un día de vacaciones sin sesiones no aparecería.
@@ -189,7 +193,8 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
     [view, fetchEvents, vacationEvents],
   );
 
-  // De la semana indicada: pacientes irregulares activos sin sesión (no cancelada) y sesiones por día.
+  // De la semana indicada (su lunes, de reloj): pacientes irregulares activos sin sesión (no cancelada)
+  // y sesiones por día.
   const loadWeek = useCallback(
     async (weekStart: Date) => {
       const weekEnd = addDays(weekStart, 7);
@@ -199,14 +204,14 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
           .from("sessions")
           .select("patient_id, starts_at")
           .eq("status", "scheduled")
-          .gte("starts_at", weekStart.toISOString())
-          .lt("starts_at", weekEnd.toISOString()),
+          .gte("starts_at", fromWall(weekStart, timeZone).toISOString())
+          .lt("starts_at", fromWall(weekEnd, timeZone).toISOString()),
       ]);
       // Si mientras tanto se pasó a otra semana, esta respuesta ya no sirve.
       if (weekRef.current?.getTime() !== weekStart.getTime()) return;
 
       const counts = Array<number>(7).fill(0);
-      for (const b of booked ?? []) counts[differenceInCalendarDays(new Date(b.starts_at), weekStart)]++;
+      for (const b of booked ?? []) counts[differenceInCalendarDays(toWall(b.starts_at, timeZone), weekStart)]++;
       setWeekCounts(counts);
 
       const bookedIds = new Set((booked ?? []).map((b) => b.patient_id));
@@ -217,27 +222,26 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
           .sort((a, b) => collator.compare(sortName(a), sortName(b))),
       );
     },
-    [supabase],
+    [supabase, timeZone],
   );
 
   // Al cambiar de fecha o vista: actualizar el título y la semana de "No agendados".
+  // FullCalendar da instantes; acá se pasan a días de reloj de la zona del perfil.
   function handleDatesSet(arg: DatesSetArg) {
     const type = arg.view.type as ViewKey;
+    const start = toWall(arg.view.currentStart, timeZone);
     setView(type);
-    setDay(arg.view.currentStart);
+    setDay(start);
 
     // En la vista mensual se usa la semana actual (si es el mes que se ve) o la primera del mes.
-    const today = new Date();
-    const reference =
-      type === "dayGridMonth"
-        ? isSameMonth(today, arg.view.currentStart) ? today : arg.view.currentStart
-        : arg.view.currentStart;
+    const today = todayIn(timeZone);
+    const reference = type === "dayGridMonth" ? (isSameMonth(today, start) ? today : start) : start;
     const weekStart = startOfWeek(reference, { weekStartsOn: 1 });
 
     // La semana del celular muestra un solo día, pero el título es el de la semana.
     setTitle(
       type === "timeGridWeekMobile"
-        ? arg.view.calendar.formatRange(weekStart, addDays(weekStart, 6), {
+        ? arg.view.calendar.formatRange(fromWall(weekStart, timeZone), fromWall(addDays(weekStart, 6), timeZone), {
             year: "numeric",
             month: "short",
             day: "numeric",
@@ -326,15 +330,16 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
 
   const weekLabel = week ? `${format(week, "dd/MM")} al ${format(addDays(week, 6), "dd/MM")}` : "";
   const scheduleUnscheduled = (p: UnscheduledPatient) =>
-    setAdding({ patientId: p.id, date: week && new Date() < week ? week : undefined });
+    setAdding({ patientId: p.id, date: week && todayIn(timeZone) < week ? week : undefined });
 
   const pad = (h: number) => `${String(h).padStart(2, "0")}:00:00`;
   // Días de vacaciones: su columna (o su casilla, en el mes) y su encabezado se pintan.
   // El primero y el último llevan el borde de ese lado, así se ve dónde empieza y termina el período.
   const vacationClass = (arg: { date: Date }) => {
-    const vacation = findVacation(vacations, arg.date);
+    const date = toWall(arg.date, timeZone);
+    const vacation = findVacation(vacations, date);
     if (!vacation) return [];
-    const day = dayKey(arg.date);
+    const day = dayKey(date);
     return [
       "vacation-day",
       ...(day === vacation.start_date ? ["vacation-start"] : []),
@@ -420,15 +425,17 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
             weekStart={week}
             selected={day}
             counts={weekCounts}
+            today={todayIn(timeZone)}
             isVacation={(d) => isVacationDay(vacations, d)}
-            onSelect={(d) => api()?.gotoDate(d)}
+            onSelect={(d) => api()?.gotoDate(fromWall(d, timeZone))}
           />
         )}
 
         <div className={cn(compact && "calendar-compact")}>
           <FullCalendar
             ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+            plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, timeZonePlugin]}
+            timeZone={timeZone}
             locale={esLocale}
             initialView={initialView}
             views={CUSTOM_VIEWS}

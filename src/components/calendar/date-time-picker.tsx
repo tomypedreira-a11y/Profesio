@@ -2,13 +2,15 @@
 
 // Selector de fecha (calendario) + inicio y fin, usado al agendar y al reprogramar.
 import { useState } from "react";
-import { format, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { es as dateFnsEs } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { es } from "react-day-picker/locale";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useTimeZone } from "@/components/profile-defaults-provider";
+import { todayIn } from "@/lib/zoned";
 import { TimeRangeFields } from "./time-range-fields";
 
 type DateTimePickerProps = {
@@ -20,8 +22,9 @@ type DateTimePickerProps = {
   onEndChange: (value: string) => void;
 };
 
+// Las fechas son días de reloj en la zona del perfil (lib/zoned.ts).
 export function DateTimePicker({ date, onDateChange, start, end, onStartChange, onEndChange }: DateTimePickerProps) {
-  const today = startOfDay(new Date());
+  const today = todayIn(useTimeZone());
 
   return (
     <>
@@ -50,7 +53,7 @@ export function DatePicker({
   onDateChange: (date: Date | undefined) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const today = startOfDay(new Date());
+  const today = todayIn(useTimeZone());
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

@@ -7,7 +7,8 @@ import { PageHeader } from "@/components/page-header";
 import { CALENDAR_VIEWS, DEFAULT_CALENDAR_VIEW } from "@/lib/calendar-views";
 import { DEFAULT_SESSION_MINUTES, SESSION_LENGTHS } from "@/lib/schedule";
 import { isFontSize } from "@/lib/font-size";
-import { updateCalendarView, updateSessionLength } from "./actions";
+import { DEFAULT_TIME_ZONE, timeZoneItems } from "@/lib/timezones";
+import { updateCalendarView, updateSessionLength, updateTimeZone } from "./actions";
 import { DefaultFeeInput } from "./default-fee-input";
 import { FontSizeSelector } from "./font-size-selector";
 import { PreferenceSelect } from "./preference-select";
@@ -27,7 +28,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("theme, font_size, calendar_view, default_session_minutes, default_session_fee")
+    .select("theme, font_size, calendar_view, default_session_minutes, default_session_fee, timezone")
     .eq("id", data.claims.sub)
     .single();
 
@@ -61,6 +62,19 @@ export default async function SettingsPage() {
               save={updateCalendarView}
             />
             <FieldDescription>Cómo se muestra el calendario cada vez que entrás a la app.</FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="timezone">Zona horaria</FieldLabel>
+            <PreferenceSelect
+              id="timezone"
+              value={profile?.timezone ?? DEFAULT_TIME_ZONE}
+              items={timeZoneItems(profile?.timezone ?? DEFAULT_TIME_ZONE)}
+              save={updateTimeZone}
+            />
+            <FieldDescription>
+              La agenda se muestra en el horario de este país, aunque abras la app desde otro lugar. Si la cambiás,
+              tus sesiones agendadas y tus horarios fijos conservan su hora.
+            </FieldDescription>
           </Field>
         </SettingsSection>
 

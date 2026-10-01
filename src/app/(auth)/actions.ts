@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { isTimeZone } from "@/lib/timezones";
 import { createClient } from "@/lib/supabase/server";
 import { formValues, type FormState } from "@/lib/form-state";
 
@@ -16,6 +17,8 @@ const signupSchema = z.object({
   last_name: z.string().trim().min(1, "Ingresá tu apellido."),
   email: z.email("Ingresá un email válido."),
   password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres."),
+  // La del navegador (campo oculto). Si no llega o no es válida, el perfil queda en la zona por defecto.
+  timezone: z.string().optional().transform((tz) => (isTimeZone(tz) ? tz : undefined)),
 });
 
 // Traduce los errores de Supabase Auth a mensajes para el usuario.
@@ -60,7 +63,7 @@ export async function signup(_prev: FormState, formData: FormData): Promise<Form
     return { fieldErrors: z.flattenError(parsed.error).fieldErrors, values };
   }
 
-  const { email, password, first_name, last_name } = parsed.data;
+  const { email, password, first_name, last_name, timezone } = parsed.data;
   const origin = (await headers()).get("origin") ?? "";
 
   const supabase = await createClient();
@@ -69,7 +72,7 @@ export async function signup(_prev: FormState, formData: FormData): Promise<Form
     password,
     options: {
       // Los usa el trigger handle_new_user para completar el perfil.
-      data: { first_name, last_name },
+      data: { first_name, last_name, timezone },
       // A dónde lleva el link del mail de confirmación.
       emailRedirectTo: `${origin}/auth/confirm`,
     },
