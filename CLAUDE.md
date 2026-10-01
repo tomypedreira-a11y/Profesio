@@ -16,7 +16,7 @@ Documentación funcional y técnica: *Propuesta integral – App de gestión par
 - **Tailwind CSS 4** + **shadcn/ui con Base UI** (preset Nova, íconos Lucide).
 - **Zod 4** para validación, **date-fns / date-fns-tz** para fechas, **libphonenumber-js** para teléfonos.
 - **FullCalendar 6** (no la 7) para el calendario.
-- Deploy en **Vercel**; cada PR tiene preview.
+- Deploy en **Vercel**; cada PR tiene preview. Producción: https://www.miprofesio.com (ver "Infraestructura").
 
 ## Comandos
 
@@ -253,8 +253,8 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
 - **Contraseña:** "¿Olvidaste tu contraseña?" → `/recuperar` (siempre el mismo mensaje, exista o no la cuenta) →
   mail → `/auth/confirm?next=/nueva-contrasena`. Cambiarla en Configuración pide la actual: se verifica con
   `signInWithPassword` en un cliente aparte sin cookies (con el de la sesión, la reemplazaría por una aal1).
-  Mientras se use la plantilla de mail original de Supabase (`code`), el link funciona solo en el navegador donde
-  se pidió; con SMTP propio y plantilla con `token_hash`, en cualquiera.
+  En prod el link usa `token_hash` y funciona desde cualquier dispositivo; en dev, la plantilla por defecto (`code`),
+  solo en el mismo navegador (ver "Infraestructura" → Mails).
 - **Cierre por inactividad** (`profiles.idle_timeout_minutes`, sin opción "nunca"): cookies `profesio_last_activity`
   (ms) y `profesio_idle_timeout` (minutos) (`lib/idle.ts`). **Lo hace cumplir el proxy**: si venció, `signOut` y
   `/login?motivo=inactividad` antes de renderizar nada, también en Server Actions (para estas responde con
@@ -267,6 +267,8 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
   extender la propia sesión). Se escriben al ingresar (login, link del mail, código MFA) y al cambiar la preferencia.
   Limitación: si la sesión ya venció en el servidor (ej. el celular estuvo bloqueado más que el límite), un borrador
   sin guardar se pierde; en la práctica no debería haberlo (se guarda a los 3 s y al ocultar la app).
+  **Mantenimiento:** `x-action-redirect` es un header interno de Next.js. Al actualizar Next, probar el cierre por
+  inactividad durante un guardado (Server Action con la sesión vencida → tiene que ir al login sin ejecutarse).
 - **Verificación en dos pasos (TOTP):** Configuración → Cuenta (hasta 2 dispositivos; quitar el último pide un código).
   Con un factor verificado, el login sigue en `/login/verificar` y el proxy manda ahí toda ruta privada mientras la
   sesión sea aal1. La base no devuelve nada a una sesión aal1 de ese usuario (políticas restrictivas); el cron
@@ -279,6 +281,30 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
   factor en Supabase → Authentication → Users → el usuario → MFA. Eso cierra todas sus sesiones; después vuelve a
   activarla desde Configuración.
 
+## Infraestructura
+
+Sin claves ni secretos acá: están en Vercel, Supabase, Resend y `.env.local`.
+
+- **Dominio:** https://www.miprofesio.com. En Vercel, `miprofesio.com` y `profesio-six.vercel.app` redirigen (308)
+  a `www` (Vercel → Settings → Domains; no está en el código).
+- **DNS en Cloudflare:** los CNAME de Vercel van en "DNS only" (nube gris). Los MX, el SPF de la raíz y el DKIM
+  `cf2024-1` los administra Cloudflare Email Routing (aparecen con candado; no se editan a mano).
+- **Mails de prod:** SMTP propio con Resend (remitente `no-responder@miprofesio.com`, región sa-east-1; registros
+  `send`, `rsend` y `resend._domainkey` en Cloudflare). DMARC en `_dmarc` con `p=none`.
+  Las plantillas de prod (Confirm sign up, Reset password, Change email address y los avisos de seguridad de
+  contraseña, email y MFA) están en castellano y apuntan a
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=...` (`email`; `recovery` con `&next=/nueva-contrasena`;
+  `email_change`): el link funciona desde cualquier dispositivo. **Si se cambia `/auth/confirm`, revisar esas
+  plantillas en el panel de Supabase.**
+- **Mails de dev:** el servicio de Supabase: solo envía a miembros del equipo y con la plantilla por defecto
+  (link con `code`, que funciona solo en el mismo navegador).
+- **Supabase prod:** plan Pro, en una organización aparte de dev (dev sigue en el plan gratuito). Backups diarios,
+  cómputo Micro, leaked password protection (rechaza contraseñas filtradas con `weak_password`), mínimo 8
+  caracteres e inactivity timeout de sesiones también del lado de Supabase.
+  URL Configuration: Site URL `https://www.miprofesio.com`; Redirect URLs solo `https://www.miprofesio.com/**`
+  y `https://miprofesio.com/**`.
+- **Contacto y soporte:** `contacto@miprofesio.com` (Cloudflare Email Routing, reenvía al Gmail del proyecto).
+
 ## Flujo de trabajo (Git)
 
 - `main` siempre funciona y está protegida: todo entra por Pull Request aprobado por el otro.
@@ -288,14 +314,16 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
 - Antes del PR: `npm run build`, `npm run lint` y `npm run test:db` sin errores.
 - **Configuración de Supabase (dev y prod), desde el panel:** Authentication → Multi-Factor → TOTP habilitado
   (enroll y verify); Authentication → URL Configuration → Redirect URLs con el dominio y `/**` (ej.
-  `http://localhost:3000/**`), para que `/auth/confirm?next=...` sea aceptado. La plantilla "Reset password" se
-  configura cuando haya SMTP propio (con `token_hash` y `type=recovery`, como la de confirmación).
+  `http://localhost:3000/**` en dev), para que `/auth/confirm?next=...` sea aceptado. Lo de prod, en "Infraestructura".
 - **Una migración mergeada a `main` también se aplica a `profesio-prod`:** vincular prod, `db push` y volver a
   vincular dev (verificar siempre con `npx supabase projects list` cuál está vinculado):
   `npx supabase link --project-ref <ref de prod>` → `npx supabase db push` → `npx supabase link --project-ref <ref de dev>`.
 
 ## Pendientes conocidos
 
-- Etapa 7: separar `profesio-prod`, SMTP propio (mails en castellano), prueba con un psicólogo real.
+- Página promocional en `/` y la app en `/app`.
+- Términos y condiciones y política de privacidad.
+- Pasar el repo a privado.
+- Beta con psicólogos reales.
 - Logo definitivo (los íconos actuales son provisorios).
 - Auditoría de lecturas (hoy solo se registran modificaciones).

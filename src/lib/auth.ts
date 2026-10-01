@@ -10,8 +10,9 @@ export function authErrorMessage(code: string | undefined): string {
       return "Todavía no confirmaste tu email. Revisá tu casilla (y la carpeta de spam).";
     case "user_already_exists":
       return "Ya existe una cuenta con ese email.";
+    // En prod está activado "Prevent use of leaked passwords": el mínimo de largo ya lo valida Zod antes.
     case "weak_password":
-      return "La contraseña es demasiado débil. Probá con una más larga.";
+      return "Esa contraseña es muy común o apareció en filtraciones de datos. Elegí otra.";
     case "over_email_send_rate_limit":
     case "over_request_rate_limit":
       return "Demasiados intentos. Esperá unos minutos y volvé a probar.";
