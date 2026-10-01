@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useSyncExternalStore } from "react";
 import { signup } from "../actions";
 import { type FormState, formKey } from "@/lib/form-state";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,15 @@ import { FormMessage } from "@/components/form-message";
 
 const initialState: FormState = {};
 
+// Zona horaria del navegador, para el perfil (después se cambia en Configuración).
+// En el servidor no se conoce: queda vacía hasta que el formulario se hidrata.
+const noSubscribe = () => () => {};
+const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 export function SignupForm() {
   const [state, action, pending] = useActionState(signup, initialState);
   const errors = state.fieldErrors ?? {};
+  const timeZone = useSyncExternalStore(noSubscribe, browserTimeZone, () => "");
 
   // Registro exitoso: en lugar del formulario, mostramos el aviso del mail.
   if (state.success) {
@@ -41,6 +47,7 @@ export function SignupForm() {
       </CardHeader>
       <CardContent>
         <form key={formKey(state)} action={action}>
+          <input type="hidden" name="timezone" value={timeZone} />
           <FieldGroup>
             <FormMessage error={state.error} />
             <div className="grid grid-cols-2 gap-3">

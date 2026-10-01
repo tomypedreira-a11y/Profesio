@@ -8,6 +8,7 @@ import { isTheme } from "@/lib/theme";
 import { isFontSize } from "@/lib/font-size";
 import { isCalendarView } from "@/lib/calendar-views";
 import { isSessionLength } from "@/lib/schedule";
+import { isTimeZone } from "@/lib/timezones";
 import { parseFee } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
 
@@ -50,6 +51,19 @@ export async function updateSessionLength(minutes: string): Promise<SaveResult> 
   const value = Number(minutes);
   if (!isSessionLength(value)) return { error: "Elegí una de las duraciones." };
   return saveProfile({ default_session_minutes: value });
+}
+
+// Las sesiones futuras y los horarios fijos conservan su hora de reloj en la zona nueva (set_timezone).
+export async function updateTimeZone(timeZone: string): Promise<SaveResult> {
+  if (!isTimeZone(timeZone)) return { error: "Elegí una zona horaria." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_timezone", { p_timezone: timeZone });
+  if (error) return { error: error.code === "P0001" ? error.message : "No se pudo guardar. Volvé a intentar." };
+
+  // El layout carga la zona (la usan el calendario y los selectores de fecha).
+  revalidatePath("/", "layout");
+  return {};
 }
 
 // Opcional: vacío = sin valor por defecto.

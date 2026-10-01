@@ -566,6 +566,7 @@ export type Database = {
         Args: { p_at: string; p_psychologist_id: string }
         Returns: boolean
       }
+      is_valid_timezone: { Args: { p_timezone: string }; Returns: boolean }
       mark_session_unpaid: {
         Args: { p_session_id: string }
         Returns: undefined
@@ -626,6 +627,7 @@ export type Database = {
         Args: { p_modality: string; p_scope?: string; p_session_id: string }
         Returns: undefined
       }
+      set_timezone: { Args: { p_timezone: string }; Returns: number }
       update_patient: {
         Args: {
           p_birth_date?: string

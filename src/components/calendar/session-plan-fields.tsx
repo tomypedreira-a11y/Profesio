@@ -44,8 +44,7 @@ const FREQUENCY_ITEMS = SCHEDULE_FREQUENCIES.map((f) => ({ value: f.value, label
 
 // Próxima fecha de los horarios guardados, según su fecha de inicio y su frecuencia. Al editar se
 // muestra como "Primera sesión": si no se cambia, el paciente sigue en las mismas semanas.
-function nextScheduledDate(slots: ScheduleSlot[]): Date | undefined {
-  const today = startOfDay(new Date());
+function nextScheduledDate(slots: ScheduleSlot[], today: Date): Date | undefined {
   const dates = slots
     .filter((s) => s.start_date)
     .map((s) => {
@@ -57,7 +56,13 @@ function nextScheduledDate(slots: ScheduleSlot[]): Date | undefined {
 }
 
 // Sin horarios fijos arranca en `emptyType`: irregular al agregar una sesión, regular al crear un paciente.
-export function initialPlan(slots: ScheduleSlot[] = [], date?: Date, emptyType: SessionPlan["type"] = "irregular"): SessionPlan {
+// `today`: hoy en la zona del perfil (todayIn, lib/zoned.ts).
+export function initialPlan(
+  slots: ScheduleSlot[] = [],
+  date?: Date,
+  emptyType: SessionPlan["type"] = "irregular",
+  today: Date = startOfDay(new Date()),
+): SessionPlan {
   const frequency = slots[0]?.frequency ?? "weekly";
   return {
     type: slots.length > 0 ? "fixed" : emptyType,
@@ -66,7 +71,7 @@ export function initialPlan(slots: ScheduleSlot[] = [], date?: Date, emptyType: 
         ? slots.map((s) => ({ weekday: String(s.weekday), start: s.start_time, end: s.end_time }))
         : [{ weekday: "", start: "", end: "" }],
     frequency,
-    firstDate: frequency === "weekly" ? undefined : nextScheduledDate(slots),
+    firstDate: frequency === "weekly" ? undefined : nextScheduledDate(slots, today),
     date,
     start: "",
     end: "",

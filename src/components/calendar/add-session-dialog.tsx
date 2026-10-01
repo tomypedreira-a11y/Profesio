@@ -4,7 +4,7 @@
 // Se usa en Sesiones, en el calendario y en la ficha del paciente.
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { format, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { UserRoundIcon } from "lucide-react";
 import { toast } from "sonner";
 import { addSessions } from "@/app/(app)/sesiones/actions";
@@ -22,9 +22,10 @@ import {
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormMessage } from "@/components/form-message";
-import { useSessionLength } from "@/components/profile-defaults-provider";
+import { useSessionLength, useTimeZone } from "@/components/profile-defaults-provider";
 import { useVacations } from "@/components/vacations-provider";
 import { dayKey, isVacationDay } from "@/lib/vacations";
+import { todayIn } from "@/lib/zoned";
 import {
   FIRST_DATE_ERROR,
   initialPlan,
@@ -91,7 +92,7 @@ function AddSessionForm({
   showPatientLink,
   onDone,
 }: Omit<AddSessionDialogProps, "open" | "onOpenChange" | "onAdded"> & { onDone: () => void }) {
-  const today = startOfDay(new Date());
+  const today = todayIn(useTimeZone());
   const [patientId, setPatientId] = useState(initialPatientId ?? "");
   const [plan, setPlan] = useState<SessionPlan>(() => initialPlan([], defaultDate && defaultDate >= today ? defaultDate : today));
   const [error, setError] = useState<string>();

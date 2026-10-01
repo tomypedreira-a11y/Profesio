@@ -8,6 +8,7 @@ import { CalendarClockIcon, CalendarXIcon, UndoIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cancelSession, rescheduleSession, restoreSession } from "@/app/(app)/sesiones/actions";
 import { isValidRange, resolveEnd } from "@/lib/schedule";
+import { toWall } from "@/lib/zoned";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -148,7 +149,7 @@ function RescheduleForm({
 }) {
   // Arranca con la fecha y hora actuales de la sesión (si no pasó).
   const current = new Date(formatInTimeZone(session.starts_at, timeZone, "yyyy-MM-dd'T'HH:mm"));
-  const [date, setDate] = useState<Date | undefined>(current > new Date() ? current : undefined);
+  const [date, setDate] = useState<Date | undefined>(current > toWall(new Date(), timeZone) ? current : undefined);
   const [start, setStart] = useState(formatInTimeZone(session.starts_at, timeZone, "HH:mm"));
   const [end, setEnd] = useState(formatInTimeZone(session.ends_at, timeZone, "HH:mm"));
   const [scope, setScope] = useState<Scope>("one");

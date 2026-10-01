@@ -4,7 +4,8 @@ import { format } from "date-fns";
 
 export type Vacation = { id: string; start_date: string; end_date: string };
 
-// El día de una fecha local, comparable como texto con start_date y end_date.
+// El día de una fecha "de reloj" (en la zona del perfil, ver lib/zoned.ts), comparable como texto
+// con start_date y end_date.
 export const dayKey = (date: Date) => format(date, "yyyy-MM-dd");
 
 export function findVacation(vacations: readonly Vacation[], date: Date) {
