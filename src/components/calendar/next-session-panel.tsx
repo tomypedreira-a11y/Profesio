@@ -1,12 +1,13 @@
 "use client";
 
-// Tarjeta con la próxima sesión: paciente, fecha y cuánto falta (se actualiza cada minuto).
+// Tarjeta con la próxima sesión: paciente, fecha ("Hoy" o "Mañana" si corresponde) y cuánto falta
+// (se actualiza cada medio minuto; así "Mañana" pasa a "Hoy" a la medianoche).
 import { useEffect, useState } from "react";
 import { ClockIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatSessionShort, formatTimeUntil } from "@/lib/format";
+import { formatSessionRelative, formatTimeUntil } from "@/lib/format";
 import type { CalendarSession } from "./types";
 
 type NextSessionPanelProps = {
@@ -60,9 +61,10 @@ export function NextSessionPanel({ session, timeZone, onSelect, onStarted }: Nex
             <span className="truncate text-sm font-medium">
               {session.first_name} {session.last_name}
             </span>
-            <span className="truncate text-xs text-muted-foreground">
+            {/* "Hoy"/"Mañana" dependen de la hora: como el tiempo que falta (abajo), puede diferir del servidor. */}
+            <span suppressHydrationWarning className="truncate text-xs text-muted-foreground">
               <span className="max-lg:hidden">Próxima: </span>
-              {formatSessionShort(session.starts_at, timeZone)}
+              {formatSessionRelative(session.starts_at, timeZone, now)}
             </span>
           </div>
           {/* La sesión puede venir del servidor: si entre el servidor y el navegador cambió el minuto, el texto

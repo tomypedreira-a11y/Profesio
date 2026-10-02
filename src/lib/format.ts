@@ -1,8 +1,9 @@
 // Formatos de fecha, hora y dinero en castellano (Argentina).
-import { differenceInYears } from "date-fns";
+import { addDays, differenceInYears, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
 import { SCHEDULE_FREQUENCIES, type ScheduleFrequency, type ScheduleSlot } from "./schedule";
+import { toWall } from "./zoned";
 
 export const WEEKDAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -23,6 +24,17 @@ export function formatSchedules(slots: ScheduleSlot[]): string {
 // "mar 30/09 · 18:00"
 export function formatSessionShort(iso: string, timeZone: string): string {
   return formatInTimeZone(iso, timeZone, "EEE dd/MM · HH:mm", { locale: es });
+}
+
+// "Hoy · 18:00", "Mañana · 18:00" o, más adelante, "mar 30/09 · 18:00". Hoy y mañana son los de la zona
+// del perfil (no la del dispositivo); `now` se recibe para que quien lo muestra lo actualice (ej. a medianoche).
+export function formatSessionRelative(iso: string, timeZone: string, now: number | Date = Date.now()): string {
+  const day = format(toWall(iso, timeZone), "yyyy-MM-dd");
+  const today = toWall(now, timeZone);
+  const time = formatInTimeZone(iso, timeZone, "HH:mm");
+  if (day === format(today, "yyyy-MM-dd")) return `Hoy · ${time}`;
+  if (day === format(addDays(today, 1), "yyyy-MM-dd")) return `Mañana · ${time}`;
+  return formatSessionShort(iso, timeZone);
 }
 
 // "martes 30 de septiembre de 2026 · 18:00"

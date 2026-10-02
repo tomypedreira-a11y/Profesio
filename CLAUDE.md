@@ -104,7 +104,7 @@ src/
     sign-out.ts  pending-saves.ts  Cerrar sesión desde el navegador (guarda lo pendiente y desuscribe el dispositivo)
     routes.ts                    APP_HOME = "/calendario": destino después de ingresar e inicio de la PWA
     legal.ts                     Versión de los términos, fecha, datos del titular (marcadores), contacto y SITE_URL
-scripts/                         Íconos, datos de demo y capturas de la página promocional
+scripts/                         Íconos (y el logo de origen en scripts/logo/), datos de demo y capturas de la página promocional
 public/landing/                  Capturas de la app (datos ficticios) para la página promocional
 supabase/migrations/             Toda la estructura de la base, en orden
 supabase/tests/database/         Tests de la base (pgTAP): RLS, agenda, cobros, anotaciones, vacaciones, modalidad, MFA, términos
@@ -263,8 +263,10 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 
 Profesio se instala como app (Chrome, Edge, Android; en iPhone/iPad desde Safari, "Agregar a pantalla de inicio").
 - `src/app/manifest.ts` (manifest), íconos en `public/icons/` + `src/app/favicon.ico` e `icon.png`. Se generan con
-  `node scripts/generate-icons.mjs` (diseño provisorio: "P" en Lora, fuente en `scripts/fonts/`); con el logo final,
-  cambiar el script y volver a correrlo. Si cambian `offline.html` o los íconos, subir la versión del caché en `sw.js`.
+  `node scripts/generate-icons.mjs` a partir del árbol del logo (`scripts/logo/arbol.svg`, vectorizado de
+  `profesio-logo.png`), verde sobre el beige claro; en tamaños chicos usa una silueta engrosada. También genera
+  `logo-mark.png`, la marca de la interfaz (`components/logo.tsx`: panel lateral, encabezado del sitio, login).
+  Si cambian `offline.html` o los íconos, subir la versión del caché en `sw.js`.
 - `public/sw.js` (lo registra `components/pwa/service-worker-register.tsx`, **solo en producción**): precachea
   `offline.html` y los íconos; las navegaciones van a la red y, sin conexión, muestran `offline.html`.
 - **Regla: el service worker nunca cachea páginas de la app, respuestas de Supabase ni Server Actions.** Son datos
@@ -394,5 +396,4 @@ Sin claves ni secretos acá: están en Vercel, Supabase, Resend y `.env.local`.
 - Pedir la aceptación de los términos a las cuentas creadas antes (tienen `terms_accepted_at` null).
 - Pasar el repo a privado.
 - Beta con psicólogos reales.
-- Logo definitivo (los íconos actuales son provisorios).
 - Auditoría de lecturas (hoy solo se registran modificaciones).
