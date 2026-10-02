@@ -67,7 +67,7 @@ Para hacer un cambio en la base:
 npx supabase migration new nombre_del_cambio   # crea el archivo vacío
 # escribir el SQL en el archivo creado
 npx supabase db push                            # aplica la migración
-npx supabase gen types typescript --linked > src/lib/database.types.ts
+npx supabase gen types typescript --linked | Out-File -Encoding utf8 src/lib/database.types.ts
 ```
 
 La migración y los tipos actualizados van en el mismo PR que el código que los usa.

@@ -11,7 +11,15 @@ export function LogoMark({ className }: { className?: string }) {
         className,
       )}
     >
-      <Image src="/icons/logo-mark.png" alt="" width={96} height={96} className="size-full object-contain" />
+      {/* Siempre arriba de todo (encabezado, panel lateral, login): eager, no lazy. */}
+      <Image
+        src="/icons/logo-mark.png"
+        alt=""
+        width={96}
+        height={96}
+        loading="eager"
+        className="size-full object-contain"
+      />
     </span>
   );
 }
