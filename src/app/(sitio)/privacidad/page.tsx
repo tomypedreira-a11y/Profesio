@@ -72,8 +72,9 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Seguridad y funcionamiento:</strong> un registro de las modificaciones de los datos (qué cambió y
-          cuándo), los dispositivos donde activaste las notificaciones, los dispositivos de la verificación en dos pasos
-          y las notificaciones enviadas.
+          cuándo) y de cada descarga del libro de sesiones de un paciente en PDF (quién, de qué paciente y cuándo; el
+          PDF no se guarda), los dispositivos donde activaste las notificaciones, los dispositivos de la verificación
+          en dos pasos y las notificaciones enviadas.
         </li>
       </ul>
 

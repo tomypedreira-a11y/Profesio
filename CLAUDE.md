@@ -18,6 +18,7 @@ Documentación funcional y técnica: *Propuesta integral – App de gestión par
   En el navegador va con `jitless` (`src/instrumentation-client.ts`): sin eso choca con la CSP.
 - **Cloudflare Turnstile** (captcha) en el login, el registro, la recuperación y el cambio de contraseña.
 - **FullCalendar 6** (no la 7) para el calendario.
+- **@react-pdf/renderer** para el PDF del libro de sesiones (solo en el servidor; ver "Libro de sesiones en PDF").
 - Deploy en **Vercel**; cada PR tiene preview. Producción: https://www.miprofesio.com (ver "Infraestructura").
 
 ## Comandos
@@ -79,7 +80,7 @@ src/
                                  /app/nueva-contrasena y sus acciones
       (app)/                     Pantallas con sesión iniciada (layout con panel lateral)
         calendario/              Calendario: vista principal (APP_HOME); vistas/ = día/semana/mes desde el celular
-        pacientes/               Listado, alta, ficha, edición, archivados, anotaciones
+        pacientes/               Listado, alta, ficha, edición, archivados, anotaciones; [id]/libro/route.ts = el PDF
         sesiones/                Lista de próximas sesiones + acciones de sesiones
         ingresos/                Resumen de cobros del mes, quiénes adeudan + acciones de cobro
         perfil/                  Datos profesionales (nombre, apellido, matrícula)
@@ -111,11 +112,14 @@ src/
     routes.ts                    APP_HOME = "/app/calendario": destino después de ingresar e inicio de la PWA
     legal.ts                     Versión de los términos, fecha, datos del titular (marcadores), contacto y SITE_URL
     turnstile.ts                 Clave pública del captcha y lectura del token en las Server Actions
+    pdf/                         Libro de sesiones en PDF (session-book.tsx, solo servidor) y sus fuentes (OFL)
 scripts/                         Íconos (y el logo de origen en scripts/logo/), datos de demo y capturas de la página promocional
 public/landing/                  Capturas de la app (datos ficticios) para la página promocional
 supabase/migrations/             Toda la estructura de la base, en orden
-supabase/tests/database/         Tests de la base (pgTAP): RLS, agenda, cobros, anotaciones, vacaciones, modalidad, MFA, términos
-next.config.ts                   Redirecciones de las rutas viejas y encabezados de seguridad (CSP y compañía)
+supabase/tests/database/         Tests de la base (pgTAP): RLS, agenda, cobros, anotaciones, vacaciones, modalidad, MFA, términos,
+                                 exportaciones del libro
+next.config.ts                   Redirecciones de las rutas viejas, encabezados de seguridad (CSP y compañía) y
+                                 las fuentes del PDF en la función (outputFileTracingIncludes)
 .github/dependabot.yml           Revisión semanal de npm (menores y parches en un solo PR; FullCalendar no pasa a la 7)
 ```
 
@@ -137,7 +141,7 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 | `vacations` | Períodos de vacaciones del psicólogo (`start_date`/`end_date`, fechas de reloj, sin superponerse). |
 | `push_subscriptions` | Dispositivos con las notificaciones activadas (endpoint y claves de Web Push). |
 | `notification_log` | Notificaciones ya enviadas (las escribe solo el cron; evita repetir envíos). |
-| `audit_log` | Registro de modificaciones (lo escriben triggers). |
+| `audit_log` | Registro de modificaciones (lo escriben triggers) y de las exportaciones del libro en PDF (`action = 'EXPORT'`, `log_patient_export`). |
 
 Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `session_book`, `session_payments`.
 
@@ -151,8 +155,10 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   Las funciones: `revoke execute ... from public, anon` + `grant execute ... to authenticated`.
   `01_rls.test.sql` falla si `anon` puede usar algo del esquema `public`.
 - Funciones SQL: `set search_path = ''` y nombres calificados (`public.tabla`).
-  `security invoker` salvo que sea imprescindible (solo `handle_new_user`, `write_audit_log`, `due_notifications`
-  y `mfa_enabled` son `security definer`; `due_notifications`, ejecutable solo por `service_role`).
+  `security invoker` salvo que sea imprescindible (solo `handle_new_user`, `write_audit_log`, `due_notifications`,
+  `mfa_enabled` y `log_patient_export` son `security definer`; `due_notifications`, ejecutable solo por `service_role`).
+  Una `security definer` que actúa por el usuario repite a mano lo de las políticas: lo propio (`auth.uid()`) y
+  aal2 si tiene la verificación en dos pasos (ver `log_patient_export`).
 - **Verificación en dos pasos en la base:** cada tabla tiene, además de la de "lo propio", una política
   `as restrictive` que exige `aal2` si el usuario tiene un factor verificado (`public.mfa_enabled()`).
   Una tabla nueva lleva las dos (ver `20261001150646_account_security.sql`) y su caso en `09_account_security.test.sql`.
@@ -219,6 +225,17 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   el editor, de a uno por vez (cola), así una corrección crea una sola versión nueva y después la actualiza.
   Cada guardado queda en `audit_log`: no guardar por tecla. Una corrección en borrador se puede descartar
   (`discardCorrection`); solo se revalidan las pantallas al finalizar o descartar.
+- **Libro de sesiones en PDF** ("Exportar PDF" en la ficha, también de archivados): `pacientes/[id]/libro/route.ts`
+  (GET) lee con la sesión del usuario (RLS, nunca el admin client) y arma el PDF en memoria con
+  `lib/pdf/session-book.tsx` (react-pdf, en `serverExternalPackages` por defecto de Next: no entra al bundle).
+  Entra la versión vigente de cada sesión = la **finalizada** de mayor `version` (una corrección en borrador no
+  cuenta; los borradores nunca); si `version > 1`, "Corregida el" + su `finalized_at`. Fechas en la zona del perfil.
+  Archivo `libro-apellido-nombre-AAAA-MM-DD.pdf`. Se registra con `log_patient_export` **después** de armarlo y, si
+  no se puede registrar, no se entrega. `Cache-Control: private, no-store`; no se guarda en ningún lado (ni Storage).
+  El botón (`export-pdf-button.tsx`) descarga con fetch (no `<Link>`: la precarga sería una exportación) y, si el
+  proxy redirige (sesión vencida), va al login. Fuentes: Outfit y Lora en `lib/pdf/fonts/` (las estándar del PDF no
+  tienen todo Unicode); `next.config.ts` las incluye en la función. En react-pdf, un texto fijo con `render`
+  (Página X de Y) se posiciona con `top`: con `bottom` se diagrama fuera de la hoja.
 - **Pacientes:** se archivan, no se borran. Archivar quita las sesiones futuras de su horario fijo.
 - **Teléfonos:** se guardan en E.164 (`+5491123456789`) usando `normalizePhone` de `lib/phone.ts`.
   Argentina por defecto; a los números argentinos sin 9 se les agrega (se asumen celulares, para WhatsApp).
@@ -450,4 +467,4 @@ Sin claves ni secretos acá: están en Vercel, Supabase, Resend y `.env.local`.
 - Pedir la aceptación de los términos a las cuentas creadas antes (tienen `terms_accepted_at` null).
 - Pasar el repo a privado.
 - Beta con psicólogos reales.
-- Auditoría de lecturas (hoy solo se registran modificaciones).
+- Auditoría de lecturas (hoy se registran las modificaciones y las exportaciones del libro en PDF).

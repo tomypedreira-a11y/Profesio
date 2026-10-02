@@ -689,6 +689,7 @@ export type Database = {
         Returns: boolean
       }
       is_valid_timezone: { Args: { p_timezone: string }; Returns: boolean }
+      log_patient_export: { Args: { p_patient_id: string }; Returns: undefined }
       mark_session_unpaid: {
         Args: { p_session_id: string }
         Returns: undefined
