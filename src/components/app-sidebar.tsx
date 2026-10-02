@@ -15,6 +15,7 @@ import {
   UsersIcon,
   WalletIcon,
 } from "lucide-react";
+import { LogoMark } from "@/components/logo";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -74,8 +75,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const initials =
     `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() ||
     user.email.charAt(0).toUpperCase();
-  // Resalta el usuario cuando se está en una pantalla de la cuenta.
-  const inAccount = ACCOUNT_ITEMS.some((item) => pathname.startsWith(item.href));
 
   return (
     <Sidebar collapsible="icon">
@@ -86,9 +85,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<Link href={APP_HOME} />}>
-              <span className="flex aspect-square size-8 items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground">
-                P
-              </span>
+              <LogoMark />
               <span className="font-semibold">Profesio</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -127,14 +124,22 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
-              <DropdownMenuTrigger render={<SidebarMenuButton size="lg" isActive={inAccount} />}>
+              {/* Efecto vidrio: el dibujo de fondo se ve desenfocado detrás del botón, que queda delimitado.
+                  No se marca activo en Perfil ni Configuración: es el menú de la cuenta, no una sección. */}
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuButton
+                    size="lg"
+                    className="border border-white/40 shadow-xs backdrop-blur-[3px] dark:border-white/10 dark:bg-secondary/10 dark:shadow-sm"
+                  />
+                }
+              >
                 <Avatar className="size-8 rounded-md">
                   <AvatarFallback className="rounded-md">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{fullName}</span>
-                  {/* Con la cuenta activa (fondo verde) el gris no se leía: el email toma el mismo color que el nombre. */}
-                  <span className="truncate text-xs text-muted-foreground group-data-active/menu-button:text-inherit">
+                  <span className="truncate text-xs text-muted-foreground">
                     {user.email}
                   </span>
                 </div>

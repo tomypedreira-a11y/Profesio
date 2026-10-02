@@ -1,5 +1,5 @@
 // Imagen para compartir la página promocional (WhatsApp, redes, buscadores). Se genera al compilar.
-// Colores de la paleta (globals.css) y la "P" provisoria de los íconos (scripts/generate-icons.mjs).
+// Colores de la paleta (globals.css) y el árbol de los íconos (scripts/generate-icons.mjs).
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
@@ -12,11 +12,15 @@ const BACKGROUND = "#faf3e5"; // beige (--background del tema claro)
 const FOREGROUND = "#3b3026"; // marrón (--foreground)
 const MUTED = "#7a6a58"; // --muted-foreground
 const PRIMARY = "#9ccd9c"; // verde salvia (--primary)
-const PRIMARY_DARK = "#122d19";
+const TREE = "#0a4a26"; // verde del logo (el de los íconos)
 
 export default async function Image() {
-  // Lora, la de los títulos (licencia OFL, la misma que usa el script de íconos).
+  // Lora, la de los títulos (licencia OFL, en scripts/fonts).
   const lora = await readFile(join(process.cwd(), "scripts/fonts/Lora-SemiBold.ttf"));
+  // El árbol del logo (vectorial, fill="currentColor": se le pone el verde del logo).
+  const svg = await readFile(join(process.cwd(), "scripts/logo/arbol.svg"), "utf8");
+  const colored = svg.replace("<svg ", `<svg color="${TREE}" `);
+  const tree = `data:image/svg+xml;base64,${Buffer.from(colored).toString("base64")}`;
 
   return new ImageResponse(
     (
@@ -27,31 +31,18 @@ export default async function Image() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "80px 96px",
+          // Todo tiene que entrar en los 630 px de alto: si no, el título se comprime y se superpone con el texto.
+          padding: "48px 96px",
           background: BACKGROUND,
           color: FOREGROUND,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <div
-            style={{
-              width: 96,
-              height: 96,
-              borderRadius: 22,
-              background: PRIMARY,
-              color: PRIMARY_DARK,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: "Lora",
-              fontSize: 64,
-            }}
-          >
-            P
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse solo acepta <img> */}
+          <img src={tree} width={91} height={100} alt="" />
           <div style={{ fontFamily: "Lora", fontSize: 56 }}>Profesio</div>
         </div>
-        <div style={{ fontFamily: "Lora", fontSize: 84, marginTop: 56, lineHeight: 1.1 }}>Tu nueva agenda, moderna.</div>
+        <div style={{ fontFamily: "Lora", fontSize: 84, marginTop: 44, lineHeight: 1.1 }}>Tu nueva agenda, moderna.</div>
         <div style={{ fontSize: 34, marginTop: 28, color: MUTED, maxWidth: 900, lineHeight: 1.35 }}>
           Sesiones, pacientes y anotaciones en un solo lugar, desde la compu o el celular.
         </div>

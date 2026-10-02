@@ -1,5 +1,6 @@
 // Encabezado de las páginas públicas (promocional, ayuda y legales).
 import Link from "next/link";
+import { LogoMark } from "@/components/logo";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { APP_HOME } from "@/lib/routes";
@@ -19,9 +20,7 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2 text-lg font-semibold" aria-label="Profesio, inicio">
-          <span className="flex size-8 items-center justify-center rounded-md bg-primary font-heading text-primary-foreground">
-            P
-          </span>
+          <LogoMark />
           Profesio
         </Link>
         <nav aria-label="Secciones" className="ml-4 hidden gap-1 lg:flex">
