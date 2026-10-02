@@ -12,7 +12,14 @@ import { DEFAULT_SESSION_MINUTES, SESSION_LENGTHS } from "@/lib/schedule";
 import { isFontSize } from "@/lib/font-size";
 import { DEFAULT_TIME_ZONE, timeZoneItems } from "@/lib/timezones";
 import { DEFAULT_IDLE_MINUTES, IDLE_TIMEOUTS } from "@/lib/idle";
-import { updateCalendarView, updateIdleTimeout, updateSessionLength, updateTimeZone } from "./actions";
+import { DEFAULT_MODALITY, MODALITIES } from "@/lib/modality";
+import {
+  updateCalendarView,
+  updateDefaultModality,
+  updateIdleTimeout,
+  updateSessionLength,
+  updateTimeZone,
+} from "./actions";
 import { ChangePassword } from "./change-password";
 import { DefaultFeeInput } from "./default-fee-input";
 import { FontSizeSelector } from "./font-size-selector";
@@ -112,6 +119,18 @@ export default async function SettingsPage() {
               value={profile?.default_session_fee ?? null}
               description="Opcional. Lo usan los pacientes que no tienen un valor propio. Las sesiones ya realizadas conservan el valor que tenían."
             />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="default_modality">Modalidad</FieldLabel>
+            <PreferenceSelect
+              id="default_modality"
+              value={profile?.default_modality ?? DEFAULT_MODALITY}
+              items={MODALITIES}
+              save={updateDefaultModality}
+            />
+            <FieldDescription>
+              La que aparece elegida al crear un paciente (podés cambiarla ahí). No cambia a tus pacientes actuales.
+            </FieldDescription>
           </Field>
         </SettingsSection>
 

@@ -8,6 +8,7 @@ import { isTheme } from "@/lib/theme";
 import { isFontSize } from "@/lib/font-size";
 import { isCalendarView } from "@/lib/calendar-views";
 import { isSessionLength } from "@/lib/schedule";
+import { isModality } from "@/lib/modality";
 import { isTimeZone } from "@/lib/timezones";
 import { parseFee } from "@/lib/format";
 import { isSummaryTime, parseReminder } from "@/lib/notifications";
@@ -67,6 +68,12 @@ export async function updateTimeZone(timeZone: string): Promise<SaveResult> {
   // El layout carga la zona (la usan el calendario y los selectores de fecha).
   revalidatePath("/", "layout");
   return {};
+}
+
+// La que trae preseleccionada el alta de un paciente; no cambia a los pacientes existentes.
+export async function updateDefaultModality(modality: string): Promise<SaveResult> {
+  if (!isModality(modality)) return { error: "Elegí presencial o virtual." };
+  return saveProfile({ default_modality: modality });
 }
 
 // Opcional: vacío = sin valor por defecto.

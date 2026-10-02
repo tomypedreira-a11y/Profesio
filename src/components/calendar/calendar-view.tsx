@@ -14,6 +14,7 @@ import {
   ChevronRightIcon,
   TreePalmIcon,
   UserRoundSearchIcon,
+  XIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { shortName, sortName } from "@/lib/format";
@@ -203,13 +204,15 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
         if (s.status === "cancelled") classNames.push("session-cancelled");
         else if (isNext) classNames.push("session-next");
         if (s.ends_at < now) classNames.push("session-past");
+        // Realizada (o en curso) y sin cobrar. Las futuras no: se cobran por adelantado solo si se quiere.
+        const unpaid = s.status === "scheduled" && s.starts_at <= now && !s.paid_at;
         return {
           id: s.id,
           title: shortName(s),
           start: s.starts_at,
           end: s.ends_at,
           classNames,
-          extendedProps: { session: s, isNext },
+          extendedProps: { session: s, isNext, unpaid },
         };
       });
     },
@@ -319,7 +322,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
     }
     // En la lista la hora tiene su propia columna; en el mes compacto la sesión es solo un punto.
     // Después del nombre, la modalidad: (v) virtual o (p) presencial.
-    const { session } = arg.event.extendedProps as { session: CalendarSession };
+    const { session, unpaid } = arg.event.extendedProps as { session: CalendarSession; unpaid: boolean };
     const virtual = session.modality === "virtual";
     const modality = (
       <>
@@ -329,12 +332,27 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
         </span>
       </>
     );
-    if (arg.view.type === "listWeek") return <span className="session-name">{arg.event.title}{modality}</span>;
+    const unpaidLabel = unpaid && (
+      <span className="session-unpaid">
+        <XIcon aria-hidden />
+        No cobrada
+      </span>
+    );
+    if (arg.view.type === "listWeek") {
+      return (
+        <span className="session-name">
+          {arg.event.title}
+          {modality}
+          {unpaidLabel}
+        </span>
+      );
+    }
     if (compact && arg.view.type === "dayGridMonth") return <span className="sr-only">{arg.event.title}</span>;
     return (
       <div className="session-content">
         {arg.timeText && <span className="session-time">{arg.timeText}</span>}
         <span className="session-name">{arg.event.title}{modality}</span>
+        {unpaidLabel}
       </div>
     );
   }
@@ -560,6 +578,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
           setSelected(null);
           refresh();
         }}
+        onPaymentChanged={refetchEvents}
       />
 
       {!browse && (

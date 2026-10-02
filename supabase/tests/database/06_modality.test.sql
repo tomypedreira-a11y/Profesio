@@ -5,7 +5,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(17);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'a@test.local');
 
@@ -82,6 +82,18 @@ select is(pg_temp.modality_of('5e550000-0000-0000-0000-000000000005'), 'in_perso
 select public.create_patient_with_schedules(p_first_name => 'Diana', p_last_name => '', p_modality => 'virtual');
 select is((select modality from public.patients where first_name = 'Diana'), 'virtual',
   'el alta de paciente guarda la modalidad elegida');
+
+-- Modalidad habitual del perfil (la que preselecciona el alta): presencial salvo que se cambie.
+select is((select default_modality from public.profiles), 'in_person',
+  'la modalidad habitual es presencial por defecto');
+update public.profiles set default_modality = 'virtual';
+select is((select default_modality from public.profiles), 'virtual',
+  'el psicólogo elige virtual como modalidad habitual');
+select throws_ok(
+  $$ update public.profiles set default_modality = 'telefonica' $$,
+  '23514', null,
+  'la modalidad habitual es presencial o virtual'
+);
 
 select * from finish();
 rollback;
