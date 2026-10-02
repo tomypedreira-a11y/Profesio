@@ -95,6 +95,8 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Vercel</strong>: aloja y sirve la aplicación web; por sus servidores pasan las pantallas que ves.
+          También mide cuánto tardan en cargar (Speed Insights): tiempos de carga, tipo de dispositivo, navegador y
+          país, sin cookies y sin datos de pacientes (de la dirección de cada pantalla se quitan los identificadores).
         </li>
         <li>
           <strong>Resend</strong>: envía los mails de la cuenta (desde servidores en São Paulo, Brasil).

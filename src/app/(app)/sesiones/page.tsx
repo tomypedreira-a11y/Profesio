@@ -15,16 +15,20 @@ const DAYS_AHEAD = 14;
 // Lista de próximas sesiones, agrupadas por día.
 export default async function SessionsPage() {
   const supabase = await createClient();
-  const [timeZone, patients] = await Promise.all([getTimeZone(), getPatientOptions()]);
   const now = new Date();
   const until = new Date(now.getTime() + DAYS_AHEAD * 24 * 60 * 60 * 1000);
 
-  const { data } = await supabase
-    .from("calendar_sessions")
-    .select(SESSION_COLUMNS)
-    .gt("ends_at", now.toISOString())
-    .lt("starts_at", until.toISOString())
-    .order("starts_at", { ascending: true });
+  // Las sesiones no dependen de la zona horaria (el rango es de instantes): las tres consultas a la vez.
+  const [timeZone, patients, { data }] = await Promise.all([
+    getTimeZone(),
+    getPatientOptions(),
+    supabase
+      .from("calendar_sessions")
+      .select(SESSION_COLUMNS)
+      .gt("ends_at", now.toISOString())
+      .lt("starts_at", until.toISOString())
+      .order("starts_at", { ascending: true }),
+  ]);
 
   const sessions = (data ?? []) as CalendarSession[];
   const nextId = sessions.find((s) => s.status === "scheduled" && s.starts_at > now.toISOString())?.id;
