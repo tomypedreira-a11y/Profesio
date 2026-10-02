@@ -129,6 +129,12 @@ next.config.ts                   Redirecciones de las rutas viejas, encabezados 
 Nunca modificar tablas desde el panel de Supabase. Después de cada migración, regenerar
 `database.types.ts` y commitearlo en el mismo PR.
 
+- `db push` a profesio-dev solo con confirmación del usuario, nunca por iniciativa propia. Antes, la rama con la
+  migración tiene que estar commiteada y pusheada a GitHub (así, si alguien encuentra una migración en dev, sabe en
+  qué rama está). Avisá al compañero cuando apliques una migración a dev desde una rama sin mergear.
+- `db push` a profesio-prod: solo lo hace una persona a mano, justo antes del merge, con dry-run previo. Claude Code
+  nunca vincula la CLI a prod.
+
 ### Tablas
 
 | Tabla | Contenido |
@@ -462,9 +468,11 @@ Sin claves ni secretos acá: están en Vercel, Supabase, Resend y `.env.local`.
 - **Configuración de Supabase (dev y prod), desde el panel:** Authentication → Multi-Factor → TOTP habilitado
   (enroll y verify); Authentication → URL Configuration → Redirect URLs con el dominio y `/**` (ej.
   `http://localhost:3000/**` en dev), para que `/auth/confirm?next=...` sea aceptado. Lo de prod, en "Infraestructura".
-- **Una migración mergeada a `main` también se aplica a `profesio-prod`:** vincular prod, `db push` y volver a
-  vincular dev (verificar siempre con `npx supabase projects list` cuál está vinculado):
-  `npx supabase link --project-ref <ref de prod>` → `npx supabase db push` → `npx supabase link --project-ref <ref de dev>`.
+- **Una migración que entra a `main` también se aplica a `profesio-prod`:** a mano, una persona (nunca Claude Code),
+  justo antes del merge y con dry-run previo (ver "Base de datos"). Vincular prod, `db push` y volver a vincular dev
+  (verificar siempre con `npx supabase projects list` cuál está vinculado):
+  `npx supabase link --project-ref <ref de prod>` → `npx supabase db push --dry-run` → `npx supabase db push` →
+  `npx supabase link --project-ref <ref de dev>`.
 
 ## Pendientes conocidos
 
