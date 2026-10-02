@@ -126,7 +126,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
       <SidebarFooter className="relative">
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
+            {/* Al abrir el menú se precargan Mi perfil y Configuración: sus ítems navegan con router.push (no con
+                un Link, que se precarga solo), y así su esqueleto de carga aparece al instante. */}
+            <DropdownMenu onOpenChange={(open) => open && ACCOUNT_ITEMS.forEach((item) => router.prefetch(item.href))}>
               <DropdownMenuTrigger render={<SidebarMenuButton size="lg" isActive={inAccount} />}>
                 <Avatar className="size-8 rounded-md">
                   <AvatarFallback className="rounded-md">{initials}</AvatarFallback>

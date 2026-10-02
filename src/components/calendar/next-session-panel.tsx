@@ -65,7 +65,12 @@ export function NextSessionPanel({ session, timeZone, onSelect, onStarted }: Nex
               {formatSessionShort(session.starts_at, timeZone)}
             </span>
           </div>
-          <span className="flex w-fit shrink-0 items-center gap-1 rounded-full border border-(--session-next-border) bg-(--session-next) px-2 py-0.5 text-xs font-medium whitespace-nowrap text-(--session-next-foreground) lg:col-start-2">
+          {/* La sesión puede venir del servidor: si entre el servidor y el navegador cambió el minuto, el texto
+              difiere (suppressHydrationWarning); se corrige solo en la próxima actualización. */}
+          <span
+            suppressHydrationWarning
+            className="flex w-fit shrink-0 items-center gap-1 rounded-full border border-(--session-next-border) bg-(--session-next) px-2 py-0.5 text-xs font-medium whitespace-nowrap text-(--session-next-foreground) lg:col-start-2"
+          >
             <ClockIcon className="size-3" />
             {formatTimeUntil(msLeft ?? 0)}
           </span>

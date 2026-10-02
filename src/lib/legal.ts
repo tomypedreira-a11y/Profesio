@@ -3,8 +3,8 @@
 
 // Versión de los textos (fecha de la última actualización). Se guarda en profiles.terms_version al registrarse:
 // si cambian los términos, subirla (y pedir la aceptación de la versión nueva a quienes tengan una anterior).
-export const TERMS_VERSION = "2026-10-01";
-export const LEGAL_UPDATED = "1 de octubre de 2026";
+export const TERMS_VERSION = "2026-10-02";
+export const LEGAL_UPDATED = "2 de octubre de 2026";
 export const LEGAL_UPDATED_ISO = TERMS_VERSION;
 
 // Marcadores visibles hasta completar los datos reales del titular.

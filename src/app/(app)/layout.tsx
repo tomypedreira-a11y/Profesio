@@ -2,7 +2,7 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getClaims, getProfile } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/app-sidebar";
 import { FontSizeSync } from "@/components/font-size-sync";
 import { HeaderBackButton } from "@/components/header-back-button";
@@ -19,23 +19,22 @@ import { DEFAULT_SESSION_MINUTES } from "@/lib/schedule";
 import { DEFAULT_TIME_ZONE } from "@/lib/timezones";
 import { DEFAULT_IDLE_MINUTES } from "@/lib/idle";
 
+// Las pantallas tienen su loading.tsx: este layout (panel lateral, encabezado y barra inferior) se muestra apenas
+// tiene la sesión y el perfil, y la página llega después en su lugar. Por eso acá solo se lee lo indispensable.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  const claims = data?.claims;
+  // Todo a la vez: getProfile() y getClaims() quedan guardados para la página (cache), y vacations no depende
+  // de la sesión (las RLS ya filtran por psicólogo).
+  const [claims, profile, { data: vacations }, cookieStore] = await Promise.all([
+    getClaims(),
+    getProfile(),
+    supabase.from("vacations").select("id, start_date, end_date").order("start_date"),
+    cookies(),
+  ]);
   if (!claims) redirect("/login");
 
-  const [{ data: profile }, { data: vacations }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("first_name, last_name, theme, font_size, default_session_minutes, default_session_fee, timezone, idle_timeout_minutes")
-      .eq("id", claims.sub)
-      .single(),
-    supabase.from("vacations").select("id, start_date, end_date").order("start_date"),
-  ]);
-
   // Recuerda si el panel lateral estaba abierto o colapsado.
-  const sidebarOpen = (await cookies()).get("sidebar_state")?.value !== "false";
+  const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
   const user = {
     firstName: profile?.first_name ?? "",
