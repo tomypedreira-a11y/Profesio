@@ -8,7 +8,7 @@
 // offline.html y los íconos (archivos públicos, sin datos de nadie). Todo lo demás va directo a la red.
 
 // Al cambiar offline.html o los íconos, subir la versión: el caché anterior se borra al activarse la nueva.
-const CACHE = "profesio-v3";
+const CACHE = "profesio-v4";
 const PRECACHE = [
   "/offline.html",
   "/icons/icon-192.png",

@@ -2,6 +2,7 @@
 
 // Verificación en dos pasos (TOTP): dispositivos registrados, activar (QR + primer código) y quitar.
 import { useEffect, useRef, useState, useTransition } from "react";
+import Image from "next/image";
 import { CheckIcon, CopyIcon, PlusIcon, ShieldCheckIcon, SmartphoneIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -194,8 +195,17 @@ function EnrollFlow({ defaultName, first, onDone }: { defaultName: string; first
         </DialogDescription>
       </DialogHeader>
       {/* Fondo blanco también en modo oscuro: las cámaras leen mejor un QR oscuro sobre claro. */}
-      {/* eslint-disable-next-line @next/next/no-img-element -- SVG en data URL generado por Supabase */}
-      <img src={enrollment.qrCode} alt="Código QR para la app de códigos" className="mx-auto size-44 rounded-md bg-white p-2" />
+      {/* SVG en data URL generado por Supabase: sin optimizar (no pasa por /_next/image). */}
+      {enrollment.qrCode && (
+        <Image
+          src={enrollment.qrCode}
+          alt="Código QR para la app de códigos"
+          width={176}
+          height={176}
+          unoptimized
+          className="mx-auto size-44 rounded-md bg-white p-2"
+        />
+      )}
       <div className="flex flex-col gap-1">
         <p className="text-xs text-muted-foreground">¿No podés escanearlo? Cargá este código a mano:</p>
         <div className="flex items-center gap-2">
