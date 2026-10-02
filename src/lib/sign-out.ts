@@ -1,7 +1,7 @@
 // Cerrar la sesión desde el navegador: el menú del usuario, el cierre por inactividad y "Usar otra cuenta"
 // usan signOutThisDevice; el botón de Configuración → Cuenta, signOutAllDevices.
-import { logout } from "@/app/(auth)/actions";
-import { signOutEverywhere } from "@/app/(app)/configuracion/account-actions";
+import { logout } from "@/app/app/(auth)/actions";
+import { signOutEverywhere } from "@/app/app/(app)/configuracion/account-actions";
 import { flushPendingSaves } from "@/lib/pending-saves";
 import { forgetThisDevice } from "@/lib/push-client";
 

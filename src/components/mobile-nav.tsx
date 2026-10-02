@@ -23,23 +23,23 @@ import { cn } from "@/lib/utils";
 
 const LEFT_ITEMS = [
   { href: APP_HOME, label: "Calendario", icon: CalendarDaysIcon },
-  { href: "/pacientes", label: "Pacientes", icon: UsersIcon },
+  { href: "/app/pacientes", label: "Pacientes", icon: UsersIcon },
 ];
 
 const RIGHT_ITEMS = [
-  { href: "/sesiones", label: "Sesiones", icon: CalendarClockIcon },
-  { href: "/ingresos", label: "Ingresos", icon: WalletIcon },
+  { href: "/app/sesiones", label: "Sesiones", icon: CalendarClockIcon },
+  { href: "/app/ingresos", label: "Ingresos", icon: WalletIcon },
 ];
 
 // Posición final de cada acceso de la cuenta respecto del botón central (en px): un arco de radio 88.
 const ACCOUNT_ITEMS = [
-  { href: "/configuracion", label: "Configuración", icon: SettingsIcon, x: -76, y: -44 },
-  { href: "/perfil", label: "Mi perfil", icon: UserRoundIcon, x: -30, y: -83 },
+  { href: "/app/configuracion", label: "Configuración", icon: SettingsIcon, x: -76, y: -44 },
+  { href: "/app/perfil", label: "Mi perfil", icon: UserRoundIcon, x: -30, y: -83 },
   { href: "/ayuda", label: "Ayuda", icon: CircleHelpIcon, x: 30, y: -83 }, // página pública (fuera de la app)
 ] as const;
 const LOGOUT_POSITION = { x: 76, y: -44 };
 
-// "Calendario" también queda marcado en la pantalla aparte de vistas (/calendario/vistas).
+// "Calendario" también queda marcado en la pantalla aparte de vistas (/app/calendario/vistas).
 function isActivePath(pathname: string, href: string) {
   return pathname.startsWith(href);
 }

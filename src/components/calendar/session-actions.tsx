@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { CalendarClockIcon, CalendarXIcon, UndoIcon } from "lucide-react";
 import { toast } from "sonner";
-import { cancelSession, rescheduleSession, restoreSession } from "@/app/(app)/sesiones/actions";
+import { cancelSession, rescheduleSession, restoreSession } from "@/app/app/(app)/sesiones/actions";
 import { isValidRange, resolveEnd } from "@/lib/schedule";
 import { toWall } from "@/lib/zoned";
 import { Button } from "@/components/ui/button";

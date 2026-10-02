@@ -86,20 +86,24 @@ self.addEventListener("push", (event) => {
       icon: "/icons/icon-192.png",
       badge: "/icons/badge-96.png", // monocromo: la barra de estado de Android usa solo su silueta
       tag: data.tag, // la misma sesión no se apila dos veces
-      data: { url: data.url || "/calendario" },
+      data: { url: data.url || "/app/calendario" },
     }),
   );
 });
 
-// Al tocarla: una ventana de Profesio que ya esté abierta va a la pantalla indicada; si no hay, se abre una.
+// Al tocarla: una ventana de la app (bajo /app/, el scope de la app instalada) que ya esté abierta va a la pantalla
+// indicada; si no hay, se abre una. Una pestaña con la página promocional no se reutiliza.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = new URL(event.notification.data?.url || "/calendario", self.location.origin).href;
+  const url = new URL(event.notification.data?.url || "/app/calendario", self.location.origin).href;
 
   event.waitUntil(
     (async () => {
       const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
+      const open = windows.find((client) => {
+        const { origin, pathname } = new URL(client.url);
+        return origin === self.location.origin && pathname.startsWith("/app/");
+      });
       if (!open) {
         await self.clients.openWindow(url);
         return;

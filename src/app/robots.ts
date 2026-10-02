@@ -2,22 +2,10 @@ import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/legal";
 
 // Los buscadores indexan solo las páginas públicas ("/", /ayuda, /terminos, /privacidad); la app y el ingreso, no.
-// Se bloquean las rutas de la app una por una (y no todo con "/"): así siguen accesibles los estilos, scripts e
-// imágenes que los buscadores necesitan para ver las páginas públicas. Si se agrega una sección a la app, sumarla.
-const APP_PATHS = [
-  "/calendario",
-  "/pacientes",
-  "/sesiones",
-  "/ingresos",
-  "/perfil",
-  "/configuracion",
-  "/login",
-  "/registro",
-  "/recuperar",
-  "/nueva-contrasena",
-  "/auth",
-  "/api",
-];
+// Toda la app (pantallas e ingreso) vive bajo /app/; /auth y /api son los links de los mails y el cron.
+// No se bloquea todo con "/": así siguen accesibles los estilos, scripts e imágenes que los buscadores necesitan
+// para ver las páginas públicas. Las rutas viejas de la app (/calendario, /login…) redirigen a /app/.
+const APP_PATHS = ["/app/", "/auth/", "/api/"];
 
 export default function robots(): MetadataRoute.Robots {
   return {

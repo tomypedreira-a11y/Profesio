@@ -95,7 +95,7 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
 
               <SessionActions session={session} timeZone={timeZone} onChanged={onChanged} />
 
-              <Button variant="outline" render={<Link href={`/pacientes/${session.patient_id}`} />} nativeButton={false}>
+              <Button variant="outline" render={<Link href={`/app/pacientes/${session.patient_id}`} />} nativeButton={false}>
                 <UserRoundIcon />
                 Ver ficha del paciente
               </Button>

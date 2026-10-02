@@ -5,7 +5,7 @@
 import { useTransition } from "react";
 import { ChevronDownIcon, UndoIcon, WalletIcon } from "lucide-react";
 import { toast } from "sonner";
-import { markSessionsPaid, markSessionUnpaid } from "@/app/(app)/ingresos/actions";
+import { markSessionsPaid, markSessionUnpaid } from "@/app/app/(app)/ingresos/actions";
 import { PAYMENT_METHODS } from "@/lib/payments";
 import { Button } from "@/components/ui/button";
 import {

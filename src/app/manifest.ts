@@ -9,8 +9,10 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Profesio",
     short_name: "Profesio",
     description: "Agenda y gestión de pacientes para psicólogos",
-    start_url: "/calendario", // APP_HOME: la app instalada abre en el calendario, no en la página promocional
-    scope: "/",
+    start_url: "/app/calendario", // APP_HOME: la app instalada abre en el calendario, no en la página promocional
+    // Solo /app/ es la app instalada: un link a miprofesio.com (la página promocional, /ayuda, etc.) abre el
+    // navegador y no la app. El service worker sigue registrado en "/" (cubre este scope).
+    scope: "/app/",
     display: "standalone",
     orientation: "any",
     lang: "es",
@@ -24,11 +26,11 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
-      { name: "Calendario", url: "/calendario", icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }] },
-      { name: "Pacientes", url: "/pacientes", icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }] },
+      { name: "Calendario", url: "/app/calendario", icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }] },
+      { name: "Pacientes", url: "/app/pacientes", icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }] },
       {
         name: "Nuevo paciente",
-        url: "/pacientes/nuevo",
+        url: "/app/pacientes/nuevo",
         icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
       },
     ],

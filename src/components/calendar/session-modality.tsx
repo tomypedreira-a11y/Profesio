@@ -4,7 +4,7 @@
 // En una sesión futura se elige si el cambio es solo para esta o también para las siguientes.
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { setSessionModality } from "@/app/(app)/sesiones/actions";
+import { setSessionModality } from "@/app/app/(app)/sesiones/actions";
 import { DEFAULT_MODALITY, isModality, modalityLabel, type Modality } from "@/lib/modality";
 import { Button } from "@/components/ui/button";
 import {

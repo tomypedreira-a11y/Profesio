@@ -13,10 +13,10 @@ import { APP_HOME } from "@/lib/routes";
 
 // Rutas que se pueden ver sin estar logueado (y sus subrutas). "/" (la página promocional) va aparte,
 // como ruta exacta: si estuviera acá, todas las rutas empezarían con ella y serían públicas.
-const PUBLIC_PATHS = ["/login", "/registro", "/recuperar", "/auth", "/ayuda", "/terminos", "/privacidad"];
+const PUBLIC_PATHS = ["/app/login", "/app/registro", "/app/recuperar", "/auth", "/ayuda", "/terminos", "/privacidad"];
 
-// Pide el código de la verificación en dos pasos: requiere sesión (aunque esté bajo /login).
-const MFA_PATH = "/login/verificar";
+// Pide el código de la verificación en dos pasos: requiere sesión (aunque esté bajo /app/login).
+const MFA_PATH = "/app/login/verificar";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -54,11 +54,11 @@ export async function updateSession(request: NextRequest) {
 
   // Sin sesión y en una ruta privada → al login.
   if (!isLoggedIn && !isPublic) {
-    return redirectKeepingCookies(request, response, "/login");
+    return redirectKeepingCookies(request, response, "/app/login");
   }
 
   // Con sesión y en login/registro → al calendario. La página promocional y las legales se ven igual con sesión.
-  if (isLoggedIn && (pathname === "/login" || pathname === "/registro")) {
+  if (isLoggedIn && (pathname === "/app/login" || pathname === "/app/registro")) {
     return redirectKeepingCookies(request, response, APP_HOME);
   }
 
@@ -74,7 +74,7 @@ export async function updateSession(request: NextRequest) {
     await supabase.auth.signOut({ scope: "local" });
     response.cookies.delete(LAST_ACTIVITY_COOKIE);
     response.cookies.delete(IDLE_TIMEOUT_COOKIE);
-    return redirectKeepingCookies(request, response, `/login?motivo=${IDLE_LOGOUT_REASON}`);
+    return redirectKeepingCookies(request, response, `/app/login?motivo=${IDLE_LOGOUT_REASON}`);
   }
 
   // Verificación en dos pasos: con factores verificados y la sesión todavía en aal1 (solo pasó la contraseña),
@@ -83,7 +83,7 @@ export async function updateSession(request: NextRequest) {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
     const mfaPending = aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2";
     if (mfaPending && !isMfaPage) {
-      // Después del código vuelve a donde iba (ej. /nueva-contrasena desde el link de recuperación).
+      // Después del código vuelve a donde iba (ej. /app/nueva-contrasena desde el link de recuperación).
       const next = isServerAction(request) ? "" : `?next=${encodeURIComponent(pathname)}`;
       return redirectKeepingCookies(request, response, `${MFA_PATH}${next}`);
     }

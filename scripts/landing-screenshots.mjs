@@ -29,7 +29,7 @@ if (!env.DEMO_PASSWORD) {
   process.exit(1);
 }
 try {
-  await fetch(`${BASE}/login`);
+  await fetch(`${BASE}/app/login`);
 } catch {
   console.error(`No responde ${BASE}: levantá la app con npm run build && npm run start.`);
   process.exit(1);
@@ -40,11 +40,11 @@ const browser = await chromium.launch({ channel: process.env.BROWSER === "chrome
 async function session(options) {
   const context = await browser.newContext({ locale: "es-AR", timezoneId: "America/Argentina/Buenos_Aires", colorScheme: "light", ...options });
   const page = await context.newPage();
-  await page.goto(`${BASE}/login`);
+  await page.goto(`${BASE}/app/login`);
   await page.fill("#email", DEMO_EMAIL);
   await page.fill("#password", env.DEMO_PASSWORD);
   await page.click("button[type=submit]");
-  await page.waitForURL(`${BASE}/calendario`);
+  await page.waitForURL(`${BASE}/app/calendario`);
   return { context, page };
 }
 
@@ -69,9 +69,9 @@ await mkdir(OUT, { recursive: true });
   await settle(page);
   await save(page, "calendario-pc");
 
-  await page.goto(`${BASE}/pacientes`);
+  await page.goto(`${BASE}/app/pacientes`);
   await page.getByRole("link", { name: /Martina/ }).first().click();
-  await page.waitForURL(/\/pacientes\/[0-9a-f-]{36}$/);
+  await page.waitForURL(/\/app\/pacientes\/[0-9a-f-]{36}$/);
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(500);
   await save(page, "paciente");
