@@ -15,7 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldLabel } from "@/components/ui/field";
 import { FormMessage } from "@/components/form-message";
 import { ModalityChoice } from "@/components/modality-choice";
 import { ScopeChoice, type Scope } from "./session-actions";
@@ -66,10 +65,13 @@ export function SessionModality({ session, onChanged }: SessionModalityProps) {
 
   return (
     <>
-      <Field>
-        <FieldLabel>Modalidad</FieldLabel>
-        <ModalityChoice idPrefix={`session-modality-${session.id}`} value={value} onChange={choose} disabled={pending} />
-      </Field>
+      {/* En una sola fila: el panel de la sesión tiene que entrar sin scrollear. */}
+      <div className="flex items-center gap-3">
+        <span className="shrink-0 font-medium">Modalidad</span>
+        <div className="min-w-0 flex-1">
+          <ModalityChoice idPrefix={`session-modality-${session.id}`} value={value} onChange={choose} disabled={pending} />
+        </div>
+      </div>
 
       <Dialog open={asking !== null} onOpenChange={(open) => !open && !pending && setAsking(null)}>
         <DialogContent className="sm:max-w-md">

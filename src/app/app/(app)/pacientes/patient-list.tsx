@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { SearchIcon } from "lucide-react";
-import { formatPhone } from "@/lib/phone";
+import { MessageCircleIcon, SearchIcon } from "lucide-react";
+import { formatPhone, whatsappUrl } from "@/lib/phone";
 import { formatSessionShort, sortName } from "@/lib/format";
 import type { ScheduleSlot } from "@/lib/schedule";
+import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -128,22 +130,41 @@ export function PatientList({
             return (
               <li key={p.id}>
                 {showLetter && <div className="px-1 pt-2 pb-1 text-xs font-semibold text-muted-foreground">{letter}</div>}
-                {/* Beige un poco más oscuro que el fondo, remarcado en oliva (como la lista de sesiones). */}
-                <Link
-                  href={`/app/pacientes/${p.id}`}
-                  className="flex items-center gap-3 rounded-lg border-[1.5px] border-primary-border bg-secondary px-4 py-3 text-secondary-foreground transition-[filter] hover:brightness-95"
-                >
-                  <Avatar className="size-10">
-                    <AvatarFallback className="bg-background">
-                      {`${p.first_name.charAt(0)}${p.last_name.charAt(0)}`.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{sortName(p)}</p>
-                    <p className="truncate text-sm opacity-75">{p.phone ? formatPhone(p.phone) : "Sin teléfono"}</p>
-                  </div>
-                  {detail(p) && <span className="shrink-0 text-right text-xs opacity-75">{detail(p)}</span>}
-                </Link>
+                <div className="relative">
+                  {/* Beige un poco más oscuro que el fondo, remarcado en oliva (como la lista de sesiones). */}
+                  <Link
+                    href={`/app/pacientes/${p.id}`}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg border-[1.5px] border-primary-border bg-secondary px-4 py-3 text-secondary-foreground transition-[filter] hover:brightness-95",
+                      p.phone && "pr-14",
+                    )}
+                  >
+                    <Avatar className="size-10">
+                      <AvatarFallback className="bg-background">
+                        {`${p.first_name.charAt(0)}${p.last_name.charAt(0)}`.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{sortName(p)}</p>
+                      <p className="truncate text-sm opacity-75">{p.phone ? formatPhone(p.phone) : "Sin teléfono"}</p>
+                    </div>
+                    {detail(p) && <span className="shrink-0 text-right text-xs opacity-75">{detail(p)}</span>}
+                  </Link>
+                  {/* Chat de WhatsApp sin mensaje. Fuera del link de la ficha (no se anidan links), encima de la fila. */}
+                  {p.phone && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-1/2 right-2 -translate-y-1/2"
+                      nativeButton={false}
+                      render={<a href={whatsappUrl(p.phone)} target="_blank" rel="noopener noreferrer" />}
+                      aria-label={`Escribirle por WhatsApp a ${p.first_name}`}
+                      title="Abrir chat de WhatsApp"
+                    >
+                      <MessageCircleIcon />
+                    </Button>
+                  )}
+                </div>
               </li>
             );
           })}

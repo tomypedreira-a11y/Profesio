@@ -309,7 +309,7 @@ export function NoteEditor({ sessionId, timeZone, onSaved }: NoteEditorProps) {
             value={text}
             onChange={(e) => handleChange(e.target.value)}
             placeholder="Escribí la anotación de la sesión…"
-            className="min-h-40"
+            className="min-h-28" // crece con el texto (field-sizing); bajo, para que el panel de la sesión entre sin scrollear
             aria-label="Anotación de la sesión"
           />
           <SaveIndicator status={status} />

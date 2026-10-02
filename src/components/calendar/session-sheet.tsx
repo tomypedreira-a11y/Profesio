@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { NoteEditor } from "@/components/notes/note-editor";
 import { SessionPayment } from "@/components/payments/session-payment";
+import { WhatsAppReminderButton } from "@/components/whatsapp-reminder";
 import { SessionActions } from "./session-actions";
 import { SessionModality } from "./session-modality";
 import type { CalendarSession } from "./types";
@@ -44,8 +45,9 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
               </SheetDescription>
             </SheetHeader>
 
-            <div className="flex flex-col gap-4 px-4 pb-6 text-sm">
-              <div className="flex flex-wrap gap-2">
+            {/* Compacto, para que entre sin scrollear (también en el celular). */}
+            <div className="flex flex-col gap-3 px-4 pb-6 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
                 {session.status === "cancelled" ? (
                   <Badge variant="destructive">Cancelada</Badge>
                 ) : isNext ? (
@@ -61,6 +63,16 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
                     {modalityLabel(session.modality)}
                   </Badge>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto"
+                  render={<Link href={`/app/pacientes/${session.patient_id}`} />}
+                  nativeButton={false}
+                >
+                  <UserRoundIcon />
+                  Ver ficha
+                </Button>
               </div>
 
               {session.status !== "cancelled" && (
@@ -73,16 +85,22 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
                 </p>
               )}
 
+              {/* El teléfono abre el chat vacío; el recordatorio, con el mensaje de Configuración (solo si todavía no empezó). */}
               {session.phone && (
-                <a
-                  href={whatsappUrl(session.phone)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 hover:underline"
-                >
-                  <MessageCircleIcon className="size-4" />
-                  {formatPhone(session.phone)}
-                </a>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <a
+                    href={whatsappUrl(session.phone)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 hover:underline"
+                  >
+                    <MessageCircleIcon className="size-4" />
+                    {formatPhone(session.phone)}
+                  </a>
+                  {session.status === "scheduled" && new Date(session.starts_at) > new Date() && (
+                    <WhatsAppReminderButton session={session} />
+                  )}
+                </div>
               )}
 
               {/* Cobro: en toda sesión; las futuras se pueden cobrar por adelantado y las canceladas también se cobran. */}
@@ -94,11 +112,6 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
               />
 
               <SessionActions session={session} timeZone={timeZone} onChanged={onChanged} />
-
-              <Button variant="outline" render={<Link href={`/app/pacientes/${session.patient_id}`} />} nativeButton={false}>
-                <UserRoundIcon />
-                Ver ficha del paciente
-              </Button>
 
               <Separator />
 
