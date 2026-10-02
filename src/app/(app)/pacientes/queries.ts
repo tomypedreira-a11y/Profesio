@@ -1,5 +1,6 @@
 // Consultas de pacientes compartidas entre pantallas (se ejecutan en el servidor).
-import { createClient } from "@/lib/supabase/server";
+// Lo del perfil sale de getProfile(): una sola consulta por request, compartida con el layout.
+import { createClient, getProfile } from "@/lib/supabase/server";
 import { toSlots } from "@/lib/schedule";
 import { sortName } from "@/lib/format";
 import { DEFAULT_TIME_ZONE } from "@/lib/timezones";
@@ -8,38 +9,20 @@ import type { PatientOption } from "@/components/calendar/types";
 import type { PatientListItem } from "./patient-list";
 
 export async function getTimeZone() {
-  const supabase = await createClient();
-  const { data: claims } = await supabase.auth.getClaims();
-  const { data } = await supabase
-    .from("profiles")
-    .select("timezone")
-    .eq("id", claims?.claims.sub ?? "")
-    .single();
-  return data?.timezone ?? DEFAULT_TIME_ZONE;
+  const profile = await getProfile();
+  return profile?.timezone ?? DEFAULT_TIME_ZONE;
 }
 
 // Vista con la que abre el calendario (preferencia del perfil).
 export async function getCalendarView(): Promise<CalendarViewPreference> {
-  const supabase = await createClient();
-  const { data: claims } = await supabase.auth.getClaims();
-  const { data } = await supabase
-    .from("profiles")
-    .select("calendar_view")
-    .eq("id", claims?.claims.sub ?? "")
-    .single();
-  return isCalendarView(data?.calendar_view) ? data.calendar_view : DEFAULT_CALENDAR_VIEW;
+  const profile = await getProfile();
+  return isCalendarView(profile?.calendar_view) ? profile.calendar_view : DEFAULT_CALENDAR_VIEW;
 }
 
 // Valor por sesión del perfil: lo usan los pacientes sin valor propio.
 export async function getDefaultFee(): Promise<number | null> {
-  const supabase = await createClient();
-  const { data: claims } = await supabase.auth.getClaims();
-  const { data } = await supabase
-    .from("profiles")
-    .select("default_session_fee")
-    .eq("id", claims?.claims.sub ?? "")
-    .single();
-  return data?.default_session_fee ?? null;
+  const profile = await getProfile();
+  return profile?.default_session_fee ?? null;
 }
 
 export async function getPatients(active: boolean): Promise<PatientListItem[]> {

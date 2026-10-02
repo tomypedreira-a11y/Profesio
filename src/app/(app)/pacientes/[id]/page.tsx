@@ -18,21 +18,25 @@ import { ArchiveButton } from "./archive-button";
 
 export const metadata: Metadata = { title: "Paciente" };
 
-async function getPatient(id: string) {
-  if (!z.uuid().safeParse(id).success) return null;
-  const supabase = await createClient();
-  const { data } = await supabase.from("patient_list").select("*").eq("id", id).maybeSingle();
-  return data;
-}
-
 export default async function PatientPage({ params }: PageProps<"/pacientes/[id]">) {
   const { id } = await params;
-  const [patient, timeZone, defaultFee] = await Promise.all([getPatient(id), getTimeZone(), getDefaultFee()]);
-  if (!patient) notFound();
+  if (!z.uuid().safeParse(id).success) notFound();
 
   const supabase = await createClient();
   const now = new Date().toISOString();
-  const [{ data: upcoming }, { data: past }, { data: notes, count: notesCount }] = await Promise.all([
+  // Todo a la vez (antes, las sesiones y anotaciones esperaban al paciente). Si el paciente no existe o es de
+  // otro psicólogo, las RLS hacen que las demás consultas vuelvan vacías y se descartan con el notFound().
+  const [
+    { data: patient },
+    timeZone,
+    defaultFee,
+    { data: upcoming },
+    { data: past },
+    { data: notes, count: notesCount },
+  ] = await Promise.all([
+    supabase.from("patient_list").select("*").eq("id", id).maybeSingle(),
+    getTimeZone(),
+    getDefaultFee(),
     supabase
       .from("sessions")
       .select("id, starts_at, status")
@@ -54,6 +58,7 @@ export default async function PatientPage({ params }: PageProps<"/pacientes/[id]
       .order("starts_at", { ascending: false })
       .limit(1), // solo la más reciente; count trae el total para "Ver todas"
   ]);
+  if (!patient) notFound();
 
   const fullName = `${patient.first_name} ${patient.last_name}`;
   const schedules = toSlots(patient.schedules);

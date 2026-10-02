@@ -1,14 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import listPlugin from "@fullcalendar/list";
-import interactionPlugin, { type DateClickArg } from "@fullcalendar/interaction";
-import esLocale from "@fullcalendar/core/locales/es";
+import type FullCalendar from "@fullcalendar/react";
+import type { DateClickArg } from "@fullcalendar/interaction";
 import type { DatesSetArg, EventClickArg, EventContentArg, EventInput, EventSourceFuncArg } from "@fullcalendar/core";
 import { addDays, differenceInCalendarDays, format, isSameMonth, parseISO, startOfWeek } from "date-fns";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   CalendarDaysIcon,
@@ -31,10 +28,22 @@ import { NextSessionPanel } from "./next-session-panel";
 import { SessionSheet } from "./session-sheet";
 import { UnscheduledPanel, UnscheduledSheet } from "./unscheduled-panel";
 import { WeekStrip } from "./week-strip";
-import { timeZonePlugin } from "./time-zone-plugin";
+import { CalendarGridSkeleton } from "./calendar-skeleton";
+import { nextSession as fetchNextSession, sessionsInRange, weekBookings, type InitialCalendarData, type WeekBookings } from "./queries";
 import type { CalendarViewPreference } from "@/lib/calendar-views";
-import { SESSION_COLUMNS, type CalendarSession, type PatientOption, type UnscheduledPatient } from "./types";
+import type { CalendarSession, PatientOption, UnscheduledPatient } from "./types";
 import "./calendar.css";
+
+// FullCalendar llega aparte y solo en el navegador (import dinámico): mientras tanto se ve el esqueleto de la
+// grilla, y el resto de la pantalla ya responde. La descarga empieza apenas se carga este archivo en el navegador
+// (no recién después de hidratar la página, que la demoraba).
+const loadGrid = () => import("./calendar-grid");
+if (typeof window !== "undefined") void loadGrid();
+const CalendarGrid = dynamic(loadGrid, { ssr: false });
+
+// Pasado este tiempo, lo que cargó el servidor ya no se usa (ej. al volver atrás, Next muestra la pantalla
+// guardada): se vuelve a pedir.
+const INITIAL_DATA_MAX_AGE_MS = 60_000;
 
 // Horario visible por defecto; se amplía si hay sesiones fuera de este rango.
 const DEFAULT_MIN_HOUR = 8;
@@ -57,9 +66,38 @@ type CalendarViewProps = {
   // "browse": pantalla aparte (/calendario/vistas) para mirar cualquier vista desde el celular,
   // sin paneles ni tira de días. Lo que se elige ahí no cambia la pantalla principal.
   mode?: "main" | "browse";
+  // Sesiones del rango inicial (y "No agendados" de esta semana), cargadas por la página en el servidor:
+  // al abrir no se vuelven a pedir. Las semanas siguientes se piden desde el navegador.
+  initialData?: InitialCalendarData;
 };
 
-export function CalendarView({ timeZone, patients = [], initialView, mode = "main" }: CalendarViewProps) {
+// En el celular la pantalla principal muestra siempre la semana como tira de días (sin importar
+// la vista del perfil); las otras vistas se miran en /calendario/vistas. En PC la semana es la grilla de 7 días.
+// En la pantalla aparte, la semana es la lista en el celular y la grilla en PC.
+function viewFor(type: string, isMobile: boolean, browse: boolean): ViewKey {
+  if (browse) {
+    if (isMobile && type === "timeGridWeek") return "listWeek";
+    if (!isMobile && type === "listWeek") return "timeGridWeek";
+  } else if (isMobile) return "timeGridWeekMobile";
+  else if (type === "timeGridWeekMobile") return "timeGridWeek";
+  return type as ViewKey;
+}
+
+// "No agendados": los irregulares sin sesión esa semana, por apellido.
+function unscheduledFrom({ irregular, booked }: WeekBookings) {
+  const bookedIds = new Set(booked.map((b) => b.patient_id));
+  const collator = new Intl.Collator("es");
+  return irregular.filter((p) => !bookedIds.has(p.id)).sort((a, b) => collator.compare(sortName(a), sortName(b)));
+}
+
+// Sesiones no canceladas de cada día de la semana (su lunes, de reloj), para la tira del celular.
+function countsFrom({ booked }: WeekBookings, weekStart: Date, timeZone: string) {
+  const counts = Array<number>(7).fill(0);
+  for (const b of booked) counts[differenceInCalendarDays(toWall(b.starts_at, timeZone), weekStart)]++;
+  return counts;
+}
+
+export function CalendarView({ timeZone, patients = [], initialView, mode = "main", initialData }: CalendarViewProps) {
   const browse = mode === "browse";
   const supabase = useRef(createClient()).current;
   const calendarRef = useRef<FullCalendar>(null);
@@ -67,72 +105,81 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
   const vacations = useVacations();
   // Pantalla aparte en el celular: semana en lista y mes con un punto por sesión.
   const compact = browse && isMobile;
+  // Lo que cargó el servidor: lo usa la primera carga de la grilla (y "No agendados", desde el principio).
+  // Se descarta al salir de ese rango o al volver a pedir (después de un cambio).
+  const initialRef = useRef(initialData ?? null);
+  const initialWeek = initialData?.week;
 
   const [title, setTitle] = useState("");
   const [view, setView] = useState<ViewKey>(initialView);
+  // FullCalendar ya montado (hasta entonces, el esqueleto de la grilla).
+  const [ready, setReady] = useState(false);
   const [hours, setHours] = useState({ min: DEFAULT_MIN_HOUR, max: DEFAULT_MAX_HOUR });
   const [selected, setSelected] = useState<{ session: CalendarSession; isNext: boolean } | null>(null);
   // Días "de reloj" en la zona del perfil (ver lib/zoned.ts): primer día visible (el elegido en la tira)
   // y lunes de la semana de "No agendados".
   const [day, setDay] = useState<Date | null>(null);
-  const [week, setWeek] = useState<Date | null>(null);
-  const weekRef = useRef<Date | null>(null);
-  const [unscheduled, setUnscheduled] = useState<UnscheduledPatient[]>([]);
+  const [week, setWeek] = useState<Date | null>(() => (initialWeek ? parseISO(initialWeek.start) : null));
+  const weekRef = useRef<Date | null>(week);
+  const [unscheduled, setUnscheduled] = useState<UnscheduledPatient[]>(() =>
+    initialWeek ? unscheduledFrom(initialWeek) : [],
+  );
   const [showUnscheduled, setShowUnscheduled] = useState(false);
   // Sesiones no canceladas de cada día de la semana, para la tira del celular (null mientras carga).
-  const [weekCounts, setWeekCounts] = useState<number[] | null>(null);
+  const [weekCounts, setWeekCounts] = useState<number[] | null>(() =>
+    initialWeek ? countsFrom(initialWeek, parseISO(initialWeek.start), timeZone) : null,
+  );
   // Próxima sesión de todas (undefined mientras carga), para destacarla y mostrarla en el panel.
-  const [nextSession, setNextSession] = useState<CalendarSession | null | undefined>(undefined);
+  const [nextSession, setNextSession] = useState<CalendarSession | null | undefined>(initialData?.next);
   // Panel "Agregar sesión" abierto (con el paciente y la fecha sugeridos, si vienen de "No agendados").
   const [adding, setAdding] = useState<{ patientId?: string; date?: Date } | null>(null);
 
   const api = () => calendarRef.current?.getApi();
+  const handleReady = useCallback(() => setReady(true), []);
 
-  // En el celular la pantalla principal muestra siempre la semana como tira de días (sin importar
-  // la vista del perfil); las otras vistas se miran en /calendario/vistas. En PC la semana es la grilla de 7 días.
-  // En la pantalla aparte, la semana es la lista en el celular y la grilla en PC.
+  // Al cambiar el tamaño de pantalla (la vista con la que arranca ya la elige viewFor).
   // El cambio va en una microtarea: FullCalendar re-renderiza con flushSync, y React no lo permite
   // dentro de un efecto ("flushSync was called from inside a lifecycle method").
   useEffect(() => {
     queueMicrotask(() => {
       const calendar = calendarRef.current?.getApi();
       if (!calendar) return;
-      const type = calendar.view.type;
-      if (browse) {
-        if (isMobile && type === "timeGridWeek") calendar.changeView("listWeek");
-        else if (!isMobile && type === "listWeek") calendar.changeView("timeGridWeek");
-      } else if (isMobile && type !== "timeGridWeekMobile") calendar.changeView("timeGridWeekMobile");
-      else if (!isMobile && type === "timeGridWeekMobile") calendar.changeView("timeGridWeek");
+      const type = viewFor(calendar.view.type, isMobile, browse);
+      if (type !== calendar.view.type) calendar.changeView(type);
     });
-  }, [isMobile, browse]);
+  }, [isMobile, browse, ready]);
 
   // Carga las sesiones del rango visible. FullCalendar la llama al cambiar de fecha o vista.
   const fetchEvents = useCallback(
     async (info: EventSourceFuncArg): Promise<EventInput[]> => {
       const now = new Date().toISOString();
-      const [{ data: sessions }, { data: next }] = await Promise.all([
-        supabase
-          .from("calendar_sessions")
-          .select(SESSION_COLUMNS)
-          .gte("starts_at", info.start.toISOString())
-          .lt("starts_at", info.end.toISOString()),
-        // La próxima sesión (no cancelada) de todas, para destacarla y mostrarla en el panel.
-        supabase
-          .from("calendar_sessions")
-          .select(SESSION_COLUMNS)
-          .eq("status", "scheduled")
-          .gt("starts_at", now)
-          .order("starts_at", { ascending: true })
-          .limit(1)
-          .maybeSingle(),
-      ]);
+      // El rango inicial ya lo cargó el servidor. Fuera de ese rango (otra semana u otra vista más amplia),
+      // se pide y lo del servidor deja de usarse.
+      const initial = initialRef.current;
+      const fromServer =
+        initial !== null &&
+        Date.parse(initial.start) <= info.start.getTime() &&
+        info.end.getTime() <= Date.parse(initial.end);
+      if (!fromServer) initialRef.current = null;
+      const [sessions, next] = fromServer
+        ? [
+            initial.sessions.filter((s) => {
+              const t = Date.parse(s.starts_at);
+              return t >= info.start.getTime() && t < info.end.getTime();
+            }),
+            initial.next,
+          ]
+        : await Promise.all([
+            sessionsInRange(supabase, info.start.toISOString(), info.end.toISOString()),
+            fetchNextSession(supabase, now),
+          ]);
 
       // En vacaciones no se muestra ningún paciente de horario fijo: las agendadas ya se quitaron
       // al cargarlas, y las canceladas (que se conservan) se ocultan.
-      const list = ((sessions ?? []) as CalendarSession[]).filter(
+      const list = sessions.filter(
         (s) => !(s.series_id && s.status === "cancelled" && isVacationDay(vacations, toWall(s.starts_at, timeZone))),
       );
-      setNextSession((next as CalendarSession | null) ?? null);
+      setNextSession(next);
 
       // Ampliar el horario visible si alguna sesión cae fuera de 8 a 22.
       let min = DEFAULT_MIN_HOUR;
@@ -194,36 +241,36 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
   );
 
   // De la semana indicada (su lunes, de reloj): pacientes irregulares activos sin sesión (no cancelada)
-  // y sesiones por día.
+  // y sesiones por día. La semana inicial ya vino del servidor (estado inicial de arriba).
   const loadWeek = useCallback(
     async (weekStart: Date) => {
-      const weekEnd = addDays(weekStart, 7);
-      const [{ data: irregular }, { data: booked }] = await Promise.all([
-        supabase.from("patient_list").select("id, first_name, last_name").eq("active", true).is("weekday", null),
-        supabase
-          .from("sessions")
-          .select("patient_id, starts_at")
-          .eq("status", "scheduled")
-          .gte("starts_at", fromWall(weekStart, timeZone).toISOString())
-          .lt("starts_at", fromWall(weekEnd, timeZone).toISOString()),
-      ]);
+      const bookings = await weekBookings(
+        supabase,
+        fromWall(weekStart, timeZone).toISOString(),
+        fromWall(addDays(weekStart, 7), timeZone).toISOString(),
+      );
       // Si mientras tanto se pasó a otra semana, esta respuesta ya no sirve.
       if (weekRef.current?.getTime() !== weekStart.getTime()) return;
-
-      const counts = Array<number>(7).fill(0);
-      for (const b of booked ?? []) counts[differenceInCalendarDays(toWall(b.starts_at, timeZone), weekStart)]++;
-      setWeekCounts(counts);
-
-      const bookedIds = new Set((booked ?? []).map((b) => b.patient_id));
-      const collator = new Intl.Collator("es");
-      setUnscheduled(
-        ((irregular ?? []) as UnscheduledPatient[])
-          .filter((p) => !bookedIds.has(p.id))
-          .sort((a, b) => collator.compare(sortName(a), sortName(b))),
-      );
+      setWeekCounts(countsFrom(bookings, weekStart, timeZone));
+      setUnscheduled(unscheduledFrom(bookings));
     },
     [supabase, timeZone],
   );
+
+  // Estable (sin dependencias) porque el panel de próxima sesión la usa en un efecto. Lo que cargó el servidor
+  // ya no sirve: después de un cambio (o cuando empieza la próxima sesión) se pide de nuevo.
+  const refetchEvents = useCallback(() => {
+    initialRef.current = null;
+    calendarRef.current?.getApi().refetchEvents();
+  }, []);
+
+  // Si los datos del servidor son viejos (ej. al volver atrás, Next muestra la pantalla que tenía guardada),
+  // se vuelven a pedir apenas se monta.
+  useEffect(() => {
+    if (!initialData || Date.now() - initialData.loadedAt < INITIAL_DATA_MAX_AGE_MS) return;
+    refetchEvents();
+    if (weekRef.current) void loadWeek(weekRef.current);
+  }, [initialData, refetchEvents, loadWeek]);
 
   // Al cambiar de fecha o vista: actualizar el título y la semana de "No agendados".
   // FullCalendar da instantes; acá se pasan a días de reloj de la zona del perfil.
@@ -313,9 +360,6 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
     const { session, isNext } = arg.event.extendedProps as { session: CalendarSession; isNext: boolean };
     setSelected({ session, isNext });
   }
-
-  // Estable (sin dependencias) porque el panel de próxima sesión la usa en un efecto.
-  const refetchEvents = useCallback(() => calendarRef.current?.getApi().refetchEvents(), []);
 
   function refresh() {
     refetchEvents();
@@ -432,12 +476,14 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
         )}
 
         <div className={cn(compact && "calendar-compact")}>
-          <FullCalendar
-            ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, timeZonePlugin]}
+          {!ready && <CalendarGridSkeleton view={view} />}
+          <CalendarGrid
+            calendarRef={calendarRef}
+            onReady={handleReady}
             timeZone={timeZone}
-            locale={esLocale}
-            initialView={initialView}
+            // Cuando monta ya se sabe si es un celular: arranca en la vista que corresponde, sin cambiarla después
+            // (así no pide dos veces las sesiones).
+            initialView={viewFor(initialView, isMobile, browse)}
             views={CUSTOM_VIEWS}
             headerToolbar={false}
             height="auto"

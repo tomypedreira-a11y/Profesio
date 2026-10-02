@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getClaims, getProfile } from "@/lib/supabase/server";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/page-header";
@@ -30,19 +30,13 @@ const SESSION_LENGTH_ITEMS = SESSION_LENGTHS.map((l) => ({ value: String(l.minut
 // Preferencias del psicólogo, agrupadas en secciones (ver settings-section.tsx).
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) redirect("/login");
-
-  const [{ data: profile }, { data: factors }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select(
-        "theme, font_size, calendar_view, default_session_minutes, default_session_fee, timezone, reminder_minutes, daily_summary_enabled, daily_summary_time, notification_show_name, idle_timeout_minutes",
-      )
-      .eq("id", data.claims.sub)
-      .single(),
+  // El perfil es el que ya leyó el layout (cache); los factores de MFA, a la vez.
+  const [claims, profile, { data: factors }] = await Promise.all([
+    getClaims(),
+    getProfile(),
     supabase.auth.mfa.listFactors(),
   ]);
+  if (!claims) redirect("/login");
 
   // Dispositivos de la verificación en dos pasos (solo los verificados).
   const timeZone = profile?.timezone ?? DEFAULT_TIME_ZONE;
@@ -155,7 +149,7 @@ export default async function SettingsPage() {
         <SettingsSection title="Cuenta">
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>
-            <Input id="email" value={data.claims.email ?? ""} disabled readOnly className="sm:max-w-sm" />
+            <Input id="email" value={claims.email ?? ""} disabled readOnly className="sm:max-w-sm" />
             <FieldDescription>Es el email con el que ingresás a Profesio.</FieldDescription>
           </Field>
           <Field>

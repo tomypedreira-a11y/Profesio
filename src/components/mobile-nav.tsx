@@ -165,7 +165,12 @@ export function MobileNav({ user }: MobileNavProps) {
               type="button"
               aria-label="Cuenta"
               aria-expanded={open}
-              onClick={() => setOpen((value) => !value)}
+              onClick={() => {
+                // Al abrirlo, se precargan Mi perfil y Configuración (navegan con router.push, no con un Link):
+                // así su esqueleto de carga aparece al instante.
+                if (!open) ACCOUNT_ITEMS.forEach((item) => router.prefetch(item.href));
+                setOpen((value) => !value);
+              }}
               className={cn(
                 "relative -mt-5 flex size-14 items-center justify-center rounded-full border-4 border-background bg-primary text-base font-semibold text-primary-foreground shadow-lg",
                 // En Mi perfil o Configuración se remarca, como las secciones activas.

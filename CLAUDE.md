@@ -82,15 +82,18 @@ src/
                                  (account-actions.ts: contraseña, MFA, cerrar sesión en todos los dispositivos)
   components/
     ui/                          Componentes de shadcn (generados por la CLI)
-    calendar/                    Calendario, panel de sesión, agendar, reprogramar/cancelar
+    calendar/                    Calendario, panel de sesión, agendar, reprogramar/cancelar. calendar-grid.tsx =
+                                 FullCalendar (import dinámico); queries.ts = consultas compartidas servidor/navegador
     notes/                       Editor de anotaciones de sesión
     payments/                    Botones de cobro y cobro dentro del panel de sesión
     pwa/                         Registro del service worker, instalar la app, aviso sin conexión
     profile-defaults-provider.tsx  Duración y valor por defecto del perfil (los carga el layout)
     idle-logout.tsx              Aviso y cierre de sesión por inactividad (en el layout de (app))
+    list-skeletons.tsx           Piezas de los esqueletos de carga (filas, tarjetas, formularios) para los loading.tsx
+    speed-insights.tsx           Vercel Speed Insights (en el layout raíz; quita los ids de la URL antes de enviar)
     sitio/                       Encabezado, pie, preguntas frecuentes, botón de instalar y estructura legal del sitio
   lib/
-    supabase/{client,server,proxy}.ts
+    supabase/{client,server,proxy}.ts  server.ts también tiene getClaims() y getProfile() (una vez por request)
     supabase/admin.ts            Cliente con la secret key: SOLO para /api/cron/*
     push.ts  push-client.ts  notifications.ts   Envío y textos (servidor), suscripción (navegador), opciones
     database.types.ts            Generado por Supabase: NO editar a mano
@@ -162,7 +165,9 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   La base impide sesiones superpuestas no canceladas (restricción de exclusión).
   Los choques devuelven errores con `hint = 'schedule_conflict'`; mostrarlos tal cual al usuario.
 - **Horarios fijos:** se generan filas reales en `sessions` (no recurrencias calculadas al vuelo).
-  Se generan 12 meses; `extend_series()` (llamada al abrir el calendario) extiende cuando quedan menos de 3.
+  Se generan 12 meses; `extend_series()` extiende cuando quedan menos de 3. La llaman `calendario/page.tsx` y
+  `calendario/vistas/page.tsx`, dentro del mismo `Promise.all` que el resto (no se espera antes): solo agrega
+  sesiones a más de 3 meses, que no se ven al abrir.
   Un paciente puede tener varios horarios fijos (ej. martes y jueves 18:00); `patient_list.schedules` los trae todos
   (`weekday`/`start_time` solo el más reciente, por compatibilidad). Formato: `[{ weekday, start_time, end_time }]` (`lib/schedule.ts`).
   Usar las funciones existentes: `create_patient_with_schedules`, `update_patient_with_schedules` (deja exactamente
@@ -222,6 +227,23 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   Los nombres en el código (variables, tablas, columnas) en inglés.
 - **Lectura de datos:** en Server Components con `createClient()` de `lib/supabase/server.ts`.
   En componentes cliente que cargan datos al navegar (ej. el calendario), `lib/supabase/client.ts`.
+  - **Sesión y perfil:** `getClaims()` y `getProfile()` de `lib/supabase/server.ts` (con `cache()` de React: el
+    layout y la página comparten una sola consulta por request). No volver a leer `profiles` ni llamar a
+    `auth.getClaims()` en una página; `getTimeZone`, `getCalendarView` y `getDefaultFee` (`pacientes/queries.ts`)
+    salen de ahí. A un componente cliente, pasarle solo los campos que usa, no la fila entera. En Server Actions
+    `cache()` no guarda nada: ahí se sigue usando `supabase.auth.getClaims()`.
+  - **Consultas independientes, en un solo `Promise.all`**; nada de `await` en fila si una no depende de la otra
+    (ej. la ficha pide el paciente, sus sesiones y anotaciones a la vez: las RLS vacían lo ajeno y `notFound()` descarta).
+  - **Cada pantalla de (app) tiene su `loading.tsx`** con la forma de la pantalla real (Skeleton de shadcn y las
+    piezas de `components/list-skeletons.tsx`; el título real si se conoce). El layout se ve enseguida y la página
+    llega después en su lugar. Una pantalla nueva lleva el suyo (si no, hereda el del padre, con otra forma). Lo
+    que navega con `router.push` en vez de `<Link>` no se precarga solo: precargarlo con `router.prefetch` (ej. el
+    menú de la cuenta) para que el esqueleto aparezca al instante.
+  - **Calendario:** la página carga en el servidor las sesiones del rango inicial, la próxima sesión y "No
+    agendados" de esta semana (`calendario/initial-data.ts`, con las mismas consultas que el navegador,
+    `components/calendar/queries.ts`); `CalendarView` no las vuelve a pedir al montarse. Fuera de ese rango, después
+    de un cambio o si los datos tienen más de un minuto (al volver atrás), las pide el navegador como siempre.
+    FullCalendar se carga con `next/dynamic` (`ssr: false`) y, mientras llega, `CalendarGridSkeleton`.
 - **Escrituras:** Server Actions (`"use server"`) que validan con Zod, llaman a Supabase y hacen `revalidatePath`.
 - **Formularios:** `useActionState` + tipo `FormState` (`lib/form-state.ts`): `error`, `fieldErrors`,
   `success` y `values` (para no perder lo escrito si hay error). Errores por campo con `<FieldError>`.
@@ -331,6 +353,11 @@ Sin claves ni secretos acá: están en Vercel, Supabase, Resend y `.env.local`.
 
 - **Dominio:** https://www.miprofesio.com. En Vercel, `miprofesio.com` y `profesio-six.vercel.app` redirigen (308)
   a `www` (Vercel → Settings → Domains; no está en el código).
+- **Región de las funciones:** `gru1` (São Paulo, junto a Supabase), en `vercel.json` (`regions`). Fluid compute:
+  Vercel → Settings → Functions.
+- **Speed Insights** (`@vercel/speed-insights`, `components/speed-insights.tsx`): tiempos de carga de cada pantalla,
+  sin cookies; la URL va sin ids (`/pacientes/[id]`). `/_vercel/` está fuera del matcher de `proxy.ts` (va sin sesión).
+  Está declarado en `/privacidad` (proveedores).
 - **DNS en Cloudflare:** los CNAME de Vercel van en "DNS only" (nube gris). Los MX, el SPF de la raíz y el DKIM
   `cf2024-1` los administra Cloudflare Email Routing (aparecen con candado; no se editan a mano).
 - **Mails de prod:** SMTP propio con Resend (remitente `no-responder@miprofesio.com`, región sa-east-1; registros
