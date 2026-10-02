@@ -13,6 +13,7 @@ import { mfaErrorMessage, totpCodeSchema, verifyTotp } from "@/lib/mfa";
 import { safeNextPath } from "@/lib/safe-path";
 import { APP_HOME } from "@/lib/routes";
 import { TERMS_VERSION } from "@/lib/legal";
+import { captchaToken } from "@/lib/turnstile";
 
 const loginSchema = z.object({
   email: z.email("Ingresá un email válido."),
@@ -38,7 +39,10 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { error } = await supabase.auth.signInWithPassword({
+    ...parsed.data,
+    options: { captchaToken: captchaToken(formData) },
+  });
   if (error) {
     return { error: authErrorMessage(error.code), values };
   }
@@ -101,6 +105,7 @@ export async function signup(_prev: FormState, formData: FormData): Promise<Form
       data: { first_name, last_name, timezone, terms_version: TERMS_VERSION },
       // A dónde lleva el link del mail de confirmación.
       emailRedirectTo: `${origin}/auth/confirm`,
+      captchaToken: captchaToken(formData),
     },
   });
   if (error) {
@@ -126,9 +131,14 @@ export async function requestPasswordReset(_prev: FormState, formData: FormData)
   const origin = (await headers()).get("origin") ?? "";
   const supabase = await createClient();
   // El resultado no se muestra: siempre el mismo mensaje, para no revelar qué emails tienen cuenta.
-  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+  // Solo el captcha rechazado se avisa (no dice nada de la cuenta).
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: `${origin}/auth/confirm?next=/app/nueva-contrasena`,
+    captchaToken: captchaToken(formData),
   });
+  if (error?.code === "captcha_failed") {
+    return { error: authErrorMessage(error.code), values };
+  }
 
   return { success: "Si existe una cuenta con ese email, te enviamos un link para crear una contraseña nueva." };
 }

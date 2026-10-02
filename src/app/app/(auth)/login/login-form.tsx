@@ -9,11 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { FormMessage } from "@/components/form-message";
+import { Turnstile, useCaptcha } from "@/components/turnstile";
 
 const initialState: FormState = {};
 
 export function LoginForm({ linkError, idleLogout }: { linkError?: boolean; idleLogout?: boolean }) {
   const [state, action, pending] = useActionState(login, initialState);
+  const { captchaReady, onCaptchaToken } = useCaptcha();
   const errors = state.fieldErrors ?? {};
 
   return (
@@ -65,7 +67,8 @@ export function LoginForm({ linkError, idleLogout }: { linkError?: boolean; idle
               />
               <FieldError>{errors.password?.[0]}</FieldError>
             </Field>
-            <Button type="submit" disabled={pending} className="w-full">
+            <Turnstile onToken={onCaptchaToken} resetKey={state} />
+            <Button type="submit" disabled={pending || !captchaReady} className="w-full">
               {pending ? "Ingresando…" : "Ingresar"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">

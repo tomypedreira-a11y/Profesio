@@ -13,6 +13,9 @@ export function authErrorMessage(code: string | undefined): string {
     // En prod está activado "Prevent use of leaked passwords": el mínimo de largo ya lo valida Zod antes.
     case "weak_password":
       return "Esa contraseña es muy común o apareció en filtraciones de datos. Elegí otra.";
+    // El captcha (Turnstile) no pasó la verificación de Supabase, venció o ya se usó.
+    case "captcha_failed":
+      return "No pudimos verificar que no seas un robot. Esperá a que se complete la verificación y volvé a intentar.";
     case "over_email_send_rate_limit":
     case "over_request_rate_limit":
       return "Demasiados intentos. Esperá unos minutos y volvé a probar.";
