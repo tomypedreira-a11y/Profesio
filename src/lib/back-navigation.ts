@@ -6,8 +6,15 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useLayoutEffect, useSyncExternalStore } from "react";
 
 // Secciones principales: se llega desde la barra inferior o el panel lateral, y empiezan un recorrido.
-// Las vistas del calendario (/calendario/vistas) se abren desde el calendario: su flecha vuelve ahí.
-const MAIN_SECTIONS = ["/calendario", "/pacientes", "/sesiones", "/ingresos", "/perfil", "/configuracion"];
+// Las vistas del calendario (/app/calendario/vistas) se abren desde el calendario: su flecha vuelve ahí.
+const MAIN_SECTIONS = [
+  "/app/calendario",
+  "/app/pacientes",
+  "/app/sesiones",
+  "/app/ingresos",
+  "/app/perfil",
+  "/app/configuracion",
+];
 
 const STORAGE_KEY = "profesio:back-stack";
 const MAX_ENTRIES = 20;
@@ -20,25 +27,25 @@ export const isMainSection = (path: string) => MAIN_SECTIONS.includes(path);
 const isForm = (path: string) => path.endsWith("/nuevo") || path.endsWith("/editar");
 
 // Pantalla de arriba en la jerarquía, para cuando no hay recorrido (se entró por un link o se recargó).
-// /pacientes/[id]/editar → /pacientes/[id] → /pacientes
+// /app/pacientes/[id]/editar → /app/pacientes/[id] → /app/pacientes
 function parentOf(path: string) {
   return "/" + path.split("/").filter(Boolean).slice(0, -1).join("/");
 }
 
 function labelFor(path: string) {
   const labels: Record<string, string> = {
-    "/calendario": "Calendario",
-    "/calendario/vistas": "Vistas",
-    "/pacientes": "Pacientes",
-    "/pacientes/archivados": "Archivados",
-    "/sesiones": "Sesiones",
-    "/ingresos": "Ingresos",
-    "/perfil": "Mi perfil",
-    "/configuracion": "Configuración",
+    "/app/calendario": "Calendario",
+    "/app/calendario/vistas": "Vistas",
+    "/app/pacientes": "Pacientes",
+    "/app/pacientes/archivados": "Archivados",
+    "/app/sesiones": "Sesiones",
+    "/app/ingresos": "Ingresos",
+    "/app/perfil": "Mi perfil",
+    "/app/configuracion": "Configuración",
   };
   if (labels[path]) return labels[path];
   if (path.endsWith("/anotaciones")) return "Anotaciones";
-  if (path.startsWith("/pacientes/")) return "Paciente";
+  if (path.startsWith("/app/pacientes/")) return "Paciente";
   return "Volver";
 }
 

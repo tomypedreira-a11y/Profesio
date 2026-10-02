@@ -45,15 +45,15 @@ import { APP_HOME } from "@/lib/routes";
 
 const NAV_ITEMS = [
   { href: APP_HOME, label: "Calendario", icon: CalendarDaysIcon },
-  { href: "/pacientes", label: "Pacientes", icon: UsersIcon },
-  { href: "/sesiones", label: "Sesiones", icon: CalendarClockIcon },
-  { href: "/ingresos", label: "Ingresos", icon: WalletIcon },
+  { href: "/app/pacientes", label: "Pacientes", icon: UsersIcon },
+  { href: "/app/sesiones", label: "Sesiones", icon: CalendarClockIcon },
+  { href: "/app/ingresos", label: "Ingresos", icon: WalletIcon },
 ];
 
 // Lo de la cuenta no va en la lista: se abre desde el usuario, abajo del panel.
 const ACCOUNT_ITEMS = [
-  { href: "/perfil", label: "Mi perfil", icon: UserRoundIcon },
-  { href: "/configuracion", label: "Configuración", icon: SettingsIcon },
+  { href: "/app/perfil", label: "Mi perfil", icon: UserRoundIcon },
+  { href: "/app/configuracion", label: "Configuración", icon: SettingsIcon },
   { href: "/ayuda", label: "Ayuda", icon: CircleHelpIcon }, // página pública (fuera del panel de la app)
 ];
 
@@ -99,7 +99,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 En reposo llevan el fondo del calendario; hover y activo los pintan de verde (ver sidebar.tsx). */}
             <SidebarMenu className="gap-2">
               {NAV_ITEMS.map((item) => {
-                // pathname.startsWith: "Calendario" también queda marcado en /calendario/vistas.
+                // pathname.startsWith: "Calendario" también queda marcado en /app/calendario/vistas.
                 const isActive = pathname.startsWith(item.href);
                 return (
                   <SidebarMenuItem key={item.href}>

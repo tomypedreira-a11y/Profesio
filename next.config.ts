@@ -1,6 +1,33 @@
 import type { NextConfig } from "next";
 
+// Rutas de la app de antes de moverla a /app (para que la PWA tuviera su propio scope y "/" abriera el navegador).
+// Redirigen para siempre (308) con sus subrutas y el query string: apps ya instaladas (su start_url era
+// /calendario), marcadores y links de mails viejos. Se aplican antes del proxy.
+const LEGACY_APP_PATHS = [
+  "calendario",
+  "pacientes",
+  "sesiones",
+  "ingresos",
+  "perfil",
+  "configuracion",
+  "login",
+  "registro",
+  "recuperar",
+  "nueva-contrasena",
+];
+
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      ...LEGACY_APP_PATHS.map((path) => ({
+        source: `/${path}/:rest*`,
+        destination: `/app/${path}/:rest*`,
+        permanent: true,
+      })),
+      // /app sola no es una pantalla: al calendario (APP_HOME). Temporal, por si algún día tiene una propia.
+      { source: "/app", destination: "/app/calendario", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

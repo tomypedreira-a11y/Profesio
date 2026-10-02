@@ -1,6 +1,6 @@
 // Suscripción de este navegador a las notificaciones (Web Push). Solo en el navegador.
 // El service worker (public/sw.js) recibe y muestra las notificaciones; se registra solo en producción.
-import { deleteSubscription } from "@/app/(app)/configuracion/notification-actions";
+import { deleteSubscription } from "@/app/app/(app)/configuracion/notification-actions";
 
 // La clave pública VAPID viene en base64url; pushManager.subscribe la quiere en bytes.
 export function vapidKeyBytes(base64url: string) {

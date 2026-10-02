@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import { format } from "date-fns";
 import { UserRoundIcon } from "lucide-react";
 import { toast } from "sonner";
-import { addSessions } from "@/app/(app)/sesiones/actions";
+import { addSessions } from "@/app/app/(app)/sesiones/actions";
 import { formatSchedules } from "@/lib/format";
 import { isValidRange, resolveEnd } from "@/lib/schedule";
 import { Button } from "@/components/ui/button";
@@ -175,7 +175,7 @@ function AddSessionForm({
       )}
 
       {showPatientLink && patient && (
-        <Button variant="outline" render={<Link href={`/pacientes/${patient.id}`} />} nativeButton={false}>
+        <Button variant="outline" render={<Link href={`/app/pacientes/${patient.id}`} />} nativeButton={false}>
           <UserRoundIcon />
           Ver ficha del paciente
         </Button>

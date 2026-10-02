@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { startIdleTracking } from "@/lib/idle-cookies";
 import { safeNextPath } from "@/lib/safe-path";
 
-const RECOVERY_PATH = "/nueva-contrasena";
+const RECOVERY_PATH = "/app/nueva-contrasena";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Link de recuperación vencido: a pedir uno nuevo. Confirmación de registro: al login.
-  url.pathname = isRecovery ? "/recuperar" : "/login";
+  url.pathname = isRecovery ? "/app/recuperar" : "/app/login";
   url.searchParams.set("error", "link-invalido");
   return NextResponse.redirect(url);
 }

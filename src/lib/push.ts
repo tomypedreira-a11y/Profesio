@@ -64,7 +64,7 @@ export function reminderPayload(n: {
   return {
     title: `Sesión en ${n.minutesBefore === 60 ? "1 hora" : plural(n.minutesBefore, "minuto", "minutos")}`,
     body: parts.join(" · "),
-    url: "/calendario",
+    url: "/app/calendario",
     tag: `session-${n.sessionId}`,
   };
 }
@@ -76,7 +76,7 @@ export function dailySummaryPayload(n: { forDate: string; sessionCount: number; 
       n.sessionCount === 1
         ? `Tenés 1 sesión. Es a las ${n.firstTime}.`
         : `Tenés ${n.sessionCount} sesiones. La primera es a las ${n.firstTime}.`,
-    url: "/calendario",
+    url: "/app/calendario",
     tag: `summary-${n.forDate}`,
   };
 }
@@ -84,6 +84,6 @@ export function dailySummaryPayload(n: { forDate: string; sessionCount: number; 
 export const testPayload: PushPayload = {
   title: "Notificación de prueba",
   body: "Así vas a ver los recordatorios en este dispositivo.",
-  url: "/calendario", // como los recordatorios
+  url: "/app/calendario", // como los recordatorios
   tag: "test",
 };

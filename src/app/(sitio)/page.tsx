@@ -138,10 +138,10 @@ export default async function LandingPage() {
               </Link>
             ) : (
               <>
-                <Link href="/registro" className={buttonVariants({ size: "lg" })}>
+                <Link href="/app/registro" className={buttonVariants({ size: "lg" })}>
                   Probala gratis
                 </Link>
-                <Link href="/login" className={buttonVariants({ variant: "outline", size: "lg" })}>
+                <Link href="/app/login" className={buttonVariants({ variant: "outline", size: "lg" })}>
                   Ingresar
                 </Link>
               </>
@@ -266,7 +266,7 @@ export default async function LandingPage() {
                 Ir a mi agenda
               </Link>
             ) : (
-              <Link href="/registro" className={buttonVariants()}>
+              <Link href="/app/registro" className={buttonVariants()}>
                 Probala gratis
               </Link>
             )}

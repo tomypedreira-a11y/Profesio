@@ -64,7 +64,7 @@ type CalendarViewProps = {
   timeZone: string; // la del perfil: el calendario la usa aunque el dispositivo esté en otra
   patients?: PatientOption[]; // para "Agregar sesión" (solo en la pantalla principal)
   initialView: CalendarViewPreference; // vista elegida en el perfil
-  // "browse": pantalla aparte (/calendario/vistas) para mirar cualquier vista desde el celular,
+  // "browse": pantalla aparte (/app/calendario/vistas) para mirar cualquier vista desde el celular,
   // sin paneles ni tira de días. Lo que se elige ahí no cambia la pantalla principal.
   mode?: "main" | "browse";
   // Sesiones del rango inicial (y "No agendados" de esta semana), cargadas por la página en el servidor:
@@ -73,7 +73,7 @@ type CalendarViewProps = {
 };
 
 // En el celular la pantalla principal muestra siempre la semana como tira de días (sin importar
-// la vista del perfil); las otras vistas se miran en /calendario/vistas. En PC la semana es la grilla de 7 días.
+// la vista del perfil); las otras vistas se miran en /app/calendario/vistas. En PC la semana es la grilla de 7 días.
 // En la pantalla aparte, la semana es la lista en el celular y la grilla en PC.
 function viewFor(type: string, isMobile: boolean, browse: boolean): ViewKey {
   if (browse) {
@@ -434,7 +434,7 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
               variant="outline"
               size="icon"
               className="ml-auto md:hidden"
-              render={<Link href="/calendario/vistas" />}
+              render={<Link href="/app/calendario/vistas" />}
               nativeButton={false}
               aria-label="Ver día, semana o mes"
             >

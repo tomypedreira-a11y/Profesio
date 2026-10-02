@@ -69,16 +69,18 @@ src/
     (sitio)/                     Páginas públicas, con encabezado y pie propios: "/" (promocional), /ayuda,
                                  /terminos, /privacidad (BORRADORES legales) y opengraph-image.tsx
     robots.ts  sitemap.ts        Solo las páginas públicas (www.miprofesio.com)
-    (auth)/                      Login, registro, /login/verificar (código MFA), /recuperar, /nueva-contrasena y sus acciones
     auth/confirm/route.ts        Links de los mails (confirmación y recuperación; respeta `next`)
     api/cron/notifications/      Cron de notificaciones (Vercel, cada minuto; protegido con CRON_SECRET)
-    (app)/                       Pantallas con sesión iniciada (layout con panel lateral)
-      calendario/                Calendario: vista principal (APP_HOME); vistas/ = día/semana/mes desde el celular
-      pacientes/                 Listado, alta, ficha, edición, archivados, anotaciones
-      sesiones/                  Lista de próximas sesiones + acciones de sesiones
-      ingresos/                  Resumen de cobros del mes, quiénes adeudan + acciones de cobro
-      perfil/                    Datos profesionales (nombre, apellido, matrícula)
-      configuracion/             Preferencias: Personalización, Calendario, Sesiones, Vacaciones, Cuenta
+    app/                         La app: todo bajo /app (scope de la PWA; ver "Sitio público y rutas")
+      (auth)/                    /app/login, /app/registro, /app/login/verificar (código MFA), /app/recuperar,
+                                 /app/nueva-contrasena y sus acciones
+      (app)/                     Pantallas con sesión iniciada (layout con panel lateral)
+        calendario/              Calendario: vista principal (APP_HOME); vistas/ = día/semana/mes desde el celular
+        pacientes/               Listado, alta, ficha, edición, archivados, anotaciones
+        sesiones/                Lista de próximas sesiones + acciones de sesiones
+        ingresos/                Resumen de cobros del mes, quiénes adeudan + acciones de cobro
+        perfil/                  Datos profesionales (nombre, apellido, matrícula)
+        configuracion/           Preferencias: Personalización, Calendario, Sesiones, Vacaciones, Cuenta
                                  (account-actions.ts: contraseña, MFA, cerrar sesión en todos los dispositivos)
   components/
     ui/                          Componentes de shadcn (generados por la CLI)
@@ -102,7 +104,7 @@ src/
     idle.ts  idle-cookies.ts     Cierre por inactividad: cookies y opciones (compartido) / escritura desde el servidor
     auth.ts  mfa.ts  safe-path.ts  Errores y validación de contraseñas, códigos TOTP, destino `next` seguro
     sign-out.ts  pending-saves.ts  Cerrar sesión desde el navegador (guarda lo pendiente y desuscribe el dispositivo)
-    routes.ts                    APP_HOME = "/calendario": destino después de ingresar e inicio de la PWA
+    routes.ts                    APP_HOME = "/app/calendario": destino después de ingresar e inicio de la PWA
     legal.ts                     Versión de los términos, fecha, datos del titular (marcadores), contacto y SITE_URL
 scripts/                         Íconos (y el logo de origen en scripts/logo/), datos de demo y capturas de la página promocional
 public/landing/                  Capturas de la app (datos ficticios) para la página promocional
@@ -253,7 +255,7 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   - Un ítem de menú que navega: `onClick={() => router.push(...)}`, no un `<Link>` adentro.
   - Agregar componentes con `npx shadcn@latest add <nombre>`; no copiarlos a mano.
 - Tema claro/oscuro con `next-themes`; la preferencia se guarda en `profiles.theme`.
-- **Configuración** (`/configuracion`): cada sección es un `<SettingsSection>` y cada opción un `<Field>` adentro.
+- **Configuración** (`/app/configuracion`): cada sección es un `<SettingsSection>` y cada opción un `<Field>` adentro.
   Las opciones se aplican al instante y se guardan en `profiles` con las acciones de `configuracion/actions.ts`
   (los textos, como el valor por sesión, al salir del campo). Mi perfil queda solo para los datos profesionales.
   Excepción: en Cuenta, la contraseña, la verificación en dos pasos y "cerrar sesión en todos los dispositivos"
@@ -273,6 +275,11 @@ Profesio se instala como app (Chrome, Edge, Android; en iPhone/iPad desde Safari
 - **Regla: el service worker nunca cachea páginas de la app, respuestas de Supabase ni Server Actions.** Son datos
   clínicos y no pueden quedar guardados en el dispositivo. No es una app offline.
 - `sw.js`, `offline.html` y el manifest están fuera del matcher de `proxy.ts` (se piden sin sesión).
+- **Scope `/app/`** (manifest): la app instalada es solo /app; un link a miprofesio.com (la promocional, /ayuda, los
+  legales) abre el navegador, no la app. `start_url` y los `shortcuts` van bajo /app; el `id` sigue siendo "/" (el
+  start_url original) para no duplicar instalaciones. El service worker sigue registrado en "/" (cubre ese scope).
+  Las apps instaladas antes (start_url `/calendario`, scope "/") siguen andando por las redirecciones hasta que el
+  navegador actualiza el manifest.
 - Instalar: `useInstallPrompt()` (`hooks/use-install-prompt.ts`), en Configuración ("Instalar la app") y en el
   menú del usuario. Sin conexión: `components/pwa/offline-banner.tsx` (con `navigator.onLine`; no se usa
   `experimental.useOffline` porque reintenta solas las Server Actions y podría repetir una escritura).
@@ -298,13 +305,19 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
 
 ## Sitio público y rutas
 
-- **"/" es la página promocional**; la app empieza en `/calendario` (`APP_HOME`, `lib/routes.ts`): ahí van el login,
-  el código de verificación, los links de los mails (default de `next`), `/nueva-contrasena`, las notificaciones y el
-  `start_url` del manifest (su `id` sigue siendo "/" para no duplicar las instalaciones existentes). Para mandar a
-  alguien "a la app", usar `APP_HOME`, nunca "/".
+- **Sitio y app separados:** el sitio (`(sitio)`: "/", /ayuda, /terminos, /privacidad) está en la raíz; **toda la app
+  vive bajo `/app`** (`src/app/app/(app)` y `src/app/app/(auth)`), que es el scope de la PWA. Fuera de /app quedan solo
+  `/auth/confirm` y `/api/*` (los links de los mails y el cron apuntan ahí). Una pantalla nueva de la app va bajo /app.
+- La app empieza en `/app/calendario` (`APP_HOME`, `lib/routes.ts`): ahí van el login, el código de verificación, los
+  links de los mails (default de `next`), `/app/nueva-contrasena`, las notificaciones y el `start_url` del manifest.
+  Para mandar a alguien "a la app", usar `APP_HOME`, nunca "/". `/app` sola redirige a `/app/calendario`.
+- **Rutas viejas** (`/calendario`, `/pacientes/...`, `/sesiones`, `/ingresos`, `/perfil`, `/configuracion`, `/login`,
+  `/registro`, `/recuperar`, `/nueva-contrasena`): redirigen (308) a /app con subrutas y query string
+  (`redirects()` en `next.config.ts`, antes del proxy), por las apps ya instaladas, marcadores y mails viejos.
+  No reutilizar esos nombres para páginas del sitio.
 - **Rutas públicas** (`PUBLIC_PATHS` en `lib/supabase/proxy.ts`): "/" va aparte, como ruta **exacta** (como prefijo
   volvería públicas a todas). Las páginas de `(sitio)` se ven igual con o sin sesión (no redirigen); solo cambia el
-  botón principal ("Ir a mi agenda"). Una sección nueva de la app: sumarla a `robots.ts` (disallow).
+  botón principal ("Ir a mi agenda"). `robots.ts` bloquea `/app/` entero (y `/auth/`, `/api/`).
 - **Textos de la página promocional y de las preguntas frecuentes** (`components/sitio/faq.tsx`, compartidas con
   /ayuda): solo afirmaciones verdaderas, verificadas contra el código. Si cambia una funcionalidad, revisarlos.
   En las páginas públicas, los botones que navegan son `<Link className={buttonVariants()}>` (rol de link, accesible),
@@ -317,14 +330,14 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
 
 ## Seguridad de la cuenta
 
-- **Contraseña:** "¿Olvidaste tu contraseña?" → `/recuperar` (siempre el mismo mensaje, exista o no la cuenta) →
-  mail → `/auth/confirm?next=/nueva-contrasena`. Cambiarla en Configuración pide la actual: se verifica con
+- **Contraseña:** "¿Olvidaste tu contraseña?" → `/app/recuperar` (siempre el mismo mensaje, exista o no la cuenta) →
+  mail → `/auth/confirm?next=/app/nueva-contrasena`. Cambiarla en Configuración pide la actual: se verifica con
   `signInWithPassword` en un cliente aparte sin cookies (con el de la sesión, la reemplazaría por una aal1).
   En prod el link usa `token_hash` y funciona desde cualquier dispositivo; en dev, la plantilla por defecto (`code`),
   solo en el mismo navegador (ver "Infraestructura" → Mails).
 - **Cierre por inactividad** (`profiles.idle_timeout_minutes`, sin opción "nunca"): cookies `profesio_last_activity`
   (ms) y `profesio_idle_timeout` (minutos) (`lib/idle.ts`). **Lo hace cumplir el proxy**: si venció, `signOut` y
-  `/login?motivo=inactividad` antes de renderizar nada, también en Server Actions (para estas responde con
+  `/app/login?motivo=inactividad` antes de renderizar nada, también en Server Actions (para estas responde con
   `x-action-redirect`, como hace Next con `redirect()`: un 307 haría que fetch repita el POST en el login).
   Así una pestaña dormida, un celular bloqueado o una compu sin JavaScript no pueden seguir usando la sesión.
   Cada request con sesión renueva la actividad. El navegador (`IdleLogout`) suma la actividad que no llega al
@@ -337,7 +350,7 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
   **Mantenimiento:** `x-action-redirect` es un header interno de Next.js. Al actualizar Next, probar el cierre por
   inactividad durante un guardado (Server Action con la sesión vencida → tiene que ir al login sin ejecutarse).
 - **Verificación en dos pasos (TOTP):** Configuración → Cuenta (hasta 2 dispositivos; quitar el último pide un código).
-  Con un factor verificado, el login sigue en `/login/verificar` y el proxy manda ahí toda ruta privada mientras la
+  Con un factor verificado, el login sigue en `/app/login/verificar` y el proxy manda ahí toda ruta privada mientras la
   sesión sea aal1. La base no devuelve nada a una sesión aal1 de ese usuario (políticas restrictivas); el cron
   (`service_role`) y las funciones `security definer` no pasan por RLS. Supabase, al verificar un factor nuevo, cierra
   las otras sesiones, y al verificar un código, invalida las sesiones aal1 del usuario.
@@ -357,7 +370,7 @@ Sin claves ni secretos acá: están en Vercel, Supabase, Resend y `.env.local`.
 - **Región de las funciones:** `gru1` (São Paulo, junto a Supabase), en `vercel.json` (`regions`). Fluid compute:
   Vercel → Settings → Functions.
 - **Speed Insights** (`@vercel/speed-insights`, `components/speed-insights.tsx`): tiempos de carga de cada pantalla,
-  sin cookies; la URL va sin ids (`/pacientes/[id]`). `/_vercel/` está fuera del matcher de `proxy.ts` (va sin sesión).
+  sin cookies; la URL va sin ids (`/app/pacientes/[id]`). `/_vercel/` está fuera del matcher de `proxy.ts` (va sin sesión).
   Está declarado en `/privacidad` (proveedores).
 - **DNS en Cloudflare:** los CNAME de Vercel van en "DNS only" (nube gris). Los MX, el SPF de la raíz y el DKIM
   `cf2024-1` los administra Cloudflare Email Routing (aparecen con candado; no se editan a mano).
@@ -365,7 +378,7 @@ Sin claves ni secretos acá: están en Vercel, Supabase, Resend y `.env.local`.
   `send`, `rsend` y `resend._domainkey` en Cloudflare). DMARC en `_dmarc` con `p=none`.
   Las plantillas de prod (Confirm sign up, Reset password, Change email address y los avisos de seguridad de
   contraseña, email y MFA) están en castellano y apuntan a
-  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=...` (`email`; `recovery` con `&next=/nueva-contrasena`;
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=...` (`email`; `recovery` con `&next=/app/nueva-contrasena`;
   `email_change`): el link funciona desde cualquier dispositivo. **Si se cambia `/auth/confirm`, revisar esas
   plantillas en el panel de Supabase.**
 - **Mails de dev:** el servicio de Supabase: solo envía a miembros del equipo y con la plantilla por defecto

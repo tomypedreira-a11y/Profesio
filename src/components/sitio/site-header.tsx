@@ -41,10 +41,10 @@ export async function SiteHeader() {
             </Link>
           ) : (
             <>
-              <Link href="/login" className={buttonVariants({ variant: "ghost" })}>
+              <Link href="/app/login" className={buttonVariants({ variant: "ghost" })}>
                 Ingresar
               </Link>
-              <Link href="/registro" className={cn(buttonVariants(), "max-sm:hidden")}>
+              <Link href="/app/registro" className={cn(buttonVariants(), "max-sm:hidden")}>
                 Probala gratis
               </Link>
             </>

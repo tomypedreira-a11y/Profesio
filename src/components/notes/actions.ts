@@ -43,7 +43,7 @@ export async function saveNote(input: SaveNoteInput): Promise<SaveNoteResult> {
   }
 
   // Los borradores se guardan solos cada pocos segundos: solo se refrescan las pantallas al finalizar.
-  if (finalize) revalidatePath("/pacientes", "layout");
+  if (finalize) revalidatePath("/app/pacientes", "layout");
   return { noteId: data.id, version: data.version, finalizedAt: data.finalized_at };
 }
 
@@ -62,6 +62,6 @@ export async function discardCorrection(noteId: string): Promise<{ error?: strin
 
   if (error || !data?.length) return { error: "No se pudo descartar la corrección. Volvé a intentar." };
 
-  revalidatePath("/pacientes", "layout");
+  revalidatePath("/app/pacientes", "layout");
   return {};
 }
