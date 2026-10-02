@@ -338,7 +338,7 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
 ## Seguridad de la cuenta
 
 - **Encabezados de seguridad** (`next.config.ts`, en todas las respuestas):
-  - **Content-Security-Policy**, por ahora **`-Report-Only`** (el navegador avisa en la consola, no bloquea):
+  - **Content-Security-Policy** (obligatoria; se probó primero como `-Report-Only` en una preview sin violaciones):
     `default-src 'self'`; `script-src` propio + `'unsafe-inline'` + Turnstile (`challenges.cloudflare.com`);
     `style-src 'self' 'unsafe-inline'`; `img-src` y `font-src` propios + `data:`; `connect-src` propio + la URL de
     Supabase (sale de `NEXT_PUBLIC_SUPABASE_URL`); `frame-src` Turnstile; `worker-src`/`manifest-src 'self'`;
@@ -346,7 +346,7 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
     script de Speed Insights; en las previews, la barra de Vercel (`vercel.live`).
     Sin nonces (obligarían a renderizar todo en cada request): `'unsafe-inline'` en scripts es el precio.
     **Un servicio externo nuevo (script, iframe, fetch del navegador) va en la CSP**; probarlo en una preview mirando
-    la consola. Nada de `eval` ni `new Function` en el navegador (Zod va con `jitless`).
+    la consola (para un cambio grande, `CSP_HEADER` en Report-Only mientras tanto). Nada de `eval` ni `new Function` en el navegador (Zod va con `jitless`).
   - `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
     `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
   - `Strict-Transport-Security` lo manda Vercel en todo el dominio (`max-age=63072000`): no va en el código.

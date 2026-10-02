@@ -63,9 +63,9 @@ const CSP = Object.entries(CSP_DIRECTIVES)
   .map(([directive, sources]) => `${directive} ${sources.join(" ")}`)
   .join("; ");
 
-// Report-Only: el navegador avisa en la consola lo que bloquearía, sin bloquearlo. Se pasa a obligatoria
-// (Content-Security-Policy) cuando una preview no muestra violaciones.
-const CSP_HEADER = "Content-Security-Policy-Report-Only";
+// Obligatoria. Para probar un cambio grande sin romper nada, pasarla un tiempo a "Content-Security-Policy-Report-Only"
+// (el navegador solo avisa en la consola) y volverla a obligatoria cuando una preview no muestre violaciones.
+const CSP_HEADER = "Content-Security-Policy";
 
 const SECURITY_HEADERS = [
   { key: CSP_HEADER, value: CSP },
