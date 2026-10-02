@@ -5,7 +5,7 @@ import { useActionState, useState } from "react";
 import { type FormState, formKey } from "@/lib/form-state";
 import { formatFee } from "@/lib/format";
 import { resolveEnd, type ScheduleSlot } from "@/lib/schedule";
-import { DEFAULT_MODALITY, type Modality } from "@/lib/modality";
+import type { Modality } from "@/lib/modality";
 import { todayIn } from "@/lib/zoned";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,19 +29,6 @@ export type PatientFormDefaults = {
   birth_date: string;
   session_fee: string;
   modality: Modality;
-};
-
-export const EMPTY_PATIENT: PatientFormDefaults = {
-  first_name: "",
-  last_name: "",
-  schedules: [],
-  phone_country: "AR",
-  phone: "",
-  dni: "",
-  email: "",
-  birth_date: "",
-  session_fee: "",
-  modality: DEFAULT_MODALITY,
 };
 
 type PatientFormProps = {
@@ -211,7 +198,7 @@ export function PatientForm({ action, defaults, countries, submitLabel, cancelHr
                 <FieldDescription>
                   {defaultFee !== null
                     ? `Si lo dejás vacío, usa el valor de tu perfil (${formatFee(defaultFee)}).`
-                    : "Podés definir un valor por defecto en Mi perfil."}
+                    : "Podés definir un valor por defecto en Configuración."}
                 </FieldDescription>
                 <FieldError>{errors.session_fee?.[0]}</FieldError>
               </Field>

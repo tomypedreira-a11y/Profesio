@@ -23,9 +23,11 @@ type SessionSheetProps = {
   timeZone: string;
   onOpenChange: (open: boolean) => void;
   onChanged: () => void;
+  // Al cobrar o deshacer el cobro el panel sigue abierto; el calendario actualiza "No cobrada".
+  onPaymentChanged?: () => void;
 };
 
-export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChanged }: SessionSheetProps) {
+export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChanged, onPaymentChanged }: SessionSheetProps) {
   const fmt = (iso: string, pattern: string) => formatInTimeZone(iso, timeZone, pattern, { locale: es });
 
   return (
@@ -84,7 +86,12 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
               )}
 
               {/* Cobro: en toda sesión; las futuras se pueden cobrar por adelantado y las canceladas también se cobran. */}
-              <SessionPayment key={`payment-${session.id}`} sessionId={session.id} timeZone={timeZone} />
+              <SessionPayment
+                key={`payment-${session.id}`}
+                sessionId={session.id}
+                timeZone={timeZone}
+                onChanged={onPaymentChanged}
+              />
 
               <SessionActions session={session} timeZone={timeZone} onChanged={onChanged} />
 

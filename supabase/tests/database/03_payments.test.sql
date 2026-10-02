@@ -4,7 +4,7 @@
 -- =============================================================================
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(16);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'a@test.local');
 update public.profiles set default_session_fee = 1000;
@@ -39,6 +39,18 @@ select is(
   (select fee from public.sessions where id = '5e550000-0000-0000-0000-000000000002'),
   1000.00,
   'al cobrarla se fija su valor'
+);
+
+-- El calendario marca las realizadas sin cobrar: la vista trae paid_at.
+select isnt(
+  (select paid_at from public.calendar_sessions where id = '5e550000-0000-0000-0000-000000000002'),
+  null,
+  'el calendario ve la sesión cobrada'
+);
+select is(
+  (select paid_at from public.calendar_sessions where id = '5e550000-0000-0000-0000-000000000003'),
+  null,
+  'el calendario ve la realizada sin cobrar'
 );
 
 -- Una sesión cobrada no se cancela, no se borra y, si ya se realizó, no se reprograma.

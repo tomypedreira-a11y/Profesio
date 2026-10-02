@@ -19,7 +19,13 @@ type Payment = {
   status: string;
 };
 
-export function SessionPayment({ sessionId, timeZone }: { sessionId: string; timeZone: string }) {
+type SessionPaymentProps = {
+  sessionId: string;
+  timeZone: string;
+  onChanged?: () => void; // después de cobrar o deshacer el cobro
+};
+
+export function SessionPayment({ sessionId, timeZone, onChanged }: SessionPaymentProps) {
   const supabase = useRef(createClient()).current;
   const [payment, setPayment] = useState<Payment | null | undefined>(undefined);
 
@@ -35,6 +41,11 @@ export function SessionPayment({ sessionId, timeZone }: { sessionId: string; tim
   useEffect(() => {
     void load();
   }, [load]);
+
+  const done = () => {
+    void load();
+    onChanged?.();
+  };
 
   if (payment === undefined) return <Skeleton className="h-9 w-full" />;
   if (payment === null) return null;
@@ -52,14 +63,14 @@ export function SessionPayment({ sessionId, timeZone }: { sessionId: string; tim
             {formatInTimeZone(payment.paid_at, timeZone, "dd/MM")}
           </Badge>
           <span className="ml-auto">
-            <MarkUnpaidButton sessionId={sessionId} onDone={load} />
+            <MarkUnpaidButton sessionId={sessionId} onDone={done} />
           </span>
         </>
       ) : (
         <>
           <Badge variant="outline">{upcoming || cancelled ? "Sin cobrar" : "Pendiente de cobro"}</Badge>
           <span className="ml-auto">
-            <MarkPaidButton sessionIds={[sessionId]} label={upcoming ? "Cobrar por adelantado" : "Cobrar"} onDone={load} />
+            <MarkPaidButton sessionIds={[sessionId]} label={upcoming ? "Cobrar por adelantado" : "Cobrar"} onDone={done} />
           </span>
         </>
       )}

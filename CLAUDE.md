@@ -120,7 +120,7 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 
 | Tabla | Contenido |
 |---|---|
-| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria (`timezone`), duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, vista inicial del calendario (`calendar_view`), cierre por inactividad (`idle_timeout_minutes`: 15, 30, 60, 120 o 240), aceptación de los términos (`terms_accepted_at`, `terms_version`; no se modifican). |
+| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria (`timezone`), duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, modalidad que preselecciona el alta de un paciente (`default_modality`, presencial por defecto), vista inicial del calendario (`calendar_view`), cierre por inactividad (`idle_timeout_minutes`: 15, 30, 60, 120 o 240), aceptación de los términos (`terms_accepted_at`, `terms_version`; no se modifican). |
 | `patients` | Pacientes. `active = false` = archivado. Teléfono en E.164. `modality`: `in_person` (por defecto) o `virtual`. |
 | `session_series` | Horario fijo semanal (día, hora y duración). Un paciente puede tener varios. `end_date is null` = vigente. |
 | `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). Cobro: `fee`, `paid_at`, `payment_method`. `modality` null = la del paciente. |
@@ -190,7 +190,8 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   (triggers): las sesiones ya pasadas conservan el valor que regía. Una sesión cobrada no se cancela ni se borra
   (trigger `sessions_payment_guard`): primero se deshace el cobro. Sí se reprograma mientras no se haya realizado,
   y una cancelada cobrada puede volver a agendarse (el cobro la acompaña).
-- **Modalidad (presencial / virtual):** obligatoria en el paciente (presencial por defecto). Cada sesión usa la del
+- **Modalidad (presencial / virtual):** obligatoria en el paciente. El alta preselecciona la habitual del perfil
+  (`profiles.default_modality`, Configuración → Sesiones; presencial si no se cambia); cambiarla no toca a los pacientes. Cada sesión usa la del
   paciente salvo que se cambie para ella (`set_session_modality`, "solo esta" o "esta y las siguientes": esta última
   cambia la del paciente de ahí en adelante). Como con el valor, al cambiar la del paciente las sesiones ya realizadas
   conservan la que tuvieron (trigger). `calendar_sessions.modality` trae la que corresponde. Valores en `lib/modality.ts`.

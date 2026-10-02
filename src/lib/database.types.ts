@@ -179,6 +179,7 @@ export type Database = {
           created_at: string
           daily_summary_enabled: boolean
           daily_summary_time: string
+          default_modality: string
           default_session_fee: number | null
           default_session_minutes: number
           first_name: string
@@ -200,6 +201,7 @@ export type Database = {
           created_at?: string
           daily_summary_enabled?: boolean
           daily_summary_time?: string
+          default_modality?: string
           default_session_fee?: number | null
           default_session_minutes?: number
           first_name?: string
@@ -221,6 +223,7 @@ export type Database = {
           created_at?: string
           daily_summary_enabled?: boolean
           daily_summary_time?: string
+          default_modality?: string
           default_session_fee?: number | null
           default_session_minutes?: number
           first_name?: string
@@ -532,6 +535,7 @@ export type Database = {
           id: string | null
           last_name: string | null
           modality: string | null
+          paid_at: string | null
           patient_id: string | null
           phone: string | null
           rescheduled_from: string | null

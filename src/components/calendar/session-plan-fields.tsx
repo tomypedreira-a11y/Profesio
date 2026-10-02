@@ -126,7 +126,7 @@ export function SessionPlanFields({ value, onChange, error, fixedHint, irregular
 
   const minutes = useSessionLength();
   const lengthLabel = SESSION_LENGTHS.find((l) => l.minutes === minutes)?.label ?? `${minutes} minutos`;
-  const endHint = `Si dejás el fin vacío, la sesión dura ${lengthLabel} (se cambia en Mi perfil).`;
+  const endHint = `Si dejás el fin vacío, la sesión dura ${lengthLabel} (se cambia en Configuración).`;
 
   return (
     <>
