@@ -1,0 +1,23 @@
+# Dependabot: revisa las dependencias de npm una vez por semana y abre PRs (cada uno con su preview de Vercel).
+# Las actualizaciones menores y de parche van juntas en un solo PR; las mayores, una por PR (pueden romper algo).
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Argentina/Buenos_Aires"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      menores-y-parches:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # FullCalendar se queda en la 6 (la 7 cambia mucho; ver CLAUDE.md → Stack).
+      - dependency-name: "@fullcalendar/*"
+        update-types: ["version-update:semver-major"]

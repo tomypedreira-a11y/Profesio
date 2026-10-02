@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { FormMessage } from "@/components/form-message";
+import { Turnstile, useCaptcha } from "@/components/turnstile";
 
 const initialState: FormState = {};
 
@@ -20,6 +21,7 @@ const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export function SignupForm() {
   const [state, action, pending] = useActionState(signup, initialState);
+  const { captchaReady, onCaptchaToken } = useCaptcha();
   const errors = state.fieldErrors ?? {};
   const timeZone = useSyncExternalStore(noSubscribe, browserTimeZone, () => "");
 
@@ -129,7 +131,8 @@ export function SignupForm() {
                 <FieldError>{errors.terms?.[0]}</FieldError>
               </div>
             </Field>
-            <Button type="submit" disabled={pending} className="w-full">
+            <Turnstile onToken={onCaptchaToken} resetKey={state} />
+            <Button type="submit" disabled={pending || !captchaReady} className="w-full">
               {pending ? "Creando cuenta…" : "Crear cuenta"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">

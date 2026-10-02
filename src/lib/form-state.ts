@@ -1,3 +1,5 @@
+import { CAPTCHA_FIELD } from "@/lib/turnstile";
+
 // Forma común de la respuesta de los formularios (Server Actions + useActionState).
 export type FormState = {
   error?: string; // error general, arriba del formulario
@@ -6,11 +8,11 @@ export type FormState = {
   values?: Record<string, string>; // lo que escribió el usuario, para no perderlo si hay error
 };
 
-// Toma los valores de texto de un formulario (sin contraseñas).
+// Toma los valores de texto de un formulario (sin contraseñas ni el token del captcha, que sirve una sola vez).
 export function formValues(formData: FormData, omit: string[] = []) {
   const values: Record<string, string> = {};
   formData.forEach((value, key) => {
-    if (typeof value === "string" && !omit.includes(key)) values[key] = value;
+    if (typeof value === "string" && key !== CAPTCHA_FIELD && !omit.includes(key)) values[key] = value;
   });
   return values;
 }

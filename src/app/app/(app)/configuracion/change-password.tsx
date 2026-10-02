@@ -17,6 +17,7 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { FormMessage } from "@/components/form-message";
+import { Turnstile, useCaptcha } from "@/components/turnstile";
 import { NewPasswordFields } from "@/components/new-password-fields";
 import type { FormState } from "@/lib/form-state";
 import { changePassword } from "./account-actions";
@@ -45,6 +46,7 @@ const initialState: FormState = {};
 
 function ChangePasswordForm({ onDone }: { onDone: () => void }) {
   const [state, action, pending] = useActionState(changePassword, initialState);
+  const { captchaReady, onCaptchaToken } = useCaptcha();
   const errors = state.fieldErrors ?? {};
 
   useEffect(() => {
@@ -74,9 +76,11 @@ function ChangePasswordForm({ onDone }: { onDone: () => void }) {
           <FieldError>{errors.current?.[0]}</FieldError>
         </Field>
         <NewPasswordFields errors={errors} />
+        {/* Verificar la contraseña actual es un inicio de sesión: Supabase pide el captcha. */}
+        <Turnstile onToken={onCaptchaToken} resetKey={state} />
       </FieldGroup>
       <DialogFooter>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending || !captchaReady}>
           {pending ? "Guardando…" : "Cambiar contraseña"}
         </Button>
       </DialogFooter>

@@ -15,6 +15,8 @@ Documentación funcional y técnica: *Propuesta integral – App de gestión par
 - **Supabase**: PostgreSQL + Auth + RLS. Cliente con `@supabase/ssr`.
 - **Tailwind CSS 4** + **shadcn/ui con Base UI** (preset Nova, íconos Lucide).
 - **Zod 4** para validación, **date-fns / date-fns-tz** para fechas, **libphonenumber-js** para teléfonos.
+  En el navegador va con `jitless` (`src/instrumentation-client.ts`): sin eso choca con la CSP.
+- **Cloudflare Turnstile** (captcha) en el login, el registro, la recuperación y el cambio de contraseña.
 - **FullCalendar 6** (no la 7) para el calendario.
 - Deploy en **Vercel**; cada PR tiene preview. Producción: https://www.miprofesio.com (ver "Infraestructura").
 
@@ -65,6 +67,7 @@ El equipo trabaja en **Windows / PowerShell**.
 ```
 src/
   proxy.ts                       Sesión de Supabase, login, inactividad y verificación en dos pasos (lib/supabase/proxy.ts)
+  instrumentation-client.ts      Corre en el navegador antes que la app: Zod sin evaluar código (CSP)
   app/
     (sitio)/                     Páginas públicas, con encabezado y pie propios: "/" (promocional), /ayuda,
                                  /terminos, /privacidad (BORRADORES legales) y opengraph-image.tsx
@@ -93,6 +96,7 @@ src/
     idle-logout.tsx              Aviso y cierre de sesión por inactividad (en el layout de (app))
     list-skeletons.tsx           Piezas de los esqueletos de carga (filas, tarjetas, formularios) para los loading.tsx
     speed-insights.tsx           Vercel Speed Insights (en el layout raíz; quita los ids de la URL antes de enviar)
+    turnstile.tsx                Widget del captcha (Turnstile) y useCaptcha() para habilitar el botón de enviar
     sitio/                       Encabezado, pie, preguntas frecuentes, botón de instalar y estructura legal del sitio
   lib/
     supabase/{client,server,proxy}.ts  server.ts también tiene getClaims() y getProfile() (una vez por request)
@@ -106,10 +110,13 @@ src/
     sign-out.ts  pending-saves.ts  Cerrar sesión desde el navegador (guarda lo pendiente y desuscribe el dispositivo)
     routes.ts                    APP_HOME = "/app/calendario": destino después de ingresar e inicio de la PWA
     legal.ts                     Versión de los términos, fecha, datos del titular (marcadores), contacto y SITE_URL
+    turnstile.ts                 Clave pública del captcha y lectura del token en las Server Actions
 scripts/                         Íconos (y el logo de origen en scripts/logo/), datos de demo y capturas de la página promocional
 public/landing/                  Capturas de la app (datos ficticios) para la página promocional
 supabase/migrations/             Toda la estructura de la base, en orden
 supabase/tests/database/         Tests de la base (pgTAP): RLS, agenda, cobros, anotaciones, vacaciones, modalidad, MFA, términos
+next.config.ts                   Redirecciones de las rutas viejas y encabezados de seguridad (CSP y compañía)
+.github/dependabot.yml           Revisión semanal de npm (menores y parches en un solo PR; FullCalendar no pasa a la 7)
 ```
 
 ## Base de datos
@@ -330,9 +337,42 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
 
 ## Seguridad de la cuenta
 
+- **Encabezados de seguridad** (`next.config.ts`, en todas las respuestas):
+  - **Content-Security-Policy**, por ahora **`-Report-Only`** (el navegador avisa en la consola, no bloquea):
+    `default-src 'self'`; `script-src` propio + `'unsafe-inline'` + Turnstile (`challenges.cloudflare.com`);
+    `style-src 'self' 'unsafe-inline'`; `img-src` y `font-src` propios + `data:`; `connect-src` propio + la URL de
+    Supabase (sale de `NEXT_PUBLIC_SUPABASE_URL`); `frame-src` Turnstile; `worker-src`/`manifest-src 'self'`;
+    `object-src 'none'`; `base-uri`/`form-action 'self'`; `frame-ancestors 'none'`. En dev suma `'unsafe-eval'` y el
+    script de Speed Insights; en las previews, la barra de Vercel (`vercel.live`).
+    Sin nonces (obligarían a renderizar todo en cada request): `'unsafe-inline'` en scripts es el precio.
+    **Un servicio externo nuevo (script, iframe, fetch del navegador) va en la CSP**; probarlo en una preview mirando
+    la consola. Nada de `eval` ni `new Function` en el navegador (Zod va con `jitless`).
+  - `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
+    `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+  - `Strict-Transport-Security` lo manda Vercel en todo el dominio (`max-age=63072000`): no va en el código.
+  - `/sw.js` mantiene su CSP propia (más estricta): su regla va después de la general y la pisa.
+- **Captcha (Cloudflare Turnstile)** en /app/login, /app/registro, /app/recuperar y "Cambiar contraseña" (verifica la
+  actual con un login): `<Turnstile>` dentro del form agrega el campo `captchaToken` y la acción se lo pasa a
+  Supabase (`options.captchaToken`). Lo verifica **Supabase Auth**: la secret key está solo en el panel de Supabase
+  (Authentication → Attack Protection), nunca en el repo ni en Vercel. Clave pública: `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+  (en dev y preview, la de prueba `1x00000000000000000000AA`, que siempre pasa; la secret de prueba en el Supabase de
+  dev es `1x0000000000000000000000000000000AA`). Sin clave pública, el widget no aparece y no se exige.
+  El token sirve una vez: se renueva después de cada envío. El widget sigue el tema claro/oscuro y, si no carga,
+  muestra un aviso con "Volver a intentar" (el botón de enviar queda deshabilitado sin token).
+  Todo `signInWithPassword` / `signUp` / `resetPasswordForEmail` nuevo necesita su `captchaToken` (con el captcha
+  activo, Supabase rechaza sin token: `captcha_failed`). `seed-demo.mjs` usa el token ficticio de prueba.
+- **Orden para activar el captcha en un proyecto de Supabase (prod, y también dev):** primero tiene que estar
+  desplegado el frontend con el widget; si se activa antes, nadie puede ingresar.
+  1. Cloudflare → Turnstile: widget "Managed" con los dominios `www.miprofesio.com` y `miprofesio.com`.
+  2. Vercel → Environment Variables → Production: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` con la clave real (Preview y
+     Development, la de prueba). Es `NEXT_PUBLIC_`: se fija al compilar, hace falta un deploy nuevo.
+  3. Mergear y verificar en prod que el widget aparece y que se puede ingresar (Supabase todavía no lo exige).
+  4. Supabase prod → Authentication → Attack Protection → Enable Captcha protection → Turnstile + secret key.
+  5. Probar en prod: ingresar, registrarse, recuperar la contraseña y cambiarla desde Configuración.
+  Para volver atrás: desactivar el captcha en Supabase primero, y después sacar el widget.
 - **Contraseña:** "¿Olvidaste tu contraseña?" → `/app/recuperar` (siempre el mismo mensaje, exista o no la cuenta) →
   mail → `/auth/confirm?next=/app/nueva-contrasena`. Cambiarla en Configuración pide la actual: se verifica con
-  `signInWithPassword` en un cliente aparte sin cookies (con el de la sesión, la reemplazaría por una aal1).
+  `signInWithPassword` en un cliente aparte sin cookies (con el de la sesión, la reemplazaría por una aal1); lleva captcha.
   En prod el link usa `token_hash` y funciona desde cualquier dispositivo; en dev, la plantilla por defecto (`code`),
   solo en el mismo navegador (ver "Infraestructura" → Mails).
 - **Cierre por inactividad** (`profiles.idle_timeout_minutes`, sin opción "nunca"): cookies `profesio_last_activity`

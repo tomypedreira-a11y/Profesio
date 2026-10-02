@@ -77,7 +77,12 @@ console.log(`Usuario ${DEMO_EMAIL} creado.`);
 const db = createClient(url, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
-const { error: signInError } = await db.auth.signInWithPassword({ email: DEMO_EMAIL, password });
+// Con el captcha activo en dev (claves de prueba de Turnstile), Supabase acepta el token ficticio de Cloudflare.
+const { error: signInError } = await db.auth.signInWithPassword({
+  email: DEMO_EMAIL,
+  password,
+  options: { captchaToken: "XXXX.DUMMY.TOKEN.XXXX" },
+});
 if (signInError) throw signInError;
 
 const check = (result, what) => {

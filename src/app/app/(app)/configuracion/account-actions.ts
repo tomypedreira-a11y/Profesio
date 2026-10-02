@@ -11,6 +11,7 @@ import type { FormState } from "@/lib/form-state";
 import { authErrorMessage, newPasswordSchema, passwordErrorMessage } from "@/lib/auth";
 import { clearIdleCookies } from "@/lib/idle-cookies";
 import { MAX_MFA_FACTORS, mfaErrorMessage, totpCodeSchema, verifyTotp } from "@/lib/mfa";
+import { captchaToken } from "@/lib/turnstile";
 
 const SESSION_EXPIRED = "Tu sesión expiró. Volvé a ingresar.";
 
@@ -35,12 +36,17 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
 
   // La contraseña actual se verifica iniciando sesión con un cliente aparte, que no toca las cookies:
   // con el cliente de esta sesión, signInWithPassword la reemplazaría por una nueva (aal1, sin el código).
+  // Como todo inicio de sesión con contraseña, Supabase le pide el captcha (por eso el formulario lo lleva).
   const verifier = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } },
   );
-  const { error: currentError } = await verifier.auth.signInWithPassword({ email, password: parsed.data.current });
+  const { error: currentError } = await verifier.auth.signInWithPassword({
+    email,
+    password: parsed.data.current,
+    options: { captchaToken: captchaToken(formData) },
+  });
   if (currentError) {
     return currentError.code === "invalid_credentials"
       ? { fieldErrors: { current: ["La contraseña actual no es correcta."] } }
