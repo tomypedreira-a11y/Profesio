@@ -15,6 +15,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { AddSessionButton } from "@/components/calendar/add-session-button";
 import { getDefaultFee, getTimeZone } from "../queries";
 import { ArchiveButton } from "./archive-button";
+import { ExportPdfButton } from "./export-pdf-button";
 
 export const metadata: Metadata = { title: "Paciente" };
 
@@ -115,6 +116,8 @@ export default async function PatientPage({ params }: PageProps<"/app/pacientes/
             <PencilIcon />
             Editar
           </Button>
+          {/* También en archivados: la historia clínica se conserva. */}
+          <ExportPdfButton patientId={id} />
           <ArchiveButton patientId={id} active={!!patient.active} hasSchedule={hasSchedule} />
         </div>
       </div>

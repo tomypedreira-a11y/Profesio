@@ -77,6 +77,11 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Las fuentes del PDF del libro de sesiones se leen del disco (src/lib/pdf/session-book.tsx): que viajen con la
+  // función en Vercel.
+  outputFileTracingIncludes: {
+    "/app/pacientes/*/libro": ["./src/lib/pdf/fonts/*.ttf"],
+  },
   async redirects() {
     return [
       ...LEGACY_APP_PATHS.map((path) => ({
