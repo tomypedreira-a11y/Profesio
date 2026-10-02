@@ -54,7 +54,8 @@ export function splitPhone(e164: string | null | undefined): { country: CountryC
   return { country: parsed.country ?? DEFAULT_COUNTRY, national: parsed.formatNational() };
 }
 
-// Link directo a un chat de WhatsApp.
-export function whatsappUrl(e164: string): string {
-  return `https://wa.me/${e164.replace(/\D/g, "")}`;
+// Link directo a un chat de WhatsApp. Con `text`, el chat abre con ese mensaje escrito (sin enviar).
+export function whatsappUrl(e164: string, text?: string): string {
+  const url = `https://wa.me/${e164.replace(/\D/g, "")}`;
+  return text ? `${url}?text=${encodeURIComponent(text)}` : url;
 }

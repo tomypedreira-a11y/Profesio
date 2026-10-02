@@ -9,6 +9,7 @@ import { es } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { SessionSheet } from "@/components/calendar/session-sheet";
+import { WhatsAppReminderButton } from "@/components/whatsapp-reminder";
 import type { CalendarSession } from "@/components/calendar/types";
 
 type SessionListProps = {
@@ -42,14 +43,16 @@ export function SessionList({ sessions, nextId, todayKey, timeZone }: SessionLis
               {items.map((s) => {
                 const cancelled = s.status === "cancelled";
                 const isNext = s.id === nextId;
+                const reminder = !cancelled && !!s.phone;
                 return (
-                  <li key={s.id}>
+                  <li key={s.id} className="relative">
                     {/* Beige un poco más oscuro que el fondo, remarcado en oliva; próxima y cancelada, con sus colores del calendario. */}
                     <button
                       type="button"
                       onClick={() => setSelected(s)}
                       className={cn(
                         "flex w-full items-center gap-3 rounded-lg border-[1.5px] px-4 py-3 text-left transition-[filter] hover:brightness-95",
+                        reminder && "pr-14",
                         cancelled
                           ? "border-(--session-cancelled-border) bg-(--session-cancelled) text-(--session-cancelled-foreground)"
                           : isNext
@@ -72,6 +75,10 @@ export function SessionList({ sessions, nextId, todayKey, timeZone }: SessionLis
                       {cancelled && <Badge variant="outline">Cancelada</Badge>}
                       {isNext && <Badge>Próxima</Badge>}
                     </button>
+                    {/* Fuera del botón (un link no puede ir dentro de otro elemento interactivo), encima de la fila. */}
+                    {reminder && (
+                      <WhatsAppReminderButton iconOnly session={s} className="absolute top-1/2 right-2 -translate-y-1/2" />
+                    )}
                   </li>
                 );
               })}
