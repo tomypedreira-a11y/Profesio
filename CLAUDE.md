@@ -129,7 +129,7 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 
 | Tabla | Contenido |
 |---|---|
-| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria (`timezone`), duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, modalidad que preselecciona el alta de un paciente (`default_modality`, presencial por defecto), vista inicial del calendario (`calendar_view`), cierre por inactividad (`idle_timeout_minutes`: 15, 30, 60, 120 o 240), aceptación de los términos (`terms_accepted_at`, `terms_version`; no se modifican). |
+| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria (`timezone`), duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, modalidad que preselecciona el alta de un paciente (`default_modality`, presencial por defecto), vista inicial del calendario (`calendar_view`), cierre por inactividad (`idle_timeout_minutes`: 15, 30, 60, 120 o 240), mensaje de recordatorio por WhatsApp (`whatsapp_reminder_template`, null = el de la app), aceptación de los términos (`terms_accepted_at`, `terms_version`; no se modifican). |
 | `patients` | Pacientes. `active = false` = archivado. Teléfono en E.164. `modality`: `in_person` (por defecto) o `virtual`. |
 | `session_series` | Horario fijo semanal (día, hora y duración). Un paciente puede tener varios. `end_date is null` = vigente. |
 | `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). Cobro: `fee`, `paid_at`, `payment_method`. `modality` null = la del paciente. |
@@ -222,6 +222,11 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 - **Pacientes:** se archivan, no se borran. Archivar quita las sesiones futuras de su horario fijo.
 - **Teléfonos:** se guardan en E.164 (`+5491123456789`) usando `normalizePhone` de `lib/phone.ts`.
   Argentina por defecto; a los números argentinos sin 9 se les agrega (se asumen celulares, para WhatsApp).
+- **WhatsApp:** solo links `wa.me` (`whatsappUrl` de `lib/phone.ts`); la app no envía mensajes. El teléfono (ficha,
+  panel de la sesión, listado de pacientes) abre el chat vacío. "Enviar recordatorio" (`components/whatsapp-reminder.tsx`,
+  en el panel de una sesión futura y en la lista de Sesiones) lo abre con el mensaje de Configuración → Sesiones ya
+  escrito: marcadores `{nombre}`, `{fecha}` y `{hora}` (`lib/whatsapp.ts`; lo carga el layout, `useReminderTemplate()`).
+  El psicólogo lo revisa y lo envía desde su WhatsApp.
 - **Fechas y zona horaria:** la base guarda `timestamptz`. Las horas "de reloj" se convierten con la zona horaria
   de `profiles.timezone` (la del navegador al registrarse; si no, `America/Argentina/Buenos_Aires`), que se cambia
   en Configuración (`set_timezone`: las sesiones futuras y los horarios fijos conservan su hora de reloj).

@@ -70,7 +70,7 @@ const FEATURES = [
   {
     icon: VideoIcon,
     title: "Presencial o virtual",
-    text: "Cada paciente con su modalidad, que podés cambiar para una sesión puntual, y un acceso directo a su WhatsApp.",
+    text: "Cada paciente con su modalidad, que podés cambiar para una sesión puntual, y un acceso directo a su WhatsApp, con el recordatorio de la sesión ya escrito para que lo envíes.",
   },
   {
     icon: MonitorSmartphoneIcon,
