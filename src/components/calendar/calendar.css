@@ -132,6 +132,20 @@
   --session-next-foreground: oklch(0.35 0.05 75);
 }
 
+/* Sesión en curso (tarjeta del calendario y de Sesiones): verde, el color de la app, un poco más intenso que el
+   de las sesiones y con el borde bien marcado para que destaque. En el oscuro, verde profundo con texto claro. */
+:root {
+  --session-current: oklch(0.82 0.1 148);
+  --session-current-border: oklch(0.58 0.12 150);
+  --session-current-foreground: oklch(0.26 0.06 150);
+}
+
+.dark {
+  --session-current: oklch(0.42 0.08 152);
+  --session-current-border: oklch(0.7 0.12 150);
+  --session-current-foreground: oklch(0.96 0.03 150);
+}
+
 /* Cancelada: rojo pastel claro. En el tema oscuro se oscurece para no resaltar sobre el fondo. */
 :root {
   --session-cancelled: oklch(0.93 0.04 20);

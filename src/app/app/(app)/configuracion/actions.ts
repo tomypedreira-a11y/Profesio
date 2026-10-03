@@ -14,7 +14,6 @@ import { parseFee } from "@/lib/format";
 import { isSummaryTime, parseReminder } from "@/lib/notifications";
 import { isIdleTimeout } from "@/lib/idle";
 import { writeIdleCookies } from "@/lib/idle-cookies";
-import { parseReminderTemplate, REMINDER_TEMPLATE_MAX } from "@/lib/whatsapp";
 import type { Database } from "@/lib/database.types";
 
 export type SaveResult = { error?: string };
@@ -82,13 +81,6 @@ export async function updateDefaultFee(raw: string): Promise<SaveResult> {
   const fee = parseFee(raw);
   if (fee === "invalid") return { error: "Ingresá un monto válido." };
   return saveProfile({ default_session_fee: fee });
-}
-
-// Mensaje de recordatorio por WhatsApp. Vacío (o igual al de la app) = el de la app.
-export async function updateReminderTemplate(raw: string): Promise<SaveResult> {
-  const template = parseReminderTemplate(raw);
-  if (template === "invalid") return { error: `Usá ${REMINDER_TEMPLATE_MAX} caracteres como máximo.` };
-  return saveProfile({ whatsapp_reminder_template: template });
 }
 
 // ---------------------------------------------------------------------------

@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { NoteEditor } from "@/components/notes/note-editor";
 import { SessionPayment } from "@/components/payments/session-payment";
-import { WhatsAppReminderButton } from "@/components/whatsapp-reminder";
+import { WhatsAppLateButton, WhatsAppReminderButton } from "@/components/whatsapp-message";
 import { SessionActions } from "./session-actions";
 import { SessionModality } from "./session-modality";
 import type { CalendarSession } from "./types";
@@ -85,21 +85,27 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
                 </p>
               )}
 
-              {/* El teléfono abre el chat vacío; el recordatorio, con el mensaje de Configuración (solo si todavía no empezó). */}
+              {/* El teléfono abre el chat vacío; el recordatorio (si todavía no empezó) y "¿aún no llegó?" (mientras
+                  está en curso), con el mensaje ya escrito.
+                  En una misma fila, el teléfono a la izquierda y el botón a la derecha, centrados entre sí. */}
               {session.phone && (
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border px-3 py-1.5">
                   <a
                     href={whatsappUrl(session.phone)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 hover:underline"
+                    title="Abrir chat de WhatsApp"
                   >
                     <MessageCircleIcon className="size-4" />
                     {formatPhone(session.phone)}
                   </a>
-                  {session.status === "scheduled" && new Date(session.starts_at) > new Date() && (
-                    <WhatsAppReminderButton session={session} />
-                  )}
+                  {session.status === "scheduled" &&
+                    (new Date(session.starts_at) > new Date() ? (
+                      <WhatsAppReminderButton session={session} />
+                    ) : (
+                      new Date(session.ends_at) > new Date() && <WhatsAppLateButton session={session} />
+                    ))}
                 </div>
               )}
 

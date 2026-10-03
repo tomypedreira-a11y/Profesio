@@ -26,7 +26,7 @@ export function formatSessionShort(iso: string, timeZone: string): string {
   return formatInTimeZone(iso, timeZone, "EEE dd/MM · HH:mm", { locale: es });
 }
 
-// "Hoy · 18:00", "Mañana · 18:00" o, más adelante, "mar 30/09 · 18:00". Hoy y mañana son los de la zona
+// "Hoy · 18:00", "Mañana · 18:00", "Ayer · 18:00" o, si no, "mar 30/09 · 18:00". Hoy y mañana son los de la zona
 // del perfil (no la del dispositivo); `now` se recibe para que quien lo muestra lo actualice (ej. a medianoche).
 export function formatSessionRelative(iso: string, timeZone: string, now: number | Date = Date.now()): string {
   const day = format(toWall(iso, timeZone), "yyyy-MM-dd");
@@ -34,6 +34,7 @@ export function formatSessionRelative(iso: string, timeZone: string, now: number
   const time = formatInTimeZone(iso, timeZone, "HH:mm");
   if (day === format(today, "yyyy-MM-dd")) return `Hoy · ${time}`;
   if (day === format(addDays(today, 1), "yyyy-MM-dd")) return `Mañana · ${time}`;
+  if (day === format(addDays(today, -1), "yyyy-MM-dd")) return `Ayer · ${time}`;
   return formatSessionShort(iso, timeZone);
 }
 
@@ -59,6 +60,25 @@ export function formatTimeUntil(ms: number): string {
         ? [hours, `${hours} h${minutes > 0 ? ` ${minutes} min` : ""}`]
         : [minutes, `${minutes} min`];
   return `${first === 1 ? "Falta" : "Faltan"} ${text}`;
+}
+
+// Hace cuánto terminó una sesión: "Hace 25 min", "Hace 3 h", "Hace 2 días".
+export function formatTimeAgo(ms: number): string {
+  const minutes = Math.max(0, Math.floor(ms / 60_000));
+  if (minutes < 60) return `Hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `Hace ${days} ${days === 1 ? "día" : "días"}`;
+}
+
+// Tiempo transcurrido de la sesión en curso, como un cronómetro: "4:07", "52:30", "1:05:12".
+export function formatElapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = String(total % 60).padStart(2, "0");
+  return hours > 0 ? `${hours}:${String(minutes).padStart(2, "0")}:${seconds}` : `${minutes}:${seconds}`;
 }
 
 // "01/05/1990 (36 años)"
