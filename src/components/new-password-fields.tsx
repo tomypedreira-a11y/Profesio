@@ -1,6 +1,6 @@
 // Contraseña nueva, escrita dos veces (recuperación y Configuración). Valida newPasswordSchema (lib/auth.ts).
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/password-input";
 
 type NewPasswordFieldsProps = {
   errors: Record<string, string[] | undefined>;
@@ -12,10 +12,9 @@ export function NewPasswordFields({ errors, className }: NewPasswordFieldsProps)
     <>
       <Field data-invalid={!!errors.password}>
         <FieldLabel htmlFor="password">Contraseña nueva</FieldLabel>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           minLength={8}
           aria-invalid={!!errors.password}
@@ -27,10 +26,9 @@ export function NewPasswordFields({ errors, className }: NewPasswordFieldsProps)
       </Field>
       <Field data-invalid={!!errors.confirm}>
         <FieldLabel htmlFor="confirm">Repetí la contraseña nueva</FieldLabel>
-        <Input
+        <PasswordInput
           id="confirm"
           name="confirm"
-          type="password"
           autoComplete="new-password"
           aria-invalid={!!errors.confirm}
           className={className}

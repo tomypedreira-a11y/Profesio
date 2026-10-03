@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/password-input";
 import { FormMessage } from "@/components/form-message";
 import { Turnstile, useCaptcha } from "@/components/turnstile";
 
@@ -57,10 +58,9 @@ export function LoginForm({ linkError, idleLogout }: { linkError?: boolean; idle
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
-              <Input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
                 autoComplete="current-password"
                 aria-invalid={!!errors.password}
                 required
