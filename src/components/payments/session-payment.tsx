@@ -2,6 +2,7 @@
 
 // Cobro de una sesión dentro de su panel: valor, estado y botón para cobrar o deshacer.
 // Una sesión futura se puede cobrar por adelantado, y una cancelada también se puede cobrar.
+// Una sin cargo solo lo informa: se vuelve a pendiente desde las acciones de la sesión.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/client";
@@ -17,6 +18,7 @@ type Payment = {
   paid_at: string | null;
   payment_method: string | null;
   status: string;
+  waived_at: string | null;
 };
 
 type SessionPaymentProps = {
@@ -32,7 +34,7 @@ export function SessionPayment({ sessionId, timeZone, onChanged }: SessionPaymen
   const load = useCallback(async () => {
     const { data } = await supabase
       .from("session_payments")
-      .select("starts_at, fee, paid_at, payment_method, status")
+      .select("starts_at, fee, paid_at, payment_method, status, waived_at")
       .eq("id", sessionId)
       .maybeSingle();
     setPayment(data as Payment | null);
@@ -52,6 +54,17 @@ export function SessionPayment({ sessionId, timeZone, onChanged }: SessionPaymen
   // "Por adelantado" solo corre para una sesión que todavía va a ocurrir.
   const cancelled = payment.status === "cancelled";
   const upcoming = !cancelled && new Date(payment.starts_at) > new Date();
+
+  if (payment.waived_at) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2">
+        <span className="font-medium text-muted-foreground line-through">
+          {payment.fee !== null ? formatFee(payment.fee) : "Sin valor"}
+        </span>
+        <Badge variant="secondary">Sin cargo · {formatInTimeZone(payment.waived_at, timeZone, "dd/MM")}</Badge>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2">

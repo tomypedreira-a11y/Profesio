@@ -215,14 +215,16 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
         else if (isNext) classNames.push("session-next");
         if (s.ends_at < now) classNames.push("session-past");
         // Realizada (o en curso) y sin cobrar. Las futuras no: se cobran por adelantado solo si se quiere.
-        const unpaid = s.status === "scheduled" && s.starts_at <= now && !s.paid_at;
+        // Una sin cargo no se cobra: en vez de "No cobrada", lo dice.
+        const waived = !!s.waived_at;
+        const unpaid = s.status === "scheduled" && s.starts_at <= now && !s.paid_at && !waived;
         return {
           id: s.id,
           title: shortName(s),
           start: s.starts_at,
           end: s.ends_at,
           classNames,
-          extendedProps: { session: s, isNext, unpaid },
+          extendedProps: { session: s, isNext, unpaid, waived },
         };
       });
     },
@@ -332,7 +334,11 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
     }
     // En la lista la hora tiene su propia columna; en el mes compacto la sesión es solo un punto.
     // Después del nombre, la modalidad: (v) virtual o (p) presencial.
-    const { session, unpaid } = arg.event.extendedProps as { session: CalendarSession; unpaid: boolean };
+    const { session, unpaid, waived } = arg.event.extendedProps as {
+      session: CalendarSession;
+      unpaid: boolean;
+      waived: boolean;
+    };
     const virtual = session.modality === "virtual";
     const modality = (
       <>
@@ -342,11 +348,13 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
         </span>
       </>
     );
-    const unpaidLabel = unpaid && (
+    const unpaidLabel = unpaid ? (
       <span className="session-unpaid">
         <XIcon aria-hidden />
         No cobrada
       </span>
+    ) : (
+      waived && <span className="session-unpaid session-waived">Sin cargo</span>
     );
     if (arg.view.type === "listWeek") {
       return (

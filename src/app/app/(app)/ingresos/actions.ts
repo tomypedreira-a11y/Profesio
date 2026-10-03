@@ -34,3 +34,28 @@ export async function markSessionUnpaid(sessionId: string) {
   revalidatePath("/", "layout");
   return {};
 }
+
+// Sin cargo: una sesión realizada que el psicólogo decide no cobrar. Sigue siendo realizada, pero no
+// suma a lo pendiente ni a lo adeudado. La base exige que ya haya terminado y que no esté cobrada.
+export async function waiveSession(sessionId: string) {
+  if (!z.uuid().safeParse(sessionId).success) return { error: "Datos inválidos." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("waive_session", { p_session_id: sessionId });
+
+  if (error) return { error: error.code === "P0001" ? error.message : "No se pudo dejar la sesión sin cargo." };
+  revalidatePath("/", "layout");
+  return {};
+}
+
+// La vuelve a pendiente de cobro.
+export async function unwaiveSession(sessionId: string) {
+  if (!z.uuid().safeParse(sessionId).success) return { error: "Datos inválidos." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("unwaive_session", { p_session_id: sessionId });
+
+  if (error) return { error: error.code === "P0001" ? error.message : "No se pudo volver la sesión a pendiente." };
+  revalidatePath("/", "layout");
+  return {};
+}

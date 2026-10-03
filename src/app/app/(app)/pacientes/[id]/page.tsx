@@ -47,7 +47,7 @@ export default async function PatientPage({ params }: PageProps<"/app/pacientes/
       .limit(3),
     supabase
       .from("sessions")
-      .select("id, starts_at, status")
+      .select("id, starts_at, status, waived_at")
       .eq("patient_id", id)
       .lte("starts_at", now)
       .order("starts_at", { ascending: false })
@@ -164,7 +164,7 @@ function SessionsCard({
   empty,
 }: {
   title: string;
-  sessions: { id: string; starts_at: string; status: string }[];
+  sessions: { id: string; starts_at: string; status: string; waived_at?: string | null }[];
   timeZone: string;
   empty: string;
 }) {
@@ -184,6 +184,7 @@ function SessionsCard({
                   {formatSessionLong(s.starts_at, timeZone)}
                 </span>
                 {s.status === "cancelled" && <Badge variant="outline">Cancelada</Badge>}
+                {s.waived_at && <Badge variant="outline">Sin cargo</Badge>}
               </li>
             ))}
           </ul>

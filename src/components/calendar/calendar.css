@@ -282,6 +282,12 @@
   margin-left: 0;
 }
 
+/* Sin cargo (el psicólogo decidió no cobrarla): en el mismo lugar que "No cobrada", sin alarma. */
+.fc .session-unpaid.session-waived {
+  color: inherit;
+  opacity: 0.85;
+}
+
 /* Modalidad después del nombre: "(v)" o "(p)", sin negrita para que el nombre siga resaltando. */
 .fc .session-modality {
   font-weight: 400;

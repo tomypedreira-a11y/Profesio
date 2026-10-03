@@ -430,6 +430,7 @@ export type Database = {
           starts_at: string
           status: string
           updated_at: string
+          waived_at: string | null
         }
         Insert: {
           cancelled_at?: string | null
@@ -449,6 +450,7 @@ export type Database = {
           starts_at: string
           status?: string
           updated_at?: string
+          waived_at?: string | null
         }
         Update: {
           cancelled_at?: string | null
@@ -468,6 +470,7 @@ export type Database = {
           starts_at?: string
           status?: string
           updated_at?: string
+          waived_at?: string | null
         }
         Relationships: [
           {
@@ -543,6 +546,7 @@ export type Database = {
           series_id: string | null
           starts_at: string | null
           status: string | null
+          waived_at: string | null
         }
         Relationships: []
       }
@@ -609,6 +613,7 @@ export type Database = {
           payment_method: string | null
           starts_at: string | null
           status: string | null
+          waived_at: string | null
         }
         Relationships: []
       }
@@ -752,6 +757,7 @@ export type Database = {
         Returns: undefined
       }
       set_timezone: { Args: { p_timezone: string }; Returns: number }
+      unwaive_session: { Args: { p_session_id: string }; Returns: undefined }
       update_patient: {
         Args: {
           p_birth_date?: string
@@ -785,6 +791,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      waive_session: { Args: { p_session_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

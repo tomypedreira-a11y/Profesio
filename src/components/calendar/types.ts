@@ -2,7 +2,7 @@ import type { ScheduleSlot } from "@/lib/schedule";
 
 // Columnas de calendar_sessions que necesita el panel de la sesión.
 export const SESSION_COLUMNS =
-  "id, patient_id, series_id, starts_at, ends_at, status, rescheduled_from, first_name, last_name, phone, series_active, modality, paid_at";
+  "id, patient_id, series_id, starts_at, ends_at, status, rescheduled_from, first_name, last_name, phone, series_active, modality, paid_at, waived_at";
 
 export type CalendarSession = {
   id: string;
@@ -18,6 +18,7 @@ export type CalendarSession = {
   series_active: boolean;
   modality: string; // la de la sesión, o la del paciente si no se cambió
   paid_at: string | null;
+  waived_at: string | null; // sin cargo: realizada, pero el psicólogo decidió no cobrarla
 };
 
 export type UnscheduledPatient = { id: string; first_name: string; last_name: string };
