@@ -24,5 +24,16 @@ export function applyFontSize(size: FontSize) {
   }
 }
 
+// El recordado en este navegador (null si no hay o no se puede leer).
+export function storedFontSize(): FontSize | null {
+  try {
+    const size = localStorage.getItem(STORAGE_KEY);
+    return isFontSize(size) ? size : null;
+  } catch {
+    return null;
+  }
+}
+
 // Corre antes de pintar la página (en el <head>), para que no aparezca primero en tamaño normal.
-export const FONT_SIZE_SCRIPT = `try{var s=localStorage.getItem("${STORAGE_KEY}");if(s)document.documentElement.dataset.fontSize=s}catch(e){}`;
+// Solo en la app (como isAppPath, lib/routes.ts): el sitio público va siempre con la letra normal.
+export const FONT_SIZE_SCRIPT = `try{var p=location.pathname;if(p==="/app"||p.indexOf("/app/")===0){var s=localStorage.getItem("${STORAGE_KEY}");if(s)document.documentElement.dataset.fontSize=s}}catch(e){}`;

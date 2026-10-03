@@ -1,12 +1,23 @@
 "use client";
 
 // Maneja el tema claro/oscuro agregando la clase "dark" al <html>.
+import { usePathname } from "next/navigation";
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
+import { isAppPath } from "@/lib/routes";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  // El tema elegido es de la app: el sitio público va siempre en claro (forcedTheme no toca el guardado,
+  // así que al volver a /app se recupera el del usuario).
+  const forcedTheme = isAppPath(usePathname()) ? undefined : "light";
   return (
-    <NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      forcedTheme={forcedTheme}
+    >
       {children}
     </NextThemesProvider>
   );
