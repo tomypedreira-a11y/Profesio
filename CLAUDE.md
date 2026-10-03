@@ -95,6 +95,8 @@ src/
     pwa/                         Registro del service worker, instalar la app, aviso sin conexión
     profile-defaults-provider.tsx  Duración y valor por defecto del perfil (los carga el layout)
     idle-logout.tsx              Aviso y cierre de sesión por inactividad (en el layout de (app))
+    auth-art.tsx                 Fondo del login y el registro: escenas (bosque, árbol en diagonal, logo, dos árboles),
+                                 una al azar en cada carga, sin repetir la anterior. password-input.tsx = campo con ojito
     list-skeletons.tsx           Piezas de los esqueletos de carga (filas, tarjetas, formularios) para los loading.tsx
     speed-insights.tsx           Vercel Speed Insights (en el layout raíz; quita los ids de la URL antes de enviar)
     turnstile.tsx                Widget del captcha (Turnstile) y useCaptcha() para habilitar el botón de enviar
