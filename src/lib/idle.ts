@@ -6,7 +6,7 @@
 export const LAST_ACTIVITY_COOKIE = "profesio_last_activity"; // timestamp en ms
 export const IDLE_TIMEOUT_COOKIE = "profesio_idle_timeout"; // minutos
 
-export const DEFAULT_IDLE_MINUTES = 30;
+export const DEFAULT_IDLE_MINUTES = 240; // igual que el default de profiles.idle_timeout_minutes
 
 // Sin opción "nunca": con datos clínicos siempre hay límite (la base lo exige con un check).
 export const IDLE_TIMEOUTS = [
