@@ -29,6 +29,33 @@ export async function nextSession(supabase: Client, now: string): Promise<Calend
   return (data as CalendarSession | null) ?? null;
 }
 
+// La sesión (no cancelada) que está en curso, si hay una (no se superponen).
+export async function currentSession(supabase: Client, now: string): Promise<CalendarSession | null> {
+  const { data } = await supabase
+    .from("calendar_sessions")
+    .select(SESSION_COLUMNS)
+    .eq("status", "scheduled")
+    .lte("starts_at", now)
+    .gt("ends_at", now)
+    .order("starts_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as CalendarSession | null) ?? null;
+}
+
+// La última sesión realizada (no cancelada y ya terminada), para consultarla sin buscarla en el calendario.
+export async function lastSession(supabase: Client, now: string): Promise<CalendarSession | null> {
+  const { data } = await supabase
+    .from("calendar_sessions")
+    .select(SESSION_COLUMNS)
+    .eq("status", "scheduled")
+    .lte("ends_at", now)
+    .order("starts_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as CalendarSession | null) ?? null;
+}
+
 // Para "No agendados" y la tira de días: pacientes irregulares activos y sesiones (no canceladas) de la semana.
 export async function weekBookings(supabase: Client, start: string, end: string) {
   const [{ data: irregular }, { data: booked }] = await Promise.all([
@@ -52,5 +79,7 @@ export type InitialCalendarData = {
   end: string;
   sessions: CalendarSession[];
   next: CalendarSession | null;
+  current: CalendarSession | null;
+  last: CalendarSession | null;
   week?: { start: string } & WeekBookings; // start: lunes de la semana, "yyyy-MM-dd" de reloj
 };

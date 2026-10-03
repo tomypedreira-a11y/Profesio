@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -195,7 +195,6 @@ export type Database = {
           theme: string
           timezone: string
           updated_at: string
-          whatsapp_reminder_template: string | null
         }
         Insert: {
           calendar_view?: string
@@ -218,7 +217,6 @@ export type Database = {
           theme?: string
           timezone?: string
           updated_at?: string
-          whatsapp_reminder_template?: string | null
         }
         Update: {
           calendar_view?: string
@@ -241,7 +239,6 @@ export type Database = {
           theme?: string
           timezone?: string
           updated_at?: string
-          whatsapp_reminder_template?: string | null
         }
         Relationships: []
       }

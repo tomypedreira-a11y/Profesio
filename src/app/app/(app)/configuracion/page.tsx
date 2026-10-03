@@ -25,7 +25,6 @@ import { DefaultFeeInput } from "./default-fee-input";
 import { FontSizeSelector } from "./font-size-selector";
 import { MfaSettings } from "./mfa-settings";
 import { PreferenceSelect } from "./preference-select";
-import { ReminderTemplateInput } from "./reminder-template-input";
 import { SettingsSection } from "./settings-section";
 import { SignOutEverywhere } from "./sign-out-everywhere";
 import { ThemeModeSelector } from "./theme-mode-selector";
@@ -132,10 +131,6 @@ export default async function SettingsPage() {
             <FieldDescription>
               La que aparece elegida al crear un paciente (podés cambiarla ahí). No cambia a tus pacientes actuales.
             </FieldDescription>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="whatsapp_reminder_template">Recordatorio por WhatsApp</FieldLabel>
-            <ReminderTemplateInput id="whatsapp_reminder_template" value={profile?.whatsapp_reminder_template ?? null} />
           </Field>
         </SettingsSection>
 

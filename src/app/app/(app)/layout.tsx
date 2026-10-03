@@ -18,7 +18,6 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { DEFAULT_SESSION_MINUTES } from "@/lib/schedule";
 import { DEFAULT_TIME_ZONE } from "@/lib/timezones";
 import { DEFAULT_IDLE_MINUTES } from "@/lib/idle";
-import { DEFAULT_REMINDER_TEMPLATE } from "@/lib/whatsapp";
 
 // Las pantallas tienen su loading.tsx: este layout (panel lateral, encabezado y barra inferior) se muestra apenas
 // tiene la sesión y el perfil, y la página llega después en su lugar. Por eso acá solo se lee lo indispensable.
@@ -70,7 +69,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               sessionMinutes: profile?.default_session_minutes ?? DEFAULT_SESSION_MINUTES,
               sessionFee: profile?.default_session_fee ?? null,
               timeZone: profile?.timezone ?? DEFAULT_TIME_ZONE,
-              reminderTemplate: profile?.whatsapp_reminder_template ?? DEFAULT_REMINDER_TEMPLATE,
             }}
           >
             <VacationsProvider value={vacations ?? []}>{children}</VacationsProvider>

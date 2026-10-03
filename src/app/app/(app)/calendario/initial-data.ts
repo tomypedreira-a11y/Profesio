@@ -1,11 +1,11 @@
-// Carga inicial del calendario desde el servidor: las sesiones del rango que se ve al abrirlo, la próxima sesión
-// y (en la pantalla principal) "No agendados" de esta semana. Son las mismas consultas que hacía el navegador al
+// Carga inicial del calendario desde el servidor: las sesiones del rango que se ve al abrirlo, la próxima sesión,
+// la que está en curso, la última realizada y (en la pantalla principal) "No agendados" de esta semana. Son las mismas consultas que hacía el navegador al
 // montarse (components/calendar/queries.ts); las semanas siguientes las sigue pidiendo el navegador.
 import { addDays, format, startOfMonth, startOfWeek } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { fromWall, todayIn } from "@/lib/zoned";
 import type { CalendarViewPreference } from "@/lib/calendar-views";
-import { nextSession, sessionsInRange, weekBookings, type InitialCalendarData } from "@/components/calendar/queries";
+import { currentSession, lastSession, nextSession, sessionsInRange, weekBookings, type InitialCalendarData } from "@/components/calendar/queries";
 
 export async function loadInitialCalendar(
   timeZone: string,
@@ -24,9 +24,12 @@ export async function loadInitialCalendar(
   const end = iso(addDays(first, days));
   const loadedAt = Date.now();
 
-  const [sessions, next, bookings] = await Promise.all([
+  const now = new Date(loadedAt).toISOString();
+  const [sessions, next, current, last, bookings] = await Promise.all([
     sessionsInRange(supabase, start, end),
-    nextSession(supabase, new Date(loadedAt).toISOString()),
+    nextSession(supabase, now),
+    currentSession(supabase, now),
+    lastSession(supabase, now),
     withWeek ? weekBookings(supabase, iso(week), iso(addDays(week, 7))) : undefined,
   ]);
 
@@ -36,6 +39,8 @@ export async function loadInitialCalendar(
     end,
     sessions,
     next,
+    current,
+    last,
     week: bookings && { start: format(week, "yyyy-MM-dd"), ...bookings },
   };
 }

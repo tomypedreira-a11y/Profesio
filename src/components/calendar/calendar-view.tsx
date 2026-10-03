@@ -25,12 +25,12 @@ import { useVacations } from "@/components/vacations-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AddSessionDialog } from "./add-session-dialog";
-import { NextSessionPanel } from "./next-session-panel";
+import { CurrentSessionPanel, LastSessionPanel, NextSessionPanel } from "./next-session-panel";
 import { SessionSheet } from "./session-sheet";
 import { UnscheduledPanel, UnscheduledSheet } from "./unscheduled-panel";
 import { WeekStrip } from "./week-strip";
 import { CalendarGridSkeleton } from "./calendar-skeleton";
-import { nextSession as fetchNextSession, sessionsInRange, weekBookings, type InitialCalendarData, type WeekBookings } from "./queries";
+import { currentSession as fetchCurrentSession, lastSession as fetchLastSession, nextSession as fetchNextSession, sessionsInRange, weekBookings, type InitialCalendarData, type WeekBookings } from "./queries";
 import type { CalendarViewPreference } from "@/lib/calendar-views";
 import type { CalendarSession, PatientOption, UnscheduledPatient } from "./types";
 import "./calendar.css";
@@ -132,6 +132,10 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
   );
   // Próxima sesión de todas (undefined mientras carga), para destacarla y mostrarla en el panel.
   const [nextSession, setNextSession] = useState<CalendarSession | null | undefined>(initialData?.next);
+  // La sesión que está en curso, si hay una (se muestra arriba de la próxima, con un cronómetro).
+  const [currentSession, setCurrentSession] = useState<CalendarSession | null>(initialData?.current ?? null);
+  // La última realizada (en gris, debajo de la próxima): las pasadas no se podían consultar sin buscarlas.
+  const [lastSession, setLastSession] = useState<CalendarSession | null | undefined>(initialData?.last);
   // Panel "Agregar sesión" abierto (con el paciente y la fecha sugeridos, si vienen de "No agendados").
   const [adding, setAdding] = useState<{ patientId?: string; date?: Date } | null>(null);
 
@@ -162,17 +166,21 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
         Date.parse(initial.start) <= info.start.getTime() &&
         info.end.getTime() <= Date.parse(initial.end);
       if (!fromServer) initialRef.current = null;
-      const [sessions, next] = fromServer
+      const [sessions, next, current, last] = fromServer
         ? [
             initial.sessions.filter((s) => {
               const t = Date.parse(s.starts_at);
               return t >= info.start.getTime() && t < info.end.getTime();
             }),
             initial.next,
+            initial.current,
+            initial.last,
           ]
         : await Promise.all([
             sessionsInRange(supabase, info.start.toISOString(), info.end.toISOString()),
             fetchNextSession(supabase, now),
+            fetchCurrentSession(supabase, now),
+            fetchLastSession(supabase, now),
           ]);
 
       // En vacaciones no se muestra ningún paciente de horario fijo: las agendadas ya se quitaron
@@ -181,6 +189,8 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
         (s) => !(s.series_id && s.status === "cancelled" && isVacationDay(vacations, toWall(s.starts_at, timeZone))),
       );
       setNextSession(next);
+      setCurrentSession(current);
+      setLastSession(last);
 
       // Ampliar el horario visible si alguna sesión cae fuera de 8 a 22.
       let min = DEFAULT_MIN_HOUR;
@@ -260,8 +270,8 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
     [supabase, timeZone],
   );
 
-  // Estable (sin dependencias) porque el panel de próxima sesión la usa en un efecto. Lo que cargó el servidor
-  // ya no sirve: después de un cambio (o cuando empieza la próxima sesión) se pide de nuevo.
+  // Estable (sin dependencias) porque los paneles de próxima sesión y en curso la usan en un efecto. Lo que cargó
+  // el servidor ya no sirve: después de un cambio (o cuando empieza o termina una sesión) se pide de nuevo.
   const refetchEvents = useCallback(() => {
     initialRef.current = null;
     calendarRef.current?.getApi().refetchEvents();
@@ -547,11 +557,22 @@ export function CalendarView({ timeZone, patients = [], initialView, mode = "mai
       {/* En PC, columna a la derecha; en el celular, debajo del calendario. */}
       {!browse && (
         <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:self-start">
+          <CurrentSessionPanel
+            session={currentSession}
+            timeZone={timeZone}
+            onSelect={(session) => setSelected({ session, isNext: false })}
+            onEnded={refetchEvents}
+          />
           <NextSessionPanel
             session={nextSession}
             timeZone={timeZone}
             onSelect={(session) => setSelected({ session, isNext: true })}
             onStarted={refetchEvents}
+          />
+          <LastSessionPanel
+            session={lastSession}
+            timeZone={timeZone}
+            onSelect={(session) => setSelected({ session, isNext: false })}
           />
           <div className="max-md:hidden">
             <UnscheduledPanel patients={unscheduled} weekLabel={weekLabel} onSelect={scheduleUnscheduled} />

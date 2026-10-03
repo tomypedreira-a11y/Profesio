@@ -1,35 +1,43 @@
-// Mensaje de recordatorio por WhatsApp: el psicólogo lo escribe una vez (Configuración → Sesiones) con
-// marcadores, y la app lo completa con los datos de cada sesión. Solo arma el texto del link: lo envía el
-// psicólogo desde su WhatsApp, después de revisarlo.
+// Mensajes de WhatsApp ya escritos: recordatorio de una sesión y aviso cuando el paciente no llegó. Son fijos
+// (antes se armaban en Configuración con marcadores, y resultaba complicado). Solo arman el texto del link: lo
+// envía el psicólogo desde su WhatsApp, después de revisarlo.
+import { addDays, format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { es } from "date-fns/locale";
+import { toWall } from "@/lib/zoned";
 
-export const DEFAULT_REMINDER_TEMPLATE = "Hola {nombre}, te recuerdo nuestra sesión del {fecha} a las {hora}. ¡Nos vemos!";
+type MessageSession = { first_name: string; starts_at: string };
 
-export const REMINDER_TEMPLATE_MAX = 500; // igual que el check de profiles.whatsapp_reminder_template
+// Cuándo es la sesión, según cuánto falta: "en un rato, a las 18:00", "hoy a las 18:00", "mañana a las 18:00",
+// "el jueves a las 18:00" (dentro de la semana) o "el martes 14 de octubre a las 18:00".
+// Los días son los de la zona del perfil, no la del dispositivo.
+export function sessionWhen(startsAt: string, timeZone: string, now: number | Date = Date.now()): string {
+  const time = formatInTimeZone(startsAt, timeZone, "HH:mm");
+  const minutesLeft = (new Date(startsAt).getTime() - new Date(now).getTime()) / 60_000;
+  const day = format(toWall(startsAt, timeZone), "yyyy-MM-dd");
+  const today = toWall(now, timeZone);
+  const dayIn = (days: number) => format(addDays(today, days), "yyyy-MM-dd");
 
-export const REMINDER_PLACEHOLDERS = [
-  { key: "{nombre}", label: "nombre del paciente" },
-  { key: "{fecha}", label: "día de la sesión (ej. martes 7 de octubre)" },
-  { key: "{hora}", label: "hora de inicio (ej. 18:00)" },
-] as const;
-
-// Vacío o igual al de la app = null: así, si se mejora el mensaje de la app, les llega a quienes no lo cambiaron.
-export function parseReminderTemplate(raw: string): string | null | "invalid" {
-  const text = raw.trim();
-  if (!text || text === DEFAULT_REMINDER_TEMPLATE) return null;
-  return text.length > REMINDER_TEMPLATE_MAX ? "invalid" : text;
+  if (day === dayIn(0)) return minutesLeft > 0 && minutesLeft <= 60 ? `en un rato, a las ${time}` : `hoy a las ${time}`;
+  if (day === dayIn(1)) return `mañana a las ${time}`;
+  // Hasta 6 días: el nombre del día alcanza (a 7 días sería el mismo día de hoy, y confunde).
+  for (let days = 2; days <= 6; days++) {
+    if (day === dayIn(days)) return `el ${formatInTimeZone(startsAt, timeZone, "EEEE", { locale: es })} a las ${time}`;
+  }
+  return `el ${formatInTimeZone(startsAt, timeZone, "EEEE d 'de' MMMM", { locale: es })} a las ${time}`;
 }
 
-export function reminderText(
-  template: string,
-  session: { first_name: string; starts_at: string },
-  timeZone: string,
-): string {
-  const values: Record<string, string> = {
-    "{nombre}": session.first_name,
-    "{fecha}": formatInTimeZone(session.starts_at, timeZone, "EEEE d 'de' MMMM", { locale: es }),
-    "{hora}": formatInTimeZone(session.starts_at, timeZone, "HH:mm"),
-  };
-  return template.replace(/\{(nombre|fecha|hora)\}/g, (key) => values[key]);
+export function reminderText(session: MessageSession, timeZone: string, now: number | Date = Date.now()): string {
+  const when = sessionWhen(session.starts_at, timeZone, now);
+  // "en un rato, a las 18:00" va mejor al final de la frase.
+  return when.startsWith("en un rato")
+    ? `Hola ${session.first_name}, te recuerdo que tenemos sesión ${when}. ¡Nos vemos!`
+    : `Hola ${session.first_name}, te recuerdo que ${when} tenemos sesión. ¡Nos vemos!`;
+}
+
+// Sesión en curso y el paciente no llegó (o no se conectó, si es virtual).
+export function lateText(session: MessageSession & { modality: string }, timeZone: string): string {
+  const time = formatInTimeZone(session.starts_at, timeZone, "HH:mm");
+  const question = session.modality === "virtual" ? "¿Te podés conectar?" : "¿Estás por llegar?";
+  return `Hola ${session.first_name}, te escribo porque teníamos sesión a las ${time}. ${question}`;
 }

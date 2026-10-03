@@ -81,7 +81,7 @@ src/
       (app)/                     Pantallas con sesión iniciada (layout con panel lateral)
         calendario/              Calendario: vista principal (APP_HOME); vistas/ = día/semana/mes desde el celular
         pacientes/               Listado, alta, ficha, edición, archivados, anotaciones; [id]/libro/route.ts = el PDF
-        sesiones/                Lista de próximas sesiones + acciones de sesiones
+        sesiones/                Lista de sesiones (próximas y las realizadas del último día) + acciones de sesiones
         ingresos/                Resumen de cobros del mes, quiénes adeudan + acciones de cobro
         perfil/                  Datos profesionales (nombre, apellido, matrícula)
         configuracion/           Preferencias: Personalización, Calendario, Sesiones, Vacaciones, Cuenta
@@ -139,7 +139,7 @@ Nunca modificar tablas desde el panel de Supabase. Después de cada migración, 
 
 | Tabla | Contenido |
 |---|---|
-| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria (`timezone`), duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, modalidad que preselecciona el alta de un paciente (`default_modality`, presencial por defecto), vista inicial del calendario (`calendar_view`), cierre por inactividad (`idle_timeout_minutes`: 15, 30, 60, 120 o 240), mensaje de recordatorio por WhatsApp (`whatsapp_reminder_template`, null = el de la app), aceptación de los términos (`terms_accepted_at`, `terms_version`; no se modifican). |
+| `profiles` | Psicólogo (1 a 1 con `auth.users`, lo crea un trigger al registrarse). Tema, zona horaria (`timezone`), duración (`default_session_minutes`) y valor (`default_session_fee`) habituales de las sesiones, modalidad que preselecciona el alta de un paciente (`default_modality`, presencial por defecto), vista inicial del calendario (`calendar_view`), cierre por inactividad (`idle_timeout_minutes`: 15, 30, 60, 120 o 240), aceptación de los términos (`terms_accepted_at`, `terms_version`; no se modifican). |
 | `patients` | Pacientes. `active = false` = archivado. Teléfono en E.164. `modality`: `in_person` (por defecto) o `virtual`. |
 | `session_series` | Horario fijo semanal (día, hora y duración). Un paciente puede tener varios. `end_date is null` = vigente. |
 | `sessions` | Cada sesión concreta (suelta o generada por una serie). Duración en `duration_minutes` (`ends_at` lo calcula un trigger). Cobro: `fee`, `paid_at`, `payment_method`. `modality` null = la del paciente. |
@@ -223,7 +223,12 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
   Las canceladas de horario fijo se conservan y el calendario las oculta en esos días. La interfaz las lee con
   `useVacations()` (`components/vacations-provider.tsx`, las carga el layout) y las pinta con `--vacation` (`calendar.css`).
 - **Estados de sesión:** solo `scheduled` y `cancelled`. Una sesión pasada no cancelada se considera realizada.
-  La "próxima sesión" se calcula (primera futura con `scheduled`); no se guarda.
+  La "próxima sesión" se calcula (primera futura con `scheduled`); no se guarda. Igual la "sesión en curso"
+  (`scheduled`, ya empezó y no terminó): en el calendario y en Sesiones, una tarjeta como la de la próxima, con un
+  cronómetro desde el inicio (`CurrentSessionPanel`, `components/calendar/next-session-panel.tsx`). El calendario
+  muestra además la última realizada, en gris (`LastSessionPanel`): las pasadas no se podían consultar de otra forma.
+  Sesiones muestra, en gris, las realizadas del último día con sesiones; si a ese día todavía le quedan (hoy, a mitad
+  del día), también las del anterior: un día completo queda en la lista hasta que se completa el siguiente.
 - **Anotaciones (historia clínica, Ley 26.529):** en la interfaz se llaman "anotaciones" (no "informes"); en el código y la base, `notes` / `session_notes`. Un borrador (`draft`) se edita; uno finalizado (`final`)
   **no se modifica ni se borra** (lo impide un trigger). Para corregir, se inserta una fila nueva con
   `supersedes_id`. Las sesiones con anotación nunca se borran.
@@ -246,9 +251,11 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
 - **Teléfonos:** se guardan en E.164 (`+5491123456789`) usando `normalizePhone` de `lib/phone.ts`.
   Argentina por defecto; a los números argentinos sin 9 se les agrega (se asumen celulares, para WhatsApp).
 - **WhatsApp:** solo links `wa.me` (`whatsappUrl` de `lib/phone.ts`); la app no envía mensajes. El teléfono (ficha,
-  panel de la sesión, listado de pacientes) abre el chat vacío. "Enviar recordatorio" (`components/whatsapp-reminder.tsx`,
-  en el panel de una sesión futura y en la lista de Sesiones) lo abre con el mensaje de Configuración → Sesiones ya
-  escrito: marcadores `{nombre}`, `{fecha}` y `{hora}` (`lib/whatsapp.ts`; lo carga el layout, `useReminderTemplate()`).
+  panel de la sesión, listado de pacientes) abre el chat vacío. Los botones de `components/whatsapp-message.tsx` lo
+  abren con un mensaje fijo ya escrito (`lib/whatsapp.ts`; no se configura): "Enviar recordatorio" (panel de una
+  sesión futura, lista de Sesiones y próxima sesión del calendario), que dice cuándo es según cuánto falta ("en un
+  rato", "hoy", "mañana", "el jueves" o la fecha), y "¿El paciente aún no llegó?" ("…no se conectó?" si es virtual),
+  mientras la sesión está en curso. El texto se arma de nuevo al tocar (la pantalla puede llevar horas abierta).
   El psicólogo lo revisa y lo envía desde su WhatsApp.
 - **Fechas y zona horaria:** la base guarda `timestamptz`. Las horas "de reloj" se convierten con la zona horaria
   de `profiles.timezone` (la del navegador al registrarse; si no, `America/Argentina/Buenos_Aires`), que se cambia
@@ -277,7 +284,7 @@ Vistas (todas `security_invoker = true`): `patient_list`, `calendar_sessions`, `
     llega después en su lugar. Una pantalla nueva lleva el suyo (si no, hereda el del padre, con otra forma). Lo
     que navega con `router.push` en vez de `<Link>` no se precarga solo: precargarlo con `router.prefetch` (ej. el
     menú de la cuenta) para que el esqueleto aparezca al instante.
-  - **Calendario:** la página carga en el servidor las sesiones del rango inicial, la próxima sesión y "No
+  - **Calendario:** la página carga en el servidor las sesiones del rango inicial, la próxima sesión, la en curso, la última y "No
     agendados" de esta semana (`calendario/initial-data.ts`, con las mismas consultas que el navegador,
     `components/calendar/queries.ts`); `CalendarView` no las vuelve a pedir al montarse. Fuera de ese rango, después
     de un cambio o si los datos tienen más de un minuto (al volver atrás), las pide el navegador como siempre.
