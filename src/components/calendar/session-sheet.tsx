@@ -48,14 +48,26 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
             {/* Compacto, para que entre sin scrollear (también en el celular). */}
             <div className="flex flex-col gap-3 px-4 pb-6 text-sm">
               <div className="flex flex-wrap items-center gap-2">
+                {/* Como en la lista de Sesiones: una pasada no cancelada se considera realizada. */}
                 {session.status === "cancelled" ? (
                   <Badge variant="destructive">Cancelada</Badge>
+                ) : new Date(session.ends_at) <= new Date() ? (
+                  <Badge variant="secondary">Realizada</Badge>
+                ) : new Date(session.starts_at) <= new Date() ? (
+                  <Badge>En curso</Badge>
                 ) : isNext ? (
                   <Badge>Próxima sesión</Badge>
                 ) : (
                   <Badge variant="secondary">Agendada</Badge>
                 )}
-                <Badge variant="outline">{session.series_id ? "Horario fijo" : "Sesión suelta"}</Badge>
+                {/* Una de horario fijo reprogramada sigue siendo del horario (vacaciones, cortes del horario): se aclara. */}
+                <Badge variant="outline">
+                  {session.series_id
+                    ? session.rescheduled_from
+                      ? "Horario fijo · reprogramada"
+                      : "Horario fijo"
+                    : "Sesión suelta"}
+                </Badge>
                 {/* En una cancelada la modalidad solo se informa; en las demás se puede cambiar (abajo). */}
                 {session.status === "cancelled" && (
                   <Badge variant="outline">

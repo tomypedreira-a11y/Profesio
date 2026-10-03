@@ -29,15 +29,16 @@ export function sessionWhen(startsAt: string, timeZone: string, now: number | Da
 
 export function reminderText(session: MessageSession, timeZone: string, now: number | Date = Date.now()): string {
   const when = sessionWhen(session.starts_at, timeZone, now);
-  // "en un rato, a las 18:00" va mejor al final de la frase.
-  return when.startsWith("en un rato")
-    ? `Hola ${session.first_name}, te recuerdo que tenemos sesión ${when}. ¡Nos vemos!`
-    : `Hola ${session.first_name}, te recuerdo que ${when} tenemos sesión. ¡Nos vemos!`;
+  // "en un rato, a las 18:00" va entre comas: "Te recuerdo que en un rato, a las 18:00, tenemos sesión."
+  const sentence = when.startsWith("en un rato") ? `${when},` : when;
+  return `¡Hola ${session.first_name}! ¿Cómo estás? Te recuerdo que ${sentence} tenemos sesión. Cualquier cosa, avisame. ¡Nos vemos!`;
 }
 
-// Sesión en curso y el paciente no llegó (o no se conectó, si es virtual).
+// Sesión en curso y el paciente no llegó (o no se conectó, si es virtual). Amable, sin sonar a reproche, y sin
+// palabras con género (ej. "conectado/a"): no sabemos el del psicólogo.
 export function lateText(session: MessageSession & { modality: string }, timeZone: string): string {
   const time = formatInTimeZone(session.starts_at, timeZone, "HH:mm");
-  const question = session.modality === "virtual" ? "¿Te podés conectar?" : "¿Estás por llegar?";
-  return `Hola ${session.first_name}, te escribo porque teníamos sesión a las ${time}. ${question}`;
+  return session.modality === "virtual"
+    ? `¡Hola ${session.first_name}! Ya estoy en la videollamada para la sesión de las ${time}. ¿Te podés sumar? Si tuviste algún inconveniente, avisame.`
+    : `¡Hola ${session.first_name}! Te estoy esperando para la sesión de las ${time}. ¿Estás en camino? Si surgió algo, avisame.`;
 }

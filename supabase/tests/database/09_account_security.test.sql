@@ -19,8 +19,8 @@ insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, c
 -- -----------------------------------------------------------------------------
 -- Preferencia de inactividad
 -- -----------------------------------------------------------------------------
-select is((select idle_timeout_minutes from public.profiles where id = '11111111-1111-1111-1111-111111111111'), 30,
-  'el cierre por inactividad arranca a los 30 minutos');
+select is((select idle_timeout_minutes from public.profiles where id = '11111111-1111-1111-1111-111111111111'), 240,
+  'el cierre por inactividad arranca a las 4 horas');
 select throws_ok(
   $$ update public.profiles set idle_timeout_minutes = 0 where id = '11111111-1111-1111-1111-111111111111' $$,
   '23514', null, 'no hay opción "nunca"'
