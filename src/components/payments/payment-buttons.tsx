@@ -1,11 +1,11 @@
 "use client";
 
-// Botones de cobro: "Cobrar" (elegís el medio de pago) y "Deshacer".
+// Botones de cobro: "Cobrar" (elegís el medio de pago) y "Deshacer" (el cobro, o el "sin cargo").
 // Se usan en el panel de la sesión y en la pantalla Ingresos.
 import { useTransition } from "react";
 import { ChevronDownIcon, UndoIcon, WalletIcon } from "lucide-react";
 import { toast } from "sonner";
-import { markSessionsPaid, markSessionUnpaid } from "@/app/app/(app)/ingresos/actions";
+import { markSessionsPaid, markSessionUnpaid, unwaiveSession } from "@/app/app/(app)/ingresos/actions";
 import { PAYMENT_METHODS } from "@/lib/payments";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,6 +70,30 @@ export function MarkUnpaidButton({ sessionId, onDone }: { sessionId: string; onD
         toast.error(result.error);
       } else {
         toast.success("Cobro deshecho.");
+        onDone?.();
+      }
+    });
+  }
+
+  return (
+    <Button variant="ghost" size="sm" onClick={undo} disabled={pending}>
+      <UndoIcon />
+      Deshacer
+    </Button>
+  );
+}
+
+// Vuelve a pendiente de cobro una sesión sin cargo.
+export function UnwaiveButton({ sessionId, onDone }: { sessionId: string; onDone?: () => void }) {
+  const [pending, startTransition] = useTransition();
+
+  function undo() {
+    startTransition(async () => {
+      const result = await unwaiveSession(sessionId);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("La sesión vuelve a estar pendiente de cobro.");
         onDone?.();
       }
     });

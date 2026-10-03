@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
-import { MarkPaidButton, MarkUnpaidButton } from "@/components/payments/payment-buttons";
+import { MarkPaidButton, MarkUnpaidButton, UnwaiveButton } from "@/components/payments/payment-buttons";
 import { getTimeZone } from "../pacientes/queries";
 
 export const metadata: Metadata = { title: "Ingresos" };
@@ -27,15 +27,17 @@ type PaymentRow = {
   paid_at: string | null;
   payment_method: string | null;
   status: string;
+  waived_at: string | null;
 };
 
-const COLUMNS = "id, patient_id, first_name, last_name, starts_at, fee, paid_at, payment_method, status";
+const COLUMNS = "id, patient_id, first_name, last_name, starts_at, fee, paid_at, payment_method, status, waived_at";
 
 const sum = (rows: PaymentRow[]) => rows.reduce((total, r) => total + (r.fee ?? 0), 0);
 
 // Resumen de cobros: lo cobrado en el mes (por fecha de cobro, incluye lo cobrado por adelantado
 // y las canceladas cobradas), las sesiones realizadas del mes sin cobrar y quiénes adeudan.
 // Una cancelada sin cobrar no es deuda: se cobra solo si se decide, desde el panel de la sesión.
+// Una sin cargo tampoco: cuenta como realizada, pero no suma a lo pendiente ni a lo adeudado.
 export default async function IncomePage({ searchParams }: PageProps<"/app/ingresos">) {
   const timeZone = await getTimeZone();
   const currentMonth = formatInTimeZone(new Date(), timeZone, "yyyy-MM");
@@ -66,6 +68,7 @@ export default async function IncomePage({ searchParams }: PageProps<"/app/ingre
       .from("session_payments")
       .select(COLUMNS)
       .is("paid_at", null)
+      .is("waived_at", null)
       .lte("starts_at", now)
       .eq("status", "scheduled")
       .order("starts_at", { ascending: true }),
@@ -73,7 +76,7 @@ export default async function IncomePage({ searchParams }: PageProps<"/app/ingre
 
   const done = (monthData ?? []) as PaymentRow[];
   const paid = (paidData ?? []) as PaymentRow[];
-  const pending = done.filter((r) => !r.paid_at);
+  const pending = done.filter((r) => !r.paid_at && !r.waived_at);
   // Lista del mes: las sesiones realizadas y todo lo cobrado en el mes, sin repetir.
   const rows = [...new Map([...done, ...paid].map((r) => [r.id, r])).values()].sort((a, b) =>
     b.starts_at.localeCompare(a.starts_at),
@@ -178,7 +181,9 @@ export default async function IncomePage({ searchParams }: PageProps<"/app/ingre
                     <span className="min-w-0 flex-1 truncate">
                       {r.first_name} {r.last_name}
                     </span>
-                    <span className="tabular-nums">{r.fee !== null ? formatFee(r.fee) : "Sin valor"}</span>
+                    <span className={cn("tabular-nums", r.waived_at && "text-muted-foreground line-through")}>
+                      {r.fee !== null ? formatFee(r.fee) : "Sin valor"}
+                    </span>
                     {/* En dos líneas, alineado con el nombre (pl-15 = ancho de la fecha + separación). */}
                     <div className="flex w-full items-center gap-2 pl-15 @lg:w-auto @lg:pl-0">
                       {r.paid_at ? (
@@ -191,6 +196,13 @@ export default async function IncomePage({ searchParams }: PageProps<"/app/ingre
                           <Badge variant="secondary">{paymentMethodLabel(r.payment_method)}</Badge>
                           <span className="ml-auto">
                             <MarkUnpaidButton sessionId={r.id} />
+                          </span>
+                        </>
+                      ) : r.waived_at ? (
+                        <>
+                          <Badge variant="outline">Sin cargo</Badge>
+                          <span className="ml-auto">
+                            <UnwaiveButton sessionId={r.id} />
                           </span>
                         </>
                       ) : (

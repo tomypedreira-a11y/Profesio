@@ -1,12 +1,14 @@
 "use client";
 
 // Acciones sobre una sesión: reprogramar, cancelar y deshacer la cancelación.
+// Una sesión que ya terminó no se cancela (ya ocurrió): en su lugar, "No cobrar" la deja sin cargo.
 import { useState, useTransition } from "react";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { CalendarClockIcon, CalendarXIcon, UndoIcon } from "lucide-react";
+import { BanIcon, CalendarClockIcon, CalendarXIcon, UndoIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cancelSession, rescheduleSession, restoreSession } from "@/app/app/(app)/sesiones/actions";
+import { unwaiveSession, waiveSession } from "@/app/app/(app)/ingresos/actions";
 import { isValidRange, resolveEnd } from "@/lib/schedule";
 import { toWall } from "@/lib/zoned";
 import { Button } from "@/components/ui/button";
@@ -34,9 +36,11 @@ type SessionActionsProps = {
 };
 
 export function SessionActions({ session, timeZone, onChanged }: SessionActionsProps) {
-  const [dialog, setDialog] = useState<"reschedule" | "cancel" | null>(null);
+  const [dialog, setDialog] = useState<"reschedule" | "cancel" | "waive" | null>(null);
   const [pending, startTransition] = useTransition();
   const cancelled = session.status === "cancelled";
+  // Realizada: ya terminó. Mientras está en curso todavía se puede cancelar (el paciente no llegó).
+  const ended = new Date(session.ends_at) <= new Date();
   // "Esta y las siguientes" solo tiene sentido en un horario fijo vigente y en sesiones futuras.
   const canAffectFollowing = session.series_active && session.starts_at > new Date().toISOString();
 
@@ -51,11 +55,32 @@ export function SessionActions({ session, timeZone, onChanged }: SessionActionsP
     });
   }
 
+  function unwaive() {
+    startTransition(async () => {
+      const result = await unwaiveSession(session.id);
+      if (result.error) toast.error(result.error);
+      else {
+        toast.success("La sesión vuelve a estar pendiente de cobro.");
+        onChanged();
+      }
+    });
+  }
+
   if (cancelled) {
     return (
       <Button variant="outline" disabled={pending} onClick={restore}>
         <UndoIcon />
         Deshacer cancelación
+      </Button>
+    );
+  }
+
+  // Sin cargo: no se cobra, cancela ni reprograma hasta volver a pendiente (la base también lo impide).
+  if (session.waived_at) {
+    return (
+      <Button variant="outline" disabled={pending} onClick={unwaive}>
+        <UndoIcon />
+        Volver a pendiente
       </Button>
     );
   }
@@ -67,10 +92,17 @@ export function SessionActions({ session, timeZone, onChanged }: SessionActionsP
           <CalendarClockIcon />
           Reprogramar
         </Button>
-        <Button variant="outline" onClick={() => setDialog("cancel")} className="text-destructive">
-          <CalendarXIcon />
-          Cancelar
-        </Button>
+        {ended ? (
+          <Button variant="outline" onClick={() => setDialog("waive")}>
+            <BanIcon />
+            No cobrar
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={() => setDialog("cancel")} className="text-destructive">
+            <CalendarXIcon />
+            Cancelar
+          </Button>
+        )}
       </div>
 
       <Dialog open={dialog !== null} onOpenChange={(open) => !open && setDialog(null)}>
@@ -90,6 +122,16 @@ export function SessionActions({ session, timeZone, onChanged }: SessionActionsP
             <CancelForm
               session={session}
               canAffectFollowing={!!canAffectFollowing}
+              onClose={() => setDialog(null)}
+              onDone={() => {
+                setDialog(null);
+                onChanged();
+              }}
+            />
+          )}
+          {dialog === "waive" && (
+            <WaiveForm
+              session={session}
               onClose={() => setDialog(null)}
               onDone={() => {
                 setDialog(null);
@@ -253,6 +295,52 @@ function CancelForm({
         </Button>
         <Button variant="destructive" onClick={submit} disabled={pending}>
           {pending ? "Cancelando…" : "Cancelar sesión"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function WaiveForm({
+  session,
+  onClose,
+  onDone,
+}: {
+  session: CalendarSession;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [error, setError] = useState<string>();
+  const [pending, startTransition] = useTransition();
+
+  function submit() {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await waiveSession(session.id);
+      if (result.error) setError(result.error);
+      else {
+        toast.success("Sesión sin cargo.");
+        onDone();
+      }
+    });
+  }
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>No cobrar la sesión</DialogTitle>
+        <DialogDescription>
+          {session.first_name} {session.last_name}. La sesión queda como realizada y sin cargo: no suma a lo pendiente
+          ni a lo que adeuda el paciente. Si cambiás de idea, podés volverla a pendiente.
+        </DialogDescription>
+      </DialogHeader>
+      <FormMessage error={error} />
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose} disabled={pending}>
+          Volver
+        </Button>
+        <Button onClick={submit} disabled={pending}>
+          {pending ? "Guardando…" : "No cobrar"}
         </Button>
       </DialogFooter>
     </>

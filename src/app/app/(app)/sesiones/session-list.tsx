@@ -104,7 +104,7 @@ export function SessionList({ sessions, nextId, todayKey, loadedAt, timeZone }: 
                         </Badge>
                       )}
                       {cancelled && <Badge variant="outline">Cancelada</Badge>}
-                      {done && <Badge variant="outline">Realizada</Badge>}
+                      {done && <Badge variant="outline">{s.waived_at ? "Realizada · sin cargo" : "Realizada"}</Badge>}
                       {inProgress && <Badge>En curso</Badge>}
                       {isNext && <Badge>Próxima</Badge>}
                     </button>

@@ -52,7 +52,7 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
                 {session.status === "cancelled" ? (
                   <Badge variant="destructive">Cancelada</Badge>
                 ) : new Date(session.ends_at) <= new Date() ? (
-                  <Badge variant="secondary">Realizada</Badge>
+                  <Badge variant="secondary">{session.waived_at ? "Realizada · sin cargo" : "Realizada"}</Badge>
                 ) : new Date(session.starts_at) <= new Date() ? (
                   <Badge>En curso</Badge>
                 ) : isNext ? (
