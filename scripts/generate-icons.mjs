@@ -108,4 +108,8 @@ await writeFile(
   await icon(await tree("#ffffff", 20), 96, { transparent: true, treeHeight: 0.86 }),
 );
 
-console.log("Íconos generados en public/icons/ y src/app/ (favicon.ico, icon.png).");
+// El árbol tal cual (vectorial), para el fondo de las pantallas de ingreso (components/auth-art.tsx): se usa como
+// máscara y lo pinta el color del tema.
+await writeFile(root("public/decor/logo-tree.svg"), SVG);
+
+console.log("Íconos generados en public/icons/, public/decor/logo-tree.svg y src/app/ (favicon.ico, icon.png).");

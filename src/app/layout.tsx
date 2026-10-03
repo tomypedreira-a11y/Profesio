@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Lora, Outfit } from "next/font/google";
+import { FontSizeScope } from "@/components/font-size-sync";
 import { KeyboardDismiss } from "@/components/keyboard-dismiss";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { SpeedInsights } from "@/components/speed-insights";
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
 
 // "cover" habilita env(safe-area-inset-bottom): la barra inferior no queda debajo de la barra de gestos del iPhone.
 // themeColor: color de la barra del navegador y de la ventana de la app instalada, según el tema del sistema
-// (el fondo de cada tema: beige en el claro, violeta noche en el oscuro).
+// (el fondo de cada tema: beige en el claro, violeta noche en el oscuro). El sitio público lo pisa con el claro.
 export const viewport: Viewport = {
   viewportFit: "cover",
   themeColor: [
@@ -66,6 +67,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>{children}</ThemeProvider>
+        <FontSizeScope />
         <KeyboardDismiss />
         <ServiceWorkerRegister />
         <SpeedInsights />

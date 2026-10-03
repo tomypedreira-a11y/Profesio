@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/password-input";
 import { FormMessage } from "@/components/form-message";
 import { Turnstile, useCaptcha } from "@/components/turnstile";
 
@@ -94,10 +95,9 @@ export function SignupForm() {
             </Field>
             <Field data-invalid={!!errors.password}>
               <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-              <Input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
                 autoComplete="new-password"
                 minLength={8}
                 aria-invalid={!!errors.password}

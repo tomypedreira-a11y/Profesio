@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/password-input";
 import { FormMessage } from "@/components/form-message";
 import { Turnstile, useCaptcha } from "@/components/turnstile";
 import { NewPasswordFields } from "@/components/new-password-fields";
@@ -65,10 +65,9 @@ function ChangePasswordForm({ onDone }: { onDone: () => void }) {
         <FormMessage error={state.error} />
         <Field data-invalid={!!errors.current}>
           <FieldLabel htmlFor="current">Contraseña actual</FieldLabel>
-          <Input
+          <PasswordInput
             id="current"
             name="current"
-            type="password"
             autoComplete="current-password"
             aria-invalid={!!errors.current}
             required

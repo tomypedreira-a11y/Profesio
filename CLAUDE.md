@@ -95,6 +95,8 @@ src/
     pwa/                         Registro del service worker, instalar la app, aviso sin conexión
     profile-defaults-provider.tsx  Duración y valor por defecto del perfil (los carga el layout)
     idle-logout.tsx              Aviso y cierre de sesión por inactividad (en el layout de (app))
+    auth-art.tsx                 Fondo del login y el registro: escenas (bosque, árbol en diagonal, logo, dos árboles),
+                                 una al azar en cada carga, sin repetir la anterior. password-input.tsx = campo con ojito
     list-skeletons.tsx           Piezas de los esqueletos de carga (filas, tarjetas, formularios) para los loading.tsx
     speed-insights.tsx           Vercel Speed Insights (en el layout raíz; quita los ids de la URL antes de enviar)
     turnstile.tsx                Widget del captcha (Turnstile) y useCaptcha() para habilitar el botón de enviar
@@ -360,6 +362,11 @@ Recordatorio de cada sesión y resumen del día, por Web Push (claves VAPID, lib
 - **Rutas públicas** (`PUBLIC_PATHS` en `lib/supabase/proxy.ts`): "/" va aparte, como ruta **exacta** (como prefijo
   volvería públicas a todas). Las páginas de `(sitio)` se ven igual con o sin sesión (no redirigen); solo cambia el
   botón principal ("Ir a mi agenda"). `robots.ts` bloquea `/app/` entero (y `/auth/`, `/api/`).
+- **El sitio no toma las preferencias de la app:** se ve siempre en claro y con la letra normal. El tema y el tamaño
+  de letra (Configuración → Personalización) se aplican solo bajo /app (`isAppPath`, `lib/routes.ts`): fuera de
+  ahí `ThemeProvider` fuerza el claro (`forcedTheme`, sin tocar el guardado), `FONT_SIZE_SCRIPT` no aplica el
+  tamaño y `FontSizeScope` (layout raíz) lo quita o lo recupera al navegar entre el sitio y la app. `(sitio)/layout.tsx`
+  fija `themeColor` en el beige del claro.
 - **Textos de la página promocional y de las preguntas frecuentes** (`components/sitio/faq.tsx`, compartidas con
   /ayuda): solo afirmaciones verdaderas, verificadas contra el código. Si cambia una funcionalidad, revisarlos.
   En las páginas públicas, los botones que navegan son `<Link className={buttonVariants()}>` (rol de link, accesible),
