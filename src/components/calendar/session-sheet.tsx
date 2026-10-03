@@ -60,7 +60,14 @@ export function SessionSheet({ session, isNext, timeZone, onOpenChange, onChange
                 ) : (
                   <Badge variant="secondary">Agendada</Badge>
                 )}
-                <Badge variant="outline">{session.series_id ? "Horario fijo" : "Sesión suelta"}</Badge>
+                {/* Una de horario fijo reprogramada sigue siendo del horario (vacaciones, cortes del horario): se aclara. */}
+                <Badge variant="outline">
+                  {session.series_id
+                    ? session.rescheduled_from
+                      ? "Horario fijo · reprogramada"
+                      : "Horario fijo"
+                    : "Sesión suelta"}
+                </Badge>
                 {/* En una cancelada la modalidad solo se informa; en las demás se puede cambiar (abajo). */}
                 {session.status === "cancelled" && (
                   <Badge variant="outline">
